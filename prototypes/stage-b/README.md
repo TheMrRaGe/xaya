@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (65 of them, ~2s, no browser). `npm run build`
+`npm test` runs the checks (112 of them, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -179,11 +179,13 @@ is often registered as `text/plain`, and Chrome refuses a
   interest if you get far enough away, with hysteresis so he doesn't flicker
   at the boundary. This is §21's "fleeing must work" and §25's Mortal Wound,
   simplified for a solo prototype with no rescue mechanic yet.
-- **Permadeath with a Barrow-list.** Death ends the run, logs an obituary
-  (cause, ticks survived, wood carried, beasts taken) to `localStorage`, and
-  increments a lineage counter. The death screen shows the last few entries.
-  No server, no chain — `localStorage` is genuinely the right amount of
-  infrastructure for one person testing whether the loop feels good.
+- **Permadeath with a real, shared Barrow-list.** Death logs an obituary
+  (cause, ticks survived, wood carried, beasts taken, what they were best
+  at) to `data/barrow.json` on the server and increments a lineage counter —
+  both survive a restart. Every soul's death goes to every connected client,
+  not just their own, so the death screen is a board the settlement keeps
+  rather than one browser's private diary. `data/` is gitignored: it's save
+  data, not source.
 
 ### He used to camp the spawn
 

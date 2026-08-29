@@ -11,7 +11,6 @@ import { WORLD_W, WORLD_H, World } from "./sim/world.js";
 import { TILE_PX, ViewState, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";
 import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
-import { loadBarrowList, recordDeath, Obituary } from "./persist/lineage.js";
 
 const HUD_H = 165;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -23,8 +22,16 @@ let myId = -1;
 let seed = 0;
 let snap: Snapshot | null = null;
 let world: World | null = null;
-let lastDeath: Obituary | null = null;
-let barrowList = loadBarrowList();
+let lastDeath: DeathEvent | null = null;
+/**
+ * "A board of its dead" only means something if it is one board everyone
+ * shares. This used to be a browser's own localStorage — one soul's own
+ * deaths, in one browser, gone if the site data was cleared, and silent
+ * about everyone else's. The server now owns the real list on disk; this is
+ * just the client's copy, seeded from history at connect and grown by every
+ * death broadcast from then on, not only this soul's own.
+ */
+let barrowList: DeathEvent[] = [];
 let connection = "connecting to the Verge...";
 
 const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`);
@@ -42,6 +49,7 @@ socket.addEventListener("message", (event) => {
   if (msg.t === "welcome") {
     myId = msg.id;
     seed = msg.seed;
+    barrowList = (msg.barrow as DeathEvent[]) ?? [];
     return;
   }
   if (msg.t !== "state") return;
@@ -51,16 +59,10 @@ socket.addEventListener("message", (event) => {
   publishDebug(snap);
 
   for (const death of msg.deaths as DeathEvent[]) {
-    if (death.id !== myId) continue;
-    lastDeath = {
-      lineage: death.lineage,
-      cause: death.cause,
-      tick: death.tick,
-      wood: death.wood,
-      kills: death.kills,
-      mastery: death.mastery,
-    };
-    barrowList = recordDeath(lastDeath);
+    // Every soul's death joins the shared board, not only this one's own —
+    // that is the whole difference between a board and a private diary.
+    barrowList.push(death);
+    if (death.id === myId) lastDeath = death;
   }
 });
 

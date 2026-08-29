@@ -4,11 +4,10 @@
  */
 import { TILE } from "../sim/fixed.js";
 import { World, WORLD_W, WORLD_H, Tile } from "../sim/world.js";
-import { isNight, CROW_THRESHOLD } from "../sim/tick.js";
+import { isNight, CROW_THRESHOLD, DeathEvent } from "../sim/tick.js";
 import { Player, Lieutenant, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
 import { SKILLS, level } from "../sim/skills.js";
-import { Obituary } from "../persist/lineage.js";
 
 export const TILE_PX = 32;
 
@@ -261,7 +260,7 @@ export function drawHud(
   logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 132 + i * 15));
 }
 
-export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: Obituary, barrowList: Obituary[]): void {
+export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {
   ctx.fillStyle = "rgba(0,0,0,0.85)";
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = "#e8e0c8";

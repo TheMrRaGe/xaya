@@ -13,6 +13,7 @@
  * reconnects is correct on the next tick with no reconciliation code.
  */
 import { createServer } from "node:http";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import { staticHandler } from "./serve.mjs";
 import { newSim, stepTick, addSoul, replaceSoul, TICK_HZ, NO_INPUT } from "./dist/sim/tick.js";
@@ -20,21 +21,31 @@ import { snapshot } from "./dist/net/snapshot.js";
 import { createOverlord } from "./overlord.mjs";
 import { isNight, CROW_THRESHOLD } from "./dist/sim/tick.js";
 import { pressure, offers, chooseByWeight, applyAction, IDLE_PRESSURE } from "./dist/sim/director.js";
+import { loadBarrow, saveBarrow } from "./barrow.mjs";
 
 const PORT = Number(process.env.PORT) || 8000;
 const WORLD_SEED = 0xc0ffee;
 const TICK_MS = 1000 / TICK_HZ;
+const BARROW_PATH = fileURLToPath(new URL("./data/barrow.json", import.meta.url));
 
 const state = newSim(WORLD_SEED, []);
-let nextLineage = 1;
+
+/**
+ * The Barrow-list: every soul this Verge has ever buried, and the counter
+ * lineage numbers are drawn from. One copy, owned by the server, on disk —
+ * not a browser's localStorage (one soul's own deaths, gone if site data is
+ * cleared) and not an in-memory array (every soul's deaths, gone on
+ * restart). "A board of its dead" means nothing if the board resets every
+ * time the game does.
+ */
+const { barrow, nextLineage: loadedLineage } = await loadBarrow(BARROW_PATH);
+let nextLineage = loadedLineage;
+console.log(`the Barrow-list remembers ${barrow.length} soul${barrow.length === 1 ? "" : "s"}`);
 
 /** id -> socket, for the souls that still have someone driving them. */
 const sockets = new Map();
 /** id -> the input being accumulated for the next tick. */
 const pending = new Map();
-
-/** The Barrow-list, server-side: every soul this Verge has buried. */
-const barrow = [];
 
 /**
  * The Grey King watches. He cannot touch the world — he only reads the same
@@ -87,7 +98,11 @@ wss.on("connection", (socket) => {
   sockets.set(id, socket);
   console.log(`soul #${player.lineage} joined as player ${id} (${sockets.size} playing)`);
 
-  socket.send(JSON.stringify({ t: "welcome", id, seed: WORLD_SEED, tickHz: TICK_HZ }));
+  // The last hundred deaths are plenty for a death screen to feel like a
+  // real board rather than a live feed — the file on disk keeps all of them.
+  socket.send(
+    JSON.stringify({ t: "welcome", id, seed: WORLD_SEED, tickHz: TICK_HZ, barrow: barrow.slice(-100) }),
+  );
 
   socket.on("message", (raw) => {
     let msg;
@@ -144,6 +159,14 @@ setInterval(() => {
     barrow.push(death);
     overlord.noteDeath(death);
     console.log(`soul #${death.lineage} — ${death.cause} at tick ${death.tick}`);
+  }
+  if (deaths.length > 0) {
+    // Fire-and-forget: a save failing must not stop the world, and nothing
+    // downstream reads the file back before the next death appends to it in
+    // memory regardless of whether the write has landed yet.
+    void saveBarrow(BARROW_PATH, barrow, nextLineage).catch((err) => {
+      console.log(`could not save the Barrow-list (${err.message})`);
+    });
   }
 
   // Everything the world told the players, he also hears. The log is a
