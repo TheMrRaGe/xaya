@@ -1,0 +1,14 @@
+{
+  "name": "stage-b-the-verge",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Stage B prototype — the smallest loop that can kill you.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
