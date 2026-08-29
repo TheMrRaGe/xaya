@@ -84,7 +84,12 @@ Hunter or Herder is the only source for:
 
 - **River-goat** (the Verge) — tameable with patience; the first livestock most
   souls keep, and why Herder is a Verge-tier profession. Named in the Stage B
-  cut `[plan §44]`.
+  cut `[plan §44]`. **`[built]`** — slow, hard to frighten, and worth more than
+  anything else in the Verge; taming is not in yet.
+- **Hare** (the Verge) `[new]` — small, and faster than anything else here, so
+  it cannot be run down at all. It exists to make the snare worth building,
+  which is how trapping became a way of eating that does not require you to be
+  present. **`[built]`**
 - **Fen-deer** (the Moorfen) — easy meat, better hide once tanned.
 - **Coast-seal** (the Sunken Reach) — oil and pelt both worth the cold water.
 
@@ -98,13 +103,20 @@ Hunter or Herder is the only source for:
 **Aggressive:**
 
 - **Bog-lynx** (the Moorfen) — ambush predator that follows a wounded traveller
-  for miles before committing. Named in the Stage B cut `[plan §44]`.
+  for miles before committing. Named in the Stage B cut `[plan §44]`, though the
+  animal itself belongs to Realm 1. Not built; the stalking behaviour it is
+  described by does not exist yet.
+- **Hedge-boar** (the Verge) `[new]` — the Verge's own aggressive Wild, filling
+  the gap §15 flagged. Ignores you until struck, then charges faster than you
+  can run and holds the grudge about 26 seconds. Named for the Verge's own
+  biome line, "river valley, hedgerow, woodland" `[plan §4]`. **`[built]`**
 - **Cliff-wyvern** (Rimeholt) — not evil, just territorial over ground a caravan
   needs to cross. Killing one is a legitimate Mercenary contract; leaving the
   nest alone is a legitimate choice too.
 
-**In code today:** deer `[built]`, boar `[built]`, wolf `[built]`, and the crows
-`[built]` — see the reconciliation in §14, because none of those are canon names.
+**In code today:** hare `[built]`, deer `[built]`, **river-goat** `[built]`,
+**hedge-boar** `[built]`, wolf `[built]`, and the crows `[built]` — see §14 for
+which of those are canon and which are still placeholders.
 
 ### 2.3 The Grey-touched — hostile `[plan §7, §7A]`
 
@@ -242,7 +254,8 @@ the Lieutenant's detection radius and opens the wolves' noses.
 
 Grass · Tree · Stump (harvested, regrows) · Water · Bush · BareBush (picked,
 regrows) · Campfire (player-built, burns down) · Ash (a fire that went out;
-grass takes it back).
+grass takes it back) · **Rock** (chip stone off it forever; it never depletes) ·
+**Snare** (set, waiting, and spent once it catches).
 
 ### 3.5 Terrain the world implies but code lacks
 
@@ -287,8 +300,16 @@ fen-bread, bitter fenroot and eel in the Moorfen; ash-salt, hard biscuit and
 carried water in the Kiln; in Rimeholt, anything fat — rendered tallow eaten
 plain, without embarrassment, because the cold takes what it wants.
 
-**In code today:** wood, raw meat, cooked meat, hide `[built]` — plus water and
-berries consumed straight off the tile rather than carried.
+**In code today:** wood, **stone**, **cordage**, raw meat, cooked meat, hide
+`[built]` — plus water and berries consumed straight off the tile rather than
+carried.
+
+Stone is worth calling out because it inverts how every other material here
+behaves. A tree runs out and regrows on a timer; a rock outcrop never runs out
+at all, so stone is never *scarce*. What it costs is being heard — chipping
+stone is the loudest single action in the Verge. That makes a tool a trade of
+attention for yield rather than of time for yield, which is the noise thesis
+`[plan §1]` applied to the workshop instead of the hunt.
 
 ---
 
@@ -323,12 +344,17 @@ maintenance is the war.
 
 ### 5.2 By kind
 
-- **Tools** — spear `[built, 12 strikes]`, axe, knife, pick, needle, snare,
-  fishing line, hammer, saw, loom, quern. All but the spear `[named]`.
+- **Tools** — spear `[built, 12 strikes]`, knife `[built, 20 butcherings]`, axe
+  `[built, 25 chops]`, snare `[built]`; pick, needle, fishing line, hammer, saw,
+  loom, quern all `[named]`. The three built ones each buy a different thing:
+  the knife buys *yield* (more off a carcass, and the only way to cut cord), the
+  axe buys yield **and quiet**, and the snare buys *absence* — it is the only
+  work that pays out while you are somewhere else.
 - **Wearables** — hide cloak `[built, wears through on the cold it stops]`,
   boots, gloves, hats, mail and plate at the Kiln tier and above `[named]`.
-- **Placed and built** — campfire `[built, burns fuel and leaves ash]`; kiln,
-  drying rack, tannery, quern, cache, shelter, well, granary, wall `[named]`.
+- **Placed and built** — campfire `[built, burns fuel and leaves ash]`, set snare
+  `[built, springs once and is spent]`; kiln, drying rack, tannery, quern, cache,
+  shelter, well, granary, wall `[named]`.
   Shelter is load-bearing: **logging off camped is safe, the open field is not**
   `[plan §25]`.
 - **Consumables** — cooked meals `[built]`, preserved food, medicine, poultices,
@@ -379,8 +405,18 @@ or a cure for the Kiln's ashlung. Capped at the Weald for a reason: it is the
 Realm where the ingredients lie to you, so **every apothecary's reputation is
 built on having survived being wrong.**
 
-**In code today** `[built]`: one chain, four links — kill → butcher → cook at a
-fire → eat. Plus wood → spear, hide → cloak, wood → fire.
+**In code today** `[built]`: two chains that cross.
+
+- **Food:** kill → butcher → cook at a fire → eat.
+- **Tools:** stone + wood → knife → (hide → cord) → cord + wood → snare → hare
+  → back into the food chain.
+
+The second is the first appearance of §15's generative rule in the prototype:
+a snare needs cordage *and* wood, cordage needs hide *and* a knife already in
+hand, and hide only comes off an animal someone hunted. Nothing in that chain
+can be self-supplied from a single activity, which is the property that makes
+trade arithmetic rather than courtesy. Plus wood → spear, hide → cloak,
+wood → fire.
 
 ---
 
@@ -872,34 +908,27 @@ What Stage B calls things versus what the world calls them. This matters now
 rather than later because renaming is nearly free today and gets expensive once
 there are saves, tests and screenshots referring to the old names.
 
-| In code | Canon slot | Status |
+**The standing decision: these are real animals, and they stay real animals.**
+The bestiary is recognisable livestock and game — a goat, a hare, a boar — with
+a locale in front of the name where one is needed. Nothing gets renamed into a
+fantasy thing to match a slot.
+
+| In code | Canon | Status |
 |---|---|---|
-| `deer` | **River-goat** — the Verge's docile Wild `[plan §44]` | Placeholder name. Fen-deer are the Moorfen's, not the Verge's. |
-| `boar` | **Bog-lynx** — the aggressive Wild `[plan §44]` | Placeholder. The bog-lynx is a Moorfen animal; the Verge's aggressive Wild is unnamed. |
-| `wolf` | **Ash-hound** — the Grey-touched `[plan §44]` | **No canon slot as written.** See below. |
+| `hare` | — | `[new]`, and the Verge's own. Nothing in PLAN.md named it; it exists so the snare has a reason to be built. |
+| `deer` | — | Kept. Fen-deer are the Moorfen's; a plain deer is the Verge's own and does not need a prefix. |
+| `river-goat` | **River-goat** `[plan §44, §7A]` | **Canon.** Taming is still unbuilt. |
+| `hedge-boar` | — | `[new]`. Fills the gap §15 flagged: the Verge's aggressive Wild had no name. §44 said "bog-lynx", but that is a Moorfen animal described by stalking behaviour the boar does not have. |
+| `wolf` | — | Kept as a wolf. It is a real animal and reads as one. |
 | crows | — | **Not in PLAN.md at all.** A prototype invention. |
 | `Lieutenant` | Lieutenant `[plan §27]` | Correct already. |
 
-**The wolf is the interesting one.** It was added to the prototype as a
-night-hunting predator that comes looking for you, whose reach widens with noise
-and which holds a long grudge once struck. That behaviour is **much closer to the
-Grey-touched ash-hound** — drawn to noise, hunting rather than defending — than
-to any Wild animal, and §44's cut list wants exactly one Grey-touched creature.
-The mismatch is that ash-hounds are a Kiln animal and the Verge is Realm 0.
-
-Two honest resolutions, neither yet chosen:
-
-1. **Rename it ash-hound** and accept that one has wandered down into the Verge —
-   which is *thematically correct*, since §2.3's conversion rule says the Grey
-   makes them wherever it reaches, and a Grey-touched thing in the Verge is a
-   visible sign the Grey is spreading.
-2. **Leave it a wolf** and register it as the Verge's own aggressive Wild,
-   filling the bog-lynx slot with a Realm-appropriate animal, and add a separate
-   Grey-touched creature later.
-
-**Option 1 is better** and costs one rename: it makes the prototype's most
-interesting creature carry the world's most important idea — *the land makes
-these, nobody conjures them* — instead of being a generic wolf.
+**What this leaves open.** The wolf currently does the *job* of the Grey-touched
+— comes looking, hunts on noise, night-driven — while being an ordinary animal.
+That is fine and arguably better: a wolf that hunts you at night needs no
+explanation, and §44's one-Grey-touched slot can be filled later by something
+that is genuinely wrong rather than by relabelling a wolf. The ash-hound and the
+fen-wraith stay unbuilt, waiting for the Realm they belong to.
 
 **The crows should be canonised rather than removed.** They are the prototype's
 best original idea — noise made *visible*, readable by the player and by the
@@ -927,7 +956,15 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   valve, and a leak from the Hoard. Needs modelling, not a guess.
 - **Apprenticeship yield** — large enough that veterans hunt for newcomers, small
   enough that farming apprentices with alts is unprofitable.
-- **The Verge's own aggressive Wild** has no name (see §14).
+- ~~**The Verge's own aggressive Wild** has no name~~ — closed: it is the
+  hedge-boar (see §14).
+- **Trapping has no skill of its own.** Setting snares currently teaches
+  nothing, while every other way of getting food teaches something. §17 names a
+  Trapper; either that becomes a sixth skill or trapping folds into hunting on
+  purpose rather than by omission.
+- **A set snare is nobody's property.** Anything can spring it and anyone could
+  pick it up, which is fine with two friendly souls and is not fine the moment
+  the Verge holds a stranger.
 - **Terrain beyond the eight tiles** (§3.5) is implied by every Realm and specced
   nowhere.
 - **Killed-by-another-soul** is absent from the death causes (§11.3), and the

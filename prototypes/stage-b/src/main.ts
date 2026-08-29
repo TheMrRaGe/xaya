@@ -18,7 +18,7 @@ import { TILE_PX, ViewState, drawWorld, drawEntities, drawNight, drawHud, drawDe
 import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
 
-const HUD_H = 165;
+const HUD_H = 195;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 canvas.width = WORLD_W * TILE_PX;
 canvas.height = WORLD_H * TILE_PX + HUD_H;
@@ -87,6 +87,10 @@ const VERBS: Record<string, string> = {
   "2": "cook",
   "3": "makeCloak",
   "4": "eat",
+  "5": "makeKnife",
+  "6": "makeAxe",
+  "7": "makeCordage",
+  "8": "setSnare",
   t: "cycleOffer",
   g: "give",
 };

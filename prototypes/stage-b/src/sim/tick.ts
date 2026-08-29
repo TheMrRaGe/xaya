@@ -46,6 +46,7 @@ import {
   stepCreature,
   woundCreature,
   isCarcass,
+  checkSnares,
   CREATURE_RESPAWN_TICKS,
   BOAR_GORE_DAMAGE,
   BOAR_GORE_COOLDOWN,
@@ -100,6 +101,32 @@ const FIST_DAMAGE = 1;
 
 const CLOAK_HIDE_COST = 2; // how long it then lasts is up to the tailor — see skills.ts
 
+/**
+ * Stone tools. The point of them is not that they are better numbers — it
+ * is that stone is *free and loud* while everything else here is scarce and
+ * quiet, so a tool is a trade of attention for yield rather than a trade of
+ * time for yield. An axe pays that back: it is the one tool that makes you
+ * quieter than having no tool at all.
+ */
+const KNIFE_STONE_COST = 1;
+const KNIFE_WOOD_COST = 1;
+const KNIFE_DURABILITY = 20; // butcherings
+const KNIFE_BONUS = 1; // extra meat and hide off a carcass
+
+const AXE_STONE_COST = 2;
+const AXE_WOOD_COST = 1;
+const AXE_DURABILITY = 25; // chops
+const AXE_WOOD_BONUS = 2; // extra logs per tree
+const AXE_QUIET = 65; // percent of the usual noise a chop makes
+
+const CORDAGE_HIDE_COST = 1;
+const CORDAGE_PER_HIDE = 2;
+
+const SNARE_CORDAGE_COST = 2;
+const SNARE_WOOD_COST = 1;
+
+const NOISE_PER_CHIP = 260; // hammering stone is the loudest work in the Verge
+
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
 const REGROW_TICKS = 900; // ~90s
@@ -124,13 +151,17 @@ const NIGHT_TICKS = 3000;
 export interface Input {
   dx: -1 | 0 | 1;
   dy: -1 | 0 | 1;
-  gather: boolean; // E — chop, pick, drink, or butcher whatever is to hand
+  gather: boolean; // E — chop, chip, pick, drink, or butcher whatever is to hand
   strike: boolean; // space
   build: boolean; // F — feed a fire, or build one
   makeSpear: boolean; // 1
   cook: boolean; // 2 — at a fire
   makeCloak: boolean; // 3 — at a fire
   eat: boolean; // 4
+  makeKnife: boolean; // 5
+  makeAxe: boolean; // 6
+  makeCordage: boolean; // 7 — needs a knife
+  setSnare: boolean; // 8 — place one you are carrying
   cycleOffer: boolean; // T — what you would hand over
   give: boolean; // G — hand one over to whoever is standing next to you
 }
@@ -145,6 +176,10 @@ export const NO_INPUT: Input = {
   cook: false,
   makeCloak: false,
   eat: false,
+  makeKnife: false,
+  makeAxe: false,
+  makeCordage: false,
+  setSnare: false,
   cycleOffer: false,
   give: false,
 };
@@ -212,6 +247,8 @@ export interface SimState {
     firstKill: boolean;
     firstCrows: boolean;
     firstTrade: boolean;
+    firstStone: boolean;
+    firstSnare: boolean;
   };
 }
 
@@ -240,7 +277,15 @@ export function newSim(seed: number, players: Player[]): SimState {
     rng,
     lastDamageSource: players.map(() => "starved" as DeathCause),
     log: [],
-    flags: { firstGather: false, firstSighting: false, firstKill: false, firstCrows: false, firstTrade: false },
+    flags: {
+      firstGather: false,
+      firstSighting: false,
+      firstKill: false,
+      firstCrows: false,
+      firstTrade: false,
+      firstStone: false,
+      firstSnare: false,
+    },
   };
 }
 
@@ -369,16 +414,22 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
     stepCreature(c, ctx);
     // A charging boar and a hunting wolf both bite the same way: contact,
     // a cooldown, and whoever the beast currently holds a grudge against.
-    const biting = (c.kind === "boar" && c.state === "charge") || (c.kind === "wolf" && c.state === "hunt");
+    const biting = (c.kind === "hedge-boar" && c.state === "charge") || (c.kind === "wolf" && c.state === "hunt");
     if (!biting || c.goreCooldown > 0) continue;
     const target = state.players[c.angryAt];
     if (!target || !target.alive) continue;
     if (distSq(c.x, c.y, target.x, target.y) > CONTACT_RADIUS * CONTACT_RADIUS) continue;
-    const damage = c.kind === "boar" ? BOAR_GORE_DAMAGE : WOLF_BITE_DAMAGE;
-    const cause: DeathCause = c.kind === "boar" ? "gored by a boar" : "savaged by wolves";
+    const damage = c.kind === "hedge-boar" ? BOAR_GORE_DAMAGE : WOLF_BITE_DAMAGE;
+    const cause: DeathCause = c.kind === "hedge-boar" ? "gored by a boar" : "savaged by wolves";
     target.health = clamp(target.health - damage, 0, HEALTH_MAX);
     state.lastDamageSource[target.id] = cause;
-    c.goreCooldown = c.kind === "boar" ? BOAR_GORE_COOLDOWN : WOLF_BITE_COOLDOWN;
+    c.goreCooldown = c.kind === "hedge-boar" ? BOAR_GORE_COOLDOWN : WOLF_BITE_COOLDOWN;
+  }
+
+  // A trapline pays out whether or not anyone is standing there.
+  for (const idx of checkSnares(state.creatures, ctx)) {
+    world.clearSnare(idx);
+    say(state, "A snare has taken something. It is still there, waiting to be cut out.");
   }
 
   // --- the Lieutenant, and whoever he catches ---
@@ -499,6 +550,10 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   if (input.cook) doCook(state, player);
   if (input.makeCloak) doMakeCloak(state, player);
   if (input.eat) doEat(state, player);
+  if (input.makeKnife) doMakeKnife(state, player);
+  if (input.makeAxe) doMakeAxe(state, player);
+  if (input.makeCordage) doMakeCordage(state, player);
+  if (input.setSnare) doSetSnare(state, player, px, py);
   if (input.cycleOffer) cycleOffer(player);
   if (input.give) doGive(state, player);
 
@@ -514,8 +569,15 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
   if (carcass) {
     const stats = STATS[carcass.kind];
     const extra = butcherBonus(player.skills);
-    const meat = stats.meat + extra;
-    const hide = stats.hide + extra;
+    // A knife is the difference between taking a carcass apart and tearing
+    // it apart. It wears, like everything else.
+    const blade = pack.knife > 0 ? KNIFE_BONUS : 0;
+    if (pack.knife > 0) {
+      pack.knife--;
+      if (pack.knife === 0) say(state, "The knife's edge is gone. It is a stone again.");
+    }
+    const meat = stats.meat + extra + blade;
+    const hide = Math.max(0, stats.hide === 0 ? 0 : stats.hide + extra + blade);
     pack.rawMeat += meat;
     pack.hide += hide;
     carcass.butchered = true;
@@ -538,12 +600,31 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     const t = world.get(gx, gy);
     if (t === Tile.Tree) {
       world.harvest(gx, gy, state.tick, REGROW_TICKS);
-      pack.wood += woodPerTree(player.skills);
-      bumpNoise(state, skilledNoise(NOISE_PER_GATHER, player, "woodcraft"), player);
+      // An axe is more wood and *less* noise — the one tool that makes you
+      // safer by being better, which is the same argument skill makes.
+      const axed = pack.axe > 0;
+      pack.wood += woodPerTree(player.skills) + (axed ? AXE_WOOD_BONUS : 0);
+      let noise = skilledNoise(NOISE_PER_GATHER, player, "woodcraft");
+      if (axed) {
+        noise = Math.trunc((noise * AXE_QUIET) / 100);
+        pack.axe--;
+        if (pack.axe === 0) say(state, "The axe head splits. Back to breaking branches by hand.");
+      }
+      bumpNoise(state, noise, player);
       learn(state, player, "woodcraft", XP.chop);
       if (!state.flags.firstGather) {
         state.flags.firstGather = true;
         say(state, "The Grey King: “...Someone is cutting wood in the Verge. How ordinary. How loud.”");
+      }
+      return;
+    }
+    if (t === Tile.Rock) {
+      // A rock does not run out. What it costs is being heard.
+      pack.stone++;
+      bumpNoise(state, NOISE_PER_CHIP, player);
+      if (!state.flags.firstStone) {
+        state.flags.firstStone = true;
+        say(state, "The Grey King: “Stone on stone. I can hear that from the Spire, and so can everything nearer.”");
       }
       return;
     }
@@ -583,7 +664,7 @@ function doStrike(state: SimState, player: Player): void {
       state.flags.firstKill = true;
       say(state, "The Grey King: “Blood in the Verge. Good. It makes you easier to follow.”");
     }
-  } else if (quarry.kind === "boar") {
+  } else if (quarry.kind === "hedge-boar") {
     say(state, "The boar turns on you.");
   }
 }
@@ -658,6 +739,64 @@ function doEat(state: SimState, player: Player): void {
       player.health = clamp(player.health - 6, 0, HEALTH_MAX);
       say(state, "Raw meat. It stays down, but not happily.");
     }
+  }
+}
+
+function doMakeKnife(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.knife > 0 || pack.stone < KNIFE_STONE_COST || pack.wood < KNIFE_WOOD_COST) return;
+  pack.stone -= KNIFE_STONE_COST;
+  pack.wood -= KNIFE_WOOD_COST;
+  pack.knife = KNIFE_DURABILITY;
+  bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 4), player);
+  say(state, "A flake of stone lashed to a handle. It will take a carcass apart properly.");
+}
+
+function doMakeAxe(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.axe > 0 || pack.stone < AXE_STONE_COST || pack.wood < AXE_WOOD_COST) return;
+  pack.stone -= AXE_STONE_COST;
+  pack.wood -= AXE_WOOD_COST;
+  pack.axe = AXE_DURABILITY;
+  bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 3), player);
+  learn(state, player, "woodcraft", XP.stitch);
+  say(state, "An axe. More wood per tree, and fewer strokes to hear.");
+}
+
+/** Cordage is the only thing you cannot make without a tool already in hand. */
+function doMakeCordage(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.knife < 1 || pack.hide < CORDAGE_HIDE_COST) return;
+  pack.hide -= CORDAGE_HIDE_COST;
+  pack.cordage += CORDAGE_PER_HIDE;
+  learn(state, player, "tailoring", XP.cook);
+  say(state, `Hide cut into ${CORDAGE_PER_HIDE} lengths of cord.`);
+}
+
+/**
+ * 8 — set a snare on open ground. It is the only work in the Verge that
+ * keeps paying after you have walked away from it.
+ */
+function doSetSnare(state: SimState, player: Player, px: number, py: number): void {
+  const pack = player.pack;
+  // Carrying one and setting one are separate steps: you make it wherever
+  // you are and set it where the hares are, which is the whole trapline.
+  if (pack.snare < 1) {
+    if (pack.cordage < SNARE_CORDAGE_COST || pack.wood < SNARE_WOOD_COST) return;
+    pack.cordage -= SNARE_CORDAGE_COST;
+    pack.wood -= SNARE_WOOD_COST;
+    pack.snare++;
+    say(state, "A snare, coiled and ready. Set it somewhere a hare would run.");
+    return;
+  }
+  if (!state.world.setSnare(px, py)) return;
+  pack.snare--;
+  // Setting one is nearly silent — that is the point of it.
+  bumpNoise(state, 10, player);
+  say(state, "You set the snare in the grass and step away from it.");
+  if (!state.flags.firstSnare) {
+    state.flags.firstSnare = true;
+    say(state, "The Grey King: “Patience. That is new. I dislike it.”");
   }
 }
 

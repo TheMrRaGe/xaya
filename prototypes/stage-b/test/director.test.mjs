@@ -133,9 +133,9 @@ const check = (name, cond, detail = "") => {
   check("nothing regrows under it", b.world.get(5, 5) !== Tile.Tree, `tile=${b.world.get(5, 5)}`);
 
   const c = fresh();
-  const boars = c.creatures.filter((x) => x.kind === "boar").length;
+  const boars = c.creatures.filter((x) => x.kind === "hedge-boar").length;
   applyAction(c, { kind: "loose_a_boar", x: c.players[0].x + TILE, y: c.players[0].y });
-  check("a loosed boar arrives", c.creatures.filter((x) => x.kind === "boar").length === boars + 1);
+  check("a loosed boar arrives", c.creatures.filter((x) => x.kind === "hedge-boar").length === boars + 1);
   check("and it arrives angry", c.creatures[c.creatures.length - 1].angerTicks > 0);
 
   const w = fresh();

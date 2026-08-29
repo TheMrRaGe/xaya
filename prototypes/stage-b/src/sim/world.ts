@@ -19,13 +19,23 @@ export enum Tile {
   BareBush = 5, // a picked-clean bush; regrows after RESPAWN_TICKS
   Campfire = 6, // player-built, and burns down
   Ash = 7, // a fire that went out; grass takes it back
+  /**
+   * A rock outcrop. Unlike a tree it does not run out — you chip stone off
+   * it and it is still a rock — so stone is never scarce. What it costs is
+   * attention: hammering stone is the loudest work in the Verge, which puts
+   * it on the same thesis as everything else here rather than on a
+   * respawn timer.
+   */
+  Rock = 8,
+  /** A set snare, waiting. Catches what walks onto it, then it is spent. */
+  Snare = 9,
 }
 
 /** How long a burnt-out camp is still visible before the grass closes over it. */
 export const ASH_TICKS = 600;
 
 export function isSolid(t: Tile): boolean {
-  return t === Tile.Tree || t === Tile.Water || t === Tile.Campfire;
+  return t === Tile.Tree || t === Tile.Water || t === Tile.Campfire || t === Tile.Rock;
 }
 
 export interface Resource {
@@ -39,6 +49,8 @@ export class World {
   readonly resources: Map<number, Resource> = new Map();
   /** Lit fires, by tile index, holding the ticks of fuel each has left. */
   readonly fires: Map<number, number> = new Map();
+  /** Set snares, by tile index. A snare has no state but where it is. */
+  readonly snares: Set<number> = new Set();
 
   constructor(seed: number) {
     const rng = new Rng(seed);
@@ -54,6 +66,7 @@ export class World {
         if (roll < 14) this.set(x, y, Tile.Tree);
         else if (roll < 19) this.set(x, y, Tile.Water);
         else if (roll < 26) this.set(x, y, Tile.Bush);
+        else if (roll < 29) this.set(x, y, Tile.Rock);
       }
     }
   }
@@ -68,6 +81,10 @@ export class World {
     for (let i = 0; i < w.tiles.length; i++) w.tiles[i] = tiles[i] ?? Tile.Grass;
     w.fires.clear();
     for (const [idx, fuel] of fires) w.fires.set(idx, fuel);
+    // A snare holds no state but its position, which the tiles already carry —
+    // so it rebuilds itself and costs the snapshot nothing.
+    w.snares.clear();
+    for (let i = 0; i < w.tiles.length; i++) if (w.tiles[i] === Tile.Snare) w.snares.add(i);
     return w;
   }
 
@@ -120,6 +137,20 @@ export class World {
 
   fuelAt(x: number, y: number): number {
     return this.fires.get(this.index(x, y)) ?? 0;
+  }
+
+  /** Set a snare on open ground. False if something is already there. */
+  setSnare(x: number, y: number): boolean {
+    if (this.get(x, y) !== Tile.Grass) return false;
+    this.set(x, y, Tile.Snare);
+    this.snares.add(this.index(x, y));
+    return true;
+  }
+
+  /** A snare that has caught something, or been picked up. The grass returns. */
+  clearSnare(idx: number): void {
+    this.snares.delete(idx);
+    if (this.tiles[idx] === Tile.Snare) this.tiles[idx] = Tile.Grass;
   }
 
   /**

@@ -64,12 +64,20 @@ export function pressure(state: DirectorState): number {
     souls++;
     const pack = player.pack;
     wealth += pack.wood + pack.rawMeat * 2 + pack.cookedMeat * 3 + pack.hide * 3;
+    // Stone is free to get, so it is worth little standing still — but a
+    // worked tool is a settled camp, and that is what he is reading.
+    wealth += pack.stone + pack.cordage * 2;
     if (pack.spear > 0) wealth += 15;
     if (pack.cloak > 0) wealth += 20;
+    if (pack.knife > 0) wealth += 12;
+    if (pack.axe > 0) wealth += 18;
+    wealth += pack.snare * 6;
     for (const skill of SKILLS) wealth += level(player.skills[skill]) * 8;
   }
   // A fire is the loudest thing you own, so it is also the most expensive.
   wealth += state.world.fires.size * 25;
+  // A trapline is a claim on the ground, whether or not anyone is standing on it.
+  wealth += state.world.snares.size * 8;
 
   if (souls === 0) return 0;
 
@@ -236,7 +244,7 @@ export function applyAction(state: DirectorState, action: OverlordAction): void 
       return;
 
     case "loose_a_boar": {
-      const boar = newCreature("boar", action.x, action.y);
+      const boar = newCreature("hedge-boar", action.x, action.y);
       const nearest = livingSouls(state).reduce<Player | null>((best, p) => {
         if (!best) return p;
         const db = (best.x - action.x) ** 2 + (best.y - action.y) ** 2;

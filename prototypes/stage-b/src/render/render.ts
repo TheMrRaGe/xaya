@@ -36,6 +36,8 @@ const COLORS: Record<Tile, string> = {
   [Tile.BareBush]: "#3a3a2a",
   [Tile.Campfire]: "#8a4a1a",
   [Tile.Ash]: "#2b2723",
+  [Tile.Rock]: "#6e6e73",
+  [Tile.Snare]: "#3a5a34", // grass — a set snare is meant to be easy to lose
 };
 
 /** Fuel at which a fire is drawn as embers rather than a blaze. */
@@ -47,6 +49,27 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
       const t = world.get(x, y);
       ctx.fillStyle = COLORS[t];
       ctx.fillRect(x * TILE_PX, y * TILE_PX, TILE_PX, TILE_PX);
+      if (t === Tile.Rock) {
+        // A boulder or two, so a rock reads as something to work rather
+        // than as a hole in the map.
+        ctx.fillStyle = "#8c8c92";
+        ctx.beginPath();
+        ctx.arc(x * TILE_PX + TILE_PX * 0.38, y * TILE_PX + TILE_PX * 0.44, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#5a5a60";
+        ctx.beginPath();
+        ctx.arc(x * TILE_PX + TILE_PX * 0.66, y * TILE_PX + TILE_PX * 0.62, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (t === Tile.Snare) {
+        // Deliberately faint. A snare you can see from across the map is
+        // not a snare, and forgetting where you set one is part of the job.
+        ctx.strokeStyle = "rgba(190, 175, 130, 0.55)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x * TILE_PX + TILE_PX / 2, y * TILE_PX + TILE_PX / 2, 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       if (t === Tile.Campfire) {
         // A fire that flickers is a fire you can find from across the map,
         // which is exactly the deal you took when you built it — and one
@@ -99,6 +122,11 @@ function drawCreature(ctx: CanvasRenderingContext2D, c: Creature): void {
 
   if (c.kind === "deer") {
     dot(ctx, c.x, c.y, 7, c.state === "flee" ? "#e6d2a8" : "#c8a878");
+  } else if (c.kind === "hare") {
+    // Small, and nearly always already running.
+    dot(ctx, c.x, c.y, 4, c.state === "flee" ? "#d8d0c0" : "#a89880");
+  } else if (c.kind === "river-goat") {
+    dot(ctx, c.x, c.y, 8, "#cfc8bc", c.state === "flee" ? "#8a7a5a" : undefined);
   } else if (c.kind === "wolf") {
     dot(ctx, c.x, c.y, 7, "#888890", c.state === "hunt" ? "#c02020" : undefined);
   } else {
@@ -225,7 +253,13 @@ export function drawHud(
   ctx.font = "12px monospace";
   // Tools show what is left in them, because "spear 2" is a decision and
   // "spear" is not.
-  const kit = [pack.spear > 0 ? `spear ${pack.spear}` : null, pack.cloak > 0 ? `cloak ${pack.cloak}` : null]
+  const kit = [
+    pack.spear > 0 ? `spear ${pack.spear}` : null,
+    pack.cloak > 0 ? `cloak ${pack.cloak}` : null,
+    pack.knife > 0 ? `knife ${pack.knife}` : null,
+    pack.axe > 0 ? `axe ${pack.axe}` : null,
+    pack.snare > 0 ? `snare ${pack.snare}` : null,
+  ]
     .filter(Boolean)
     .join("  ");
   const others = state.players.filter((o) => o.id !== p.id && o.alive).length;
@@ -239,27 +273,40 @@ export function drawHud(
     hudY + 44,
   );
   ctx.fillText(
-    `wood ${pack.wood}  meat ${pack.rawMeat} raw / ${pack.cookedMeat} cooked  hide ${pack.hide}  ${kit}`,
+    `wood ${pack.wood}  stone ${pack.stone}  cord ${pack.cordage}  ` +
+      `meat ${pack.rawMeat} raw / ${pack.cookedMeat} cooked  hide ${pack.hide}`,
     10,
     hudY + 60,
   );
+  // Tools show what is left in them, because "axe 3" is a decision.
+  ctx.fillStyle = "#c8b088";
+  ctx.fillText(kit || "no tools", 10, hudY + 76);
 
   // Skill is the only thing that separates two souls, so it gets a line.
   const learned = SKILLS.map((sk) => `${sk.slice(0, 4)} ${level(p.skills[sk])}`).join("  ");
   ctx.fillStyle = "#9ab08a";
-  ctx.fillText(learned, 10, hudY + 78);
+  ctx.fillText(learned, 10, hudY + 92);
 
   ctx.fillStyle = "#8a8a8a";
-  ctx.fillText("WASD move · E gather/butcher · SPACE strike · F build fire (5 wood) / feed it (1)", 10, hudY + 96);
   ctx.fillText(
-    `1 spear (3 wood) · 2 cook · 3 cloak · 4 eat · T offer: ${p.offer} · G give`,
+    "WASD move · E gather/chip/butcher · SPACE strike · F fire (5 wood) / feed (1)",
     10,
     hudY + 110,
+  );
+  ctx.fillText(
+    "1 spear (3w) · 2 cook · 3 cloak (2 hide) · 4 eat · 5 knife (1s 1w) · 6 axe (2s 1w)",
+    10,
+    hudY + 124,
+  );
+  ctx.fillText(
+    `7 cord (1 hide, needs knife) · 8 snare (2 cord 1w), again to set · T offer: ${p.offer} · G give`,
+    10,
+    hudY + 138,
   );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 132 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 158 + i * 15));
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {

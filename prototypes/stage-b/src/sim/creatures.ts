@@ -23,8 +23,11 @@ import { Rng } from "./rng.js";
 import { World, WORLD_W, WORLD_H } from "./world.js";
 import { stepToward, stepAway, moveWithCollision, walkable } from "./move.js";
 
-export type CreatureKind = "deer" | "boar" | "wolf";
+export type CreatureKind = "deer" | "hedge-boar" | "wolf" | "hare" | "river-goat";
 export type CreatureState = "graze" | "flee" | "charge" | "hunt" | "dead";
+
+/** Everything that runs from you rather than at you. */
+export const PREY: ReadonlyArray<CreatureKind> = ["deer", "hare", "river-goat"];
 
 export interface CreatureStats {
   health: number;
@@ -36,20 +39,41 @@ export interface CreatureStats {
 
 /**
  * The deer is slightly slower than a soul (300) so a chase is winnable but
- * not free. The boar is faster, which is the whole point of the boar: you
+ * not free. The hedge-boar is faster, which is the whole point of it: you
  * cannot outrun what you started, you can only outlast it. The wolf sits
  * between them — faster than you, but not by much, because what makes it
  * dangerous is that it comes looking rather than that it is unbeatable.
+ *
+ * The hare and the river-goat are the two ends of prey. A hare is faster
+ * than anything in the Verge and spooks from most of the way across it, so
+ * **it cannot be caught on foot at all** — it is there to make the snare
+ * worth building, which is the whole reason trapping exists as a separate
+ * way of eating. A river-goat is the opposite: slow, calm, hard to frighten,
+ * and worth more than anything else you can take. It is the good hunt, and
+ * the reason §44 calls it the first livestock most souls ever keep.
  */
 export const STATS: Record<CreatureKind, CreatureStats> = {
   deer: { health: 6, meat: 2, hide: 1, runSpeed: 280, grazeSpeed: 90 },
-  boar: { health: 14, meat: 3, hide: 2, runSpeed: 330, grazeSpeed: 110 },
+  "hedge-boar": { health: 14, meat: 3, hide: 2, runSpeed: 330, grazeSpeed: 110 },
   wolf: { health: 10, meat: 2, hide: 2, runSpeed: 310, grazeSpeed: 100 },
+  hare: { health: 2, meat: 1, hide: 0, runSpeed: 400, grazeSpeed: 70 },
+  "river-goat": { health: 9, meat: 4, hide: 2, runSpeed: 200, grazeSpeed: 80 },
 };
 
 /** How far a deer spooks from at zero noise. Louder work scares them further off. */
 export const DEER_FLEE_BASE = TILE * 3;
 export const DEER_FLEE_NOISE_SCALE = TILE * 5;
+
+/**
+ * How much of the usual spooking distance each prey animal uses. A hare is
+ * gone before you have seen it; a river-goat barely looks up, which is what
+ * makes it approachable and therefore worth keeping.
+ */
+const FLEE_SCALE: Record<string, number> = {
+  deer: 100,
+  hare: 210,
+  "river-goat": 55,
+};
 
 export const BOAR_ANGER_TICKS = 260; // ~26s of grudge, then it wanders off
 export const BOAR_GIVE_UP_RADIUS = TILE * 9;
@@ -144,7 +168,20 @@ export function spawnCreatures(
   rng: Rng,
   souls: ReadonlyArray<{ x: number; y: number }>,
 ): Creature[] {
-  const roster: CreatureKind[] = ["deer", "deer", "deer", "deer", "boar", "boar", "wolf", "wolf"];
+  const roster: CreatureKind[] = [
+    "deer",
+    "deer",
+    "deer",
+    "hare",
+    "hare",
+    "hare",
+    "river-goat",
+    "river-goat",
+    "hedge-boar",
+    "hedge-boar",
+    "wolf",
+    "wolf",
+  ];
   return roster.map((kind) => {
     const spot = findOpenTile(world, rng, souls, 6);
     return newCreature(kind, spot.x, spot.y);
@@ -204,7 +241,7 @@ export function stepCreature(c: Creature, ctx: CreatureCtx): void {
   let speed = stats.grazeSpeed;
   let state: CreatureState = "graze";
 
-  if (c.kind === "boar" && c.angerTicks > 0 && quarry) {
+  if (c.kind === "hedge-boar" && c.angerTicks > 0 && quarry) {
     // A boar holds one grudge at a time, against whoever swung first.
     state = "charge";
     target = { x: quarry.x, y: quarry.y };
@@ -219,7 +256,7 @@ export function stepCreature(c: Creature, ctx: CreatureCtx): void {
       target = { x: prey.x, y: prey.y };
       speed = stats.runSpeed;
     }
-  } else if (c.kind === "deer") {
+  } else if (PREY.includes(c.kind)) {
     const from = spooker(c, ctx);
     if (from) {
       state = "flee";
@@ -270,23 +307,62 @@ function wolfPrey(
 }
 
 /**
- * The soul close enough to scare this deer, if any. The radius grows with
+ * The soul close enough to scare this animal, if any. The radius grows with
  * the world's noise — so a camp that gathers hard all day is a camp whose
  * meat has walked to the far side of the map. Same thesis as the
  * Lieutenant's detection radius (§1), pointed at your dinner instead of at
  * your life.
+ *
+ * Each animal scales that radius by its own nerve, which is most of what
+ * separates them to hunt: a hare is over the hill before you are in range,
+ * a river-goat lets you walk up to it.
  */
 function spooker(c: Creature, ctx: CreatureCtx): { x: number; y: number } | null {
   const near = nearestSoul(c, ctx);
   if (!near) return null;
-  const radius = DEER_FLEE_BASE + Math.trunc((DEER_FLEE_NOISE_SCALE * ctx.noise) / ctx.noiseMax);
+  const base = DEER_FLEE_BASE + Math.trunc((DEER_FLEE_NOISE_SCALE * ctx.noise) / ctx.noiseMax);
+  const radius = Math.trunc((base * (FLEE_SCALE[c.kind] ?? 100)) / 100);
   return distSq(c.x, c.y, near.x, near.y) <= radius * radius ? near : null;
+}
+
+/**
+ * A set snare catches what walks onto it.
+ *
+ * This is the only way to eat that does not require you to be present, and
+ * that is the point of it: a trapline is work you did *earlier*, quietly,
+ * which is the exact opposite of every other way of getting food here. It
+ * only takes the small prey — a snare does not hold a river-goat and it
+ * certainly does not hold a boar — so it is the hare's counterpart rather
+ * than a replacement for hunting.
+ *
+ * Returns the tile indices of every snare that sprang this tick, so the
+ * caller can clear them and say so.
+ */
+export function checkSnares(creatures: Creature[], ctx: CreatureCtx): number[] {
+  const sprung: number[] = [];
+  if (!ctx.world.snares.size) return sprung;
+
+  for (const c of creatures) {
+    if (c.state === "dead" || c.kind !== "hare") continue;
+    const tx = Math.floor(c.x / TILE);
+    const ty = Math.floor(c.y / TILE);
+    const idx = ctx.world.index(tx, ty);
+    if (!ctx.world.snares.has(idx)) continue;
+    // Even standing on one it is a coin-flip per tick, so a trapline is a
+    // thing you come back to rather than a thing you watch.
+    if (!ctx.rng.chance(1, 3)) continue;
+    c.state = "dead";
+    c.health = 0;
+    c.diedAtTick = ctx.tick;
+    sprung.push(idx);
+  }
+  return sprung;
 }
 
 /** Returns true if the strike killed it. */
 export function woundCreature(c: Creature, damage: number, tick: number, byId: number): boolean {
   c.health -= damage;
-  if (c.kind === "boar") {
+  if (c.kind === "hedge-boar") {
     c.angerTicks = BOAR_ANGER_TICKS;
     c.angryAt = byId;
   } else if (c.kind === "wolf") {

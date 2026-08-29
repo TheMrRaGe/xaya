@@ -87,14 +87,18 @@ is often registered as `text/plain`, and Chrome refuses a
 | key | verb |
 |---|---|
 | **WASD / arrows** | move |
-| **E** | gather — chop a tree, pick a bush, drink from water, or butcher a carcass you're standing over |
+| **E** | gather — chop a tree, chip a rock, pick a bush, drink from water, or butcher a carcass you're standing over |
 | **SPACE** | strike — hit the nearest living thing in reach |
 | **F** | feed the fire you're standing at (1 wood), or build one where there isn't one (5 wood, on grass) |
 | **1** | sharpen a spear (3 wood) — 3 damage a hit instead of 1, for 12 hits |
 | **2** | cook one raw meat (must be at a fire) |
 | **3** | stitch a hide cloak (2 hide, at a fire) — cold takes half as much, until it wears through |
 | **4** | eat — cooked if you have it, raw if you're desperate |
-| **T** | cycle what you're offering (wood / raw meat / cooked meat / hide) |
+| **5** | knap a knife (1 stone, 1 wood) — more off every carcass, for 20 of them, and the only way to cut cord |
+| **6** | bind an axe (2 stone, 1 wood) — two more logs a tree *and a third less noise*, for 25 chops |
+| **7** | cut cord (1 hide → 2 cord) — needs a knife in hand |
+| **8** | make a snare (2 cord, 1 wood); press again to set the one you're carrying |
+| **T** | cycle what you're offering (wood / stone / cord / raw meat / cooked meat / hide) |
 | **G** | give one of it to the nearest other soul |
 
 ## What's actually happening under the hood
@@ -120,13 +124,22 @@ plan committed at the repo root's `doc/world/`.
   is *visible*, to you and to him, and the counter-play falls out of it for
   free: work in short bursts, or go quiet and let the flock thin, or be loud
   somewhere on purpose and leave before he arrives.
-- **Deer spook, boar charge, wolves hunt.** Deer flee from you, and from a
+- **Five animals, and each one is a different question.** Prey flee from a
   radius that grows with your noise — a camp that gathers hard all day is a
-  camp whose meat has walked to the far side of the map. Boar ignore you
-  until you swing at one, and a boar is *faster than you are*. You cannot
-  outrun what you started; you can only outlast its temper (~26s) or put a
-  spear in it. That is the one place in Stage B where greed, not bad luck,
-  kills you.
+  camp whose meat has walked to the far side of the map — but they do not
+  all have the same nerve, and that is most of what separates them:
+
+  | | | |
+  |---|---|---|
+  | **hare** | 1 meat, no hide | Faster than anything in the Verge and gone before you are in range. **You cannot catch one on foot.** It is why the snare exists. |
+  | **deer** | 2 meat, 1 hide | The ordinary hunt. Slightly slower than you, so a chase is winnable but not free. |
+  | **river-goat** | 4 meat, 2 hide | Slow, calm, hard to frighten, worth more than anything else you can take. The good hunt, and §44's "first livestock most souls ever keep". |
+  | **hedge-boar** | 3 meat, 2 hide | Ignores you until you swing at it, and it is *faster than you are*. |
+  | **wolf** | 2 meat, 2 hide | Comes looking for you. |
+
+  A boar is the one place in Stage B where greed, not bad luck, kills you:
+  you cannot outrun what you started, you can only outlast its temper
+  (~26s) or put a spear in it.
 
   Wolves are the odd one out, and the newest thing in the Verge: they are
   the only beast that comes looking for you rather than waiting to be
@@ -143,6 +156,26 @@ plan committed at the repo root's `doc/world/`.
   is worth little and makes you sick one bite in four; cooked meat is worth
   four times as much and warms you. Hides become a cloak. The fire is now
   load-bearing three ways — warmth, cooking, and being seen.
+- **Stone is free, and loud.** A rock outcrop does not run out the way a
+  tree does — you chip at it and it is still a rock — so stone is the one
+  material that is never scarce. What it costs is *attention*: hammering
+  stone is the loudest single thing you can do in the Verge, louder than
+  building a fire. That puts tools on the same thesis as everything else
+  here rather than on a respawn timer, and it means the decision is never
+  "can I afford this" but "can I afford to be heard making it."
+
+  Off that: a **knife** (more off every carcass, and the only way to cut
+  cord) and an **axe** — two more logs a tree *and a third less noise*,
+  which makes it the one tool that leaves you safer than owning no tool at
+  all. Same argument skill makes, bought with stone instead of hours.
+- **The snare is the only work that pays while you are somewhere else.**
+  Hide → cord (needs a knife) → snare → set it in the grass and walk away.
+  It takes hares and nothing bigger, it is nearly silent to set, and it
+  springs on its own whether or not anyone is watching. Every other way of
+  eating in this game requires you to be present and loud at the moment it
+  happens; a trapline is work you did *earlier*, quietly, and it is the
+  first thing in Stage B that rewards patience over nerve. The Grey King
+  has a line about that, and he does not enjoy it.
 - **Skill is earned by doing, and dies with you** (DESIGN §6.10). No perks,
   no classes, no starting traits — every soul arrives at zero and can learn
   anything, and the only difference between two players is which hours they
@@ -246,8 +279,8 @@ Per the plan's own named cut list (§44), checked off:
 | In scope | Built |
 |---|---|
 | The Verge, nothing else | ✅ one zone, no Realm gating |
-| A few professions worth of actions | ✅ gather, hunt, butcher, cook, craft (spear, cloak, fire) |
-| Three creatures | ✅ deer, boar, and the crows — plus a fourth, the wolf, added after this gate passed |
+| A few professions worth of actions | ✅ gather, chip, hunt, trap, butcher, cook, craft (spear, cloak, fire, knife, axe, cord, snare) |
+| Three creatures | ✅ and then some — hare, deer, river-goat, hedge-boar, wolf, and the crows. §44 asked for three; the extras came after the gate passed, and each one answers a different question rather than padding a bestiary |
 | Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
 | One Lieutenant, no Muster | ✅ |
 | Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
@@ -264,13 +297,21 @@ The whole sim, worst case — moving, gathering and striking every single
 tick with the full creature roster alive — measured on this machine:
 
 ```
-2.55 µs/tick  ≈  0.003% of one core at 10 Hz
+5.05 µs/tick  ≈  0.005% of one core at 10 Hz
 ```
 
 That is the budget to protect. Everything in `src/sim/` is integer math on
 a 24×16 grid with no allocation in the hot path, which is why it runs on
 anything. If a feature can't be done in that shape, it's a feature for a
 tier that isn't the tick.
+
+It was 2.55 µs when the roster was six animals and there were nine verbs.
+Twelve animals and thirteen verbs doubled it, which is the honest and
+boring answer: **the cost is linear in creatures**, because every one of
+them is stepped every tick. That is fine at twelve and it is fine at fifty.
+It is *not* fine at the point someone adds a population model, which is
+exactly why §44 cut one — the roster is fixed and respawns on a timer, and
+a tick that costs 40ms is what happens if that ever stops being true.
 
 ## What to actually test
 
@@ -284,6 +325,13 @@ Play until you die at least twice. Then ask, honestly:
   one that tells you whether the noise thesis reads as a mechanic or just as
   a number in the HUD.
 - Did you ever pick a fight with a boar on purpose? Did you regret it?
+- Did you build a trapline, or did you forget the snare existed? If it never
+  occurred to you to set one and walk away, the game has not managed to
+  teach that patience is a strategy — and that is the one new idea here.
+- Was chipping stone a decision or a chore? It's meant to be the loudest
+  thing you can do, so "I want an axe but not *here*, and not now" is the
+  thought it should produce. If you just stood at a rock and held E, the
+  noise cost is too low.
 - Did a wolf ever find you before you found it — and did you notice it was
   night that did it, or did it just feel like bad luck?
 - When the fire burned low, did going for wood feel like a chore or like a

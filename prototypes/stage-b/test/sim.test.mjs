@@ -32,8 +32,12 @@ function check(name, cond, detail = "") {
   const s = fresh();
   const p = s.players[0];
   const kinds = s.creatures.map((c) => c.kind).sort().join(",");
-  check("eight creatures spawn", s.creatures.length === 8, `got ${s.creatures.length}`);
-  check("roster is 4 deer + 2 boar + 2 wolves", kinds === "boar,boar,deer,deer,deer,deer,wolf,wolf", kinds);
+  check("twelve creatures spawn", s.creatures.length === 12, `got ${s.creatures.length}`);
+  check(
+    "the roster is prey, boar and wolves",
+    kinds === "deer,deer,deer,hare,hare,hare,hedge-boar,hedge-boar,river-goat,river-goat,wolf,wolf",
+    kinds,
+  );
   const tooClose = s.creatures.filter((c) => Math.hypot(c.x - p.x, c.y - p.y) < 6 * TILE);
   check("nothing spawns in your lap", tooClose.length === 0, `${tooClose.length} within 6 tiles`);
 }
@@ -127,7 +131,7 @@ function check(name, cond, detail = "") {
   const py = Math.floor(p.y / TILE);
 
   p.pack.spear = 12;
-  const boar = s.creatures.find((c) => c.kind === "boar");
+  const boar = s.creatures.find((c) => c.kind === "hedge-boar");
   for (let i = 0; i < 12; i++) {
     p.x = boar.x;
     p.y = boar.y;
@@ -423,6 +427,120 @@ function check(name, cond, detail = "") {
   s2.tick = 2999;
   const deaths = stepTick(s2, IDLE);
   check("a bite that lands can kill", deaths.length === 1 && deaths[0].cause === "savaged by wolves", JSON.stringify(deaths));
+}
+
+// --- 16. stone, and the tools that come off a rock ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+
+  // A rock does not run out — that is the whole deal with it.
+  s.world.set(px + 1, py, Tile.Rock);
+  const quiet = s.noise;
+  stepTick(s, [I({ gather: true })]);
+  check("chipping a rock yields stone", p.pack.stone === 1, `stone=${p.pack.stone}`);
+  check("and the rock is still there", s.world.get(px + 1, py) === Tile.Rock);
+  check("and it is the loudest work there is", s.noise - quiet >= 200, `+${s.noise - quiet}`);
+
+  p.pack.stone = 4;
+  p.pack.wood = 4;
+  stepTick(s, [I({ makeKnife: true })]);
+  check("a knife costs stone and wood", p.pack.knife > 0 && p.pack.stone === 3 && p.pack.wood === 3, JSON.stringify(p.pack));
+  stepTick(s, [I({ makeAxe: true })]);
+  check("an axe costs more stone", p.pack.axe > 0 && p.pack.stone === 1, `stone=${p.pack.stone}`);
+}
+
+// --- 17. an axe is more wood and less noise, which is the point of it ---
+{
+  const bare = fresh();
+  const axed = fresh();
+  for (const s of [bare, axed]) {
+    const p = s.players[0];
+    s.world.set(Math.floor(p.x / TILE) + 1, Math.floor(p.y / TILE), Tile.Tree);
+  }
+  axed.players[0].pack.axe = 5;
+
+  stepTick(bare, [I({ gather: true })]);
+  stepTick(axed, [I({ gather: true })]);
+  check("an axe gets more off a tree", axed.players[0].pack.wood > bare.players[0].pack.wood, `${bare.players[0].pack.wood} vs ${axed.players[0].pack.wood}`);
+  check("and does it more quietly", axed.noise < bare.noise, `${bare.noise} vs ${axed.noise}`);
+  check("and wears with use", axed.players[0].pack.axe === 4, `axe=${axed.players[0].pack.axe}`);
+}
+
+// --- 18. a knife earns its keep on a carcass, and cuts the only cordage ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const goat = s.creatures.find((c) => c.kind === "river-goat");
+  goat.state = "dead";
+  goat.health = 0;
+  goat.diedAtTick = s.tick;
+  p.x = goat.x;
+  p.y = goat.y;
+  p.pack.knife = 3;
+  stepTick(s, [I({ gather: true })]);
+  // river-goat is 4 meat / 2 hide before the blade's +1 each.
+  check("a knife takes more off a carcass", p.pack.rawMeat === 5 && p.pack.hide === 3, JSON.stringify(p.pack));
+  check("and the edge dulls", p.pack.knife === 2, `knife=${p.pack.knife}`);
+
+  stepTick(s, [I({ makeCordage: true })]);
+  check("a knife cuts hide into cord", p.pack.cordage === 2 && p.pack.hide === 2, JSON.stringify(p.pack));
+
+  const noKnife = fresh();
+  noKnife.players[0].pack.hide = 4;
+  stepTick(noKnife, [I({ makeCordage: true })]);
+  check("bare hands cut no cord", noKnife.players[0].pack.cordage === 0);
+}
+
+// --- 19. the snare: work you did earlier, paying out while you are elsewhere ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Grass);
+
+  p.pack.cordage = 2;
+  p.pack.wood = 1;
+  stepTick(s, [I({ setSnare: true })]);
+  check("a snare is made from cord and wood", p.pack.snare === 1 && p.pack.cordage === 0, JSON.stringify(p.pack));
+
+  const before = s.noise;
+  stepTick(s, [I({ setSnare: true })]);
+  check("pressing again sets it", s.world.get(px, py) === Tile.Snare && p.pack.snare === 0, `tile=${s.world.get(px, py)}`);
+  check("the world knows where it is", s.world.snares.has(s.world.index(px, py)));
+  check("and setting one is quiet", s.noise - before < 30, `+${s.noise - before}`);
+
+  // Walk a hare onto it and it eventually springs.
+  const hare = s.creatures.find((c) => c.kind === "hare");
+  let ticks = 0;
+  while (s.world.snares.size > 0 && ticks < 60) {
+    hare.x = px * TILE;
+    hare.y = py * TILE;
+    p.health = 100;
+    stepTick(s, IDLE);
+    ticks++;
+  }
+  check("a hare that runs onto it is caught", hare.state === "dead", `after ${ticks} ticks`);
+  check("and the snare is spent", s.world.get(px, py) === Tile.Grass);
+}
+
+// --- 20. a hare cannot be run down, which is why the snare exists ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const hare = s.creatures.find((c) => c.kind === "hare");
+  const goat = s.creatures.find((c) => c.kind === "river-goat");
+  // Stand the same distance from each and see which one tolerates it.
+  hare.x = p.x + 4 * TILE;
+  hare.y = p.y;
+  goat.x = p.x + 4 * TILE;
+  goat.y = p.y + TILE;
+  stepTick(s, IDLE);
+  check("a hare bolts from across the field", hare.state === "flee", hare.state);
+  check("a river-goat lets you walk up to it", goat.state !== "flee", goat.state);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

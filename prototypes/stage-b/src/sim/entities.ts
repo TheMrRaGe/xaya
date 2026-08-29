@@ -18,14 +18,29 @@ export interface Needs {
   warmth: number; // cold — Tailor/Mason/Charcoaler, and a campfire
 }
 
-/** The things one soul can hand another. Tools are not on the list yet. */
-export type Tradeable = "wood" | "rawMeat" | "cookedMeat" | "hide";
+/**
+ * The things one soul can hand another. Materials only, still — a tool is a
+ * wear counter rather than a countable object, so handing one over is a
+ * different problem and it is not this one yet.
+ */
+export type Tradeable = "wood" | "stone" | "cordage" | "rawMeat" | "cookedMeat" | "hide";
 
-export const TRADEABLES: readonly Tradeable[] = ["wood", "rawMeat", "cookedMeat", "hide"];
+export const TRADEABLES: readonly Tradeable[] = [
+  "wood",
+  "stone",
+  "cordage",
+  "rawMeat",
+  "cookedMeat",
+  "hide",
+];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
 export interface Pack {
   wood: number;
+  /** Chipped off a rock outcrop. Never scarce; just loud to get (see Tile.Rock). */
+  stone: number;
+  /** Cut from hide with a knife. What a snare is actually made of. */
+  cordage: number;
   rawMeat: number;
   cookedMeat: number;
   hide: number;
@@ -37,6 +52,9 @@ export interface Pack {
    */
   spear: number; // strikes left. 3 damage instead of 1 while it lasts
   cloak: number; // cold ticks left. Halves what the cold takes
+  knife: number; // uses left. More off a carcass, and the only way to cut cordage
+  axe: number; // chops left. More wood off a tree, and quieter doing it
+  snare: number; // how many you are carrying, unset
 }
 
 export type DeathCause =
@@ -77,7 +95,19 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     y,
     health: HEALTH_MAX,
     needs: { satiety: NEED_MAX, hydration: NEED_MAX, warmth: NEED_MAX },
-    pack: { wood: 0, rawMeat: 0, cookedMeat: 0, hide: 0, spear: 0, cloak: 0 },
+    pack: {
+      wood: 0,
+      stone: 0,
+      cordage: 0,
+      rawMeat: 0,
+      cookedMeat: 0,
+      hide: 0,
+      spear: 0,
+      cloak: 0,
+      knife: 0,
+      axe: 0,
+      snare: 0,
+    },
     skills: newSkills(),
     offer: "wood",
     kills: 0,
