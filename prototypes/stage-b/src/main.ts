@@ -125,6 +125,7 @@ function publishDebug(current: Snapshot): void {
     souls: current.players.length,
     me: myId >= 0 ? current.players[myId] : null,
     others: current.players.filter((p) => p.id !== myId).map((p) => ({ id: p.id, x: p.x, y: p.y, alive: p.alive })),
+    lieutenant: { x: current.lieutenant.x, y: current.lieutenant.y, state: current.lieutenant.state },
     trades: current.trades,
   });
 }

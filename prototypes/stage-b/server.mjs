@@ -15,8 +15,7 @@
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { staticHandler } from "./serve.mjs";
-import { newSim, stepTick, TICK_HZ, NO_INPUT } from "./dist/sim/tick.js";
-import { newPlayer } from "./dist/sim/entities.js";
+import { newSim, stepTick, addSoul, replaceSoul, TICK_HZ, NO_INPUT } from "./dist/sim/tick.js";
 import { snapshot } from "./dist/net/snapshot.js";
 
 const PORT = Number(process.env.PORT) || 8000;
@@ -38,19 +37,16 @@ function freshInput() {
   return { ...NO_INPUT };
 }
 
+// Where a soul arrives, and who is allowed to notice it, are decisions the
+// sim makes — the server only says that a soul is arriving.
 function joinSoul() {
-  const id = state.players.length;
-  const player = newPlayer(nextLineage++, id);
-  state.players.push(player);
-  state.lastDamageSource.push("starved");
-  pending.set(id, freshInput());
+  const player = addSoul(state, nextLineage++);
+  pending.set(player.id, freshInput());
   return player;
 }
 
 function respawnSoul(id) {
-  const fresh = newPlayer(nextLineage++, id);
-  state.players[id] = fresh;
-  state.lastDamageSource[id] = "starved";
+  const fresh = replaceSoul(state, id, nextLineage++);
   pending.set(id, freshInput());
   return fresh;
 }

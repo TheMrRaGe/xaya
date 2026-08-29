@@ -130,7 +130,25 @@ is often registered as `text/plain`, and Chrome refuses a
   No server, no chain — `localStorage` is genuinely the right amount of
   infrastructure for one person testing whether the loop feels good.
 
-### Three things that were quietly broken
+### He used to camp the spawn
+
+Reported from actual play, and worth writing down because no single line of
+it was wrong — it was three correct behaviours multiplying:
+
+1. The crows gather over wherever you were last loud. After a fight, that's
+   your corpse.
+2. A patrolling Lieutenant walks toward the crows. So he stayed.
+3. Every new soul arrived at the same fixed tile, right where you'd been
+   working, with no grace period.
+
+So he stood on the spot and killed each soul as it appeared. That isn't
+difficulty, it's a locked door. Now: a kill he made satisfies him for 40
+seconds, in which he ignores both souls and crows and walks away; a new soul
+arrives at least 8 tiles from him and clear of the birds; and for 12 seconds
+it is beneath his notice, which the HUD says out loud so you don't spend it
+running from nothing. He is exactly as lethal once he sees you.
+
+### Three more things that were quietly broken
 
 Worth recording, because two of them had been silently cancelling the
 design's own central tension:
@@ -206,11 +224,11 @@ With two people, the only question that matters:
   professions aren't different enough from each other yet, and that is a
   content problem rather than an economy one.
 
-One thing you'll notice immediately with two people: an idle soul is dead in
-about 23 seconds, because the Lieutenant is tuned for a solo run where you
-are always moving. Standing still to talk or to hand something over is
-currently lethal. That number wants revisiting once two people have actually
-tried to have a conversation in the Verge — but feel it first.
+Numbers you may want to move after playing: `KILL_REST_TICKS` (how long he
+loses interest for after a kill), `RESPAWN_GRACE_TICKS` (how long a new soul
+is beneath notice) and `SPAWN_CLEAR_TILES` (how far away it arrives), all at
+the top of `src/sim/tick.ts`. They are set generously on purpose — a death
+loop is far worse than an easy minute.
 
 That's the whole gate. Tuning numbers (drain rates, detection radius,
 Lieutenant speed, how hard a boar hits) are all placeholders at the top of

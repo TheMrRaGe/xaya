@@ -227,9 +227,12 @@ export function drawHud(
     .filter(Boolean)
     .join("  ");
   const others = state.players.filter((o) => o.id !== p.id && o.alive).length;
+  // A new soul is beneath the Grey King's notice for a few seconds. Say so,
+  // or the player spends them running from nothing.
+  const grace = p.graceUntil > state.tick ? `  [unseen ${Math.ceil((p.graceUntil - state.tick) / 10)}s]` : "";
   ctx.fillText(
     `soul #${p.lineage}  ${isNight(state.tick) ? "night" : "day"}  kills ${p.kills}` +
-      `${p.atFire ? "  [at fire]" : ""}${others > 0 ? `  ${others} other soul${others > 1 ? "s" : ""}` : ""}`,
+      `${p.atFire ? "  [at fire]" : ""}${grace}${others > 0 ? `  ${others} other soul${others > 1 ? "s" : ""}` : ""}`,
     10,
     hudY + 44,
   );

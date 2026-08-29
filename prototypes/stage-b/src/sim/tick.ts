@@ -21,9 +21,10 @@ import {
   NEED_MAX,
   HEALTH_MAX,
   DeathCause,
+  newPlayer,
   newLieutenant,
 } from "./entities.js";
-import { stepToward, moveWithCollision } from "./move.js";
+import { stepToward, moveWithCollision, walkable } from "./move.js";
 import {
   Creature,
   STATS,
@@ -87,6 +88,20 @@ const CLOAK_DURABILITY = 400; // cold ticks it can take before it is rags
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
 const REGROW_TICKS = 900; // ~90s
+
+/**
+ * What stops a Lieutenant camping the place he made a kill.
+ *
+ * Three things were compounding. The crows sit over wherever you were last
+ * loud, which after a fight is your corpse; a patrolling Lieutenant walks
+ * toward the crows; and every new soul used to arrive at the same fixed
+ * tile. So he stood on the spot and killed each soul as it appeared, which
+ * is not difficulty, it is a locked door.
+ */
+const KILL_REST_TICKS = 400; // 40s in which he is satisfied and ignores everything
+const RESPAWN_GRACE_TICKS = 120; // 12s in which a new soul is beneath his notice
+const SPAWN_CLEAR_TILES = 8; // how far a new soul arrives from him
+const SPAWN_CLEAR_CROWS = 4; // and from whatever the birds are still watching
 
 const DAY_TICKS = 3000;
 const NIGHT_TICKS = 3000;
@@ -188,6 +203,52 @@ export function newSim(seed: number, players: Player[]): SimState {
     log: [],
     flags: { firstGather: false, firstSighting: false, firstKill: false, firstCrows: false, firstTrade: false },
   };
+}
+
+/**
+ * Somewhere for a new soul to wash up: walkable, well away from the
+ * Lieutenant, and not under the crows. A fixed arrival tile is what turns
+ * one bad death into ten.
+ */
+function findSpawn(state: SimState): { x: number; y: number } {
+  const { world, rng, lieutenant } = state;
+  const fromHim = SPAWN_CLEAR_TILES * TILE * (SPAWN_CLEAR_TILES * TILE);
+  const fromBirds = SPAWN_CLEAR_CROWS * TILE * (SPAWN_CLEAR_CROWS * TILE);
+  for (let attempt = 0; attempt < 64; attempt++) {
+    const x = rng.nextInt(WORLD_W) * TILE;
+    const y = rng.nextInt(WORLD_H) * TILE;
+    if (!walkable(world, x, y)) continue;
+    if (distSq(x, y, lieutenant.x, lieutenant.y) < fromHim) continue;
+    if (state.noise >= CROW_THRESHOLD && distSq(x, y, state.crowX, state.crowY) < fromBirds) continue;
+    return { x, y };
+  }
+  // The Verge is small; on an unlucky roll, settle for the far corner from
+  // him rather than dropping a soul in his lap.
+  const x = lieutenant.x > ((WORLD_W - 1) * TILE) / 2 ? 0 : (WORLD_W - 1) * TILE;
+  const y = lieutenant.y > ((WORLD_H - 1) * TILE) / 2 ? 0 : (WORLD_H - 1) * TILE;
+  return { x, y };
+}
+
+/** A soul joins the Verge. The authority above the sim calls this, not `newPlayer`. */
+export function addSoul(state: SimState, lineage: number): Player {
+  const spot = findSpawn(state);
+  const player = newPlayer(lineage, state.players.length, spot.x, spot.y, state.tick + RESPAWN_GRACE_TICKS);
+  state.players.push(player);
+  state.lastDamageSource.push("starved");
+  return player;
+}
+
+/** The next soul in a lineage takes over a slot. Ids are stable; souls are not. */
+export function replaceSoul(state: SimState, id: number, lineage: number): Player {
+  const spot = findSpawn(state);
+  const player = newPlayer(lineage, id, spot.x, spot.y, state.tick + RESPAWN_GRACE_TICKS);
+  state.players[id] = player;
+  state.lastDamageSource[id] = "starved";
+  if (state.lieutenant.target === id) {
+    state.lieutenant.state = "patrol";
+    state.lieutenant.target = -1;
+  }
+  return player;
 }
 
 export function isNight(tick: number): boolean {
@@ -298,6 +359,18 @@ function kill(state: SimState, player: Player): DeathEvent {
   player.alive = false;
   const cause = state.lastDamageSource[player.id] ?? "starved";
   say(state, `Soul #${player.lineage} is dead — ${cause}.`);
+
+  const { lieutenant } = state;
+  if (lieutenant.target === player.id) {
+    lieutenant.state = "patrol";
+    lieutenant.target = -1;
+  }
+  if (cause === "cut down by a Lieutenant") {
+    // He has what he came for. He rests, and he rests somewhere else.
+    lieutenant.restUntil = state.tick + KILL_REST_TICKS;
+    lieutenant.waypointX = (WORLD_W - 1) * TILE - lieutenant.x;
+    lieutenant.waypointY = (WORLD_H - 1) * TILE - lieutenant.y;
+  }
   return {
     id: player.id,
     lineage: player.lineage,
@@ -603,7 +676,7 @@ function tickLieutenant(state: SimState): void {
   let nearest: Player | null = null;
   let nearestSq = Number.MAX_SAFE_INTEGER;
   for (const p of state.players) {
-    if (!p.alive) continue;
+    if (!p.alive || p.graceUntil > state.tick) continue;
     const d = distSq(lieutenant.x, lieutenant.y, p.x, p.y);
     if (d < nearestSq) {
       nearestSq = d;
@@ -611,7 +684,9 @@ function tickLieutenant(state: SimState): void {
     }
   }
 
-  if (lieutenant.state === "patrol" && nearest && nearestSq <= detectionRadius * detectionRadius) {
+  const resting = state.tick < lieutenant.restUntil;
+
+  if (!resting && lieutenant.state === "patrol" && nearest && nearestSq <= detectionRadius * detectionRadius) {
     lieutenant.state = "hunt";
     lieutenant.target = nearest.id;
     if (!state.flags.firstSighting) {
@@ -635,9 +710,11 @@ function tickLieutenant(state: SimState): void {
   if (lieutenant.state === "hunt" && hunted) {
     targetX = hunted.x;
     targetY = hunted.y;
-  } else if (state.noise >= CROW_THRESHOLD) {
+  } else if (state.noise >= CROW_THRESHOLD && !resting) {
     // He does not need to see you. He needs to see the birds — which is the
     // whole design in one line: what you build is what gives you away.
+    // Unless he has just killed someone, in which case the birds over that
+    // body are the last thing that should be holding him in place.
     targetX = state.crowX;
     targetY = state.crowY;
   } else {

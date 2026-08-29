@@ -54,22 +54,29 @@ export interface Player {
   offer: Tradeable; // what this soul hands over when it gives
   kills: number;
   atFire: boolean; // derived each tick; the HUD and the crafting verbs want it
+  /** Ticks until the Grey King's servants will look at a new soul at all. */
+  graceUntil: number;
   alive: boolean;
   lineage: number; // which soul this is — the heir count
 }
 
-/** Souls wash up a couple of tiles apart, inside the clearing world.ts keeps free. */
-export function newPlayer(lineage: number, id = 0): Player {
+/**
+ * Souls wash up a couple of tiles apart, inside the clearing world.ts keeps
+ * free. Callers that know where the danger is (see `addSoul` in tick.ts)
+ * should pass somewhere better.
+ */
+export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 3 * TILE, graceUntil = 0): Player {
   return {
     id,
-    x: (3 + id * 2) * TILE,
-    y: 3 * TILE,
+    x,
+    y,
     health: HEALTH_MAX,
     needs: { satiety: NEED_MAX, hydration: NEED_MAX, warmth: NEED_MAX },
     pack: { wood: 0, rawMeat: 0, cookedMeat: 0, hide: 0, spear: 0, cloak: 0 },
     offer: "wood",
     kills: 0,
     atFire: false,
+    graceUntil,
     alive: true,
     lineage,
   };
@@ -85,8 +92,14 @@ export interface Lieutenant {
   waypointX: number;
   waypointY: number;
   contactTicks: number; // consecutive ticks in a Mortal Wound with a soul
+  /**
+   * Ticks until he is interested again. He took what he came for; a
+   * Lieutenant that stands over the body waiting for the next soul to
+   * arrive is not frightening, it is a wall.
+   */
+  restUntil: number;
 }
 
 export function newLieutenant(x: number, y: number): Lieutenant {
-  return { x, y, state: "patrol", target: -1, waypointX: x, waypointY: y, contactTicks: 0 };
+  return { x, y, state: "patrol", target: -1, waypointX: x, waypointY: y, contactTicks: 0, restUntil: 0 };
 }
