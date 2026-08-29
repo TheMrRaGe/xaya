@@ -1,8 +1,8 @@
 /**
- * The Barrow-list (§10) — "Every settlement keeps a board of its dead, by
- * name and by what killed them." For a solo Stage B prototype that's just
- * localStorage: no server, no chain, per §44's Stage B cut ("local state or
- * the cheapest possible server").
+ * The Barrow-list (doc/world/PLAN.md §10) — "Every settlement keeps a board
+ * of its dead, by name and by what killed them." For a solo Stage B
+ * prototype that's just localStorage: no server, no chain, per §44's Stage B
+ * cut ("local state or the cheapest possible server").
  */
 import { DeathCause } from "../sim/entities.js";
 

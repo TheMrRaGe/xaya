@@ -1,6 +1,7 @@
 /**
  * Player and Lieutenant state — the only two entities Stage B needs
- * (§44 cut list: "one Lieutenant. No Captain, no Warden, no Muster").
+ * (doc/world/PLAN.md §44 cut list: "one Lieutenant. No Captain, no Warden,
+ * no Muster").
  */
 import { TILE } from "./fixed.js";
 
@@ -8,7 +9,7 @@ export const NEED_MAX = 1000;
 export const HEALTH_MAX = 100;
 
 export interface Needs {
-  satiety: number; // hunger — Farmer/Hunter/Fisher answer this (§17)
+  satiety: number; // hunger — Farmer/Hunter/Fisher answer this (doc/world/PLAN.md §17)
   hydration: number; // thirst — Dowser/Brewer
   warmth: number; // cold — Tailor/Mason/Charcoaler, and a campfire
 }

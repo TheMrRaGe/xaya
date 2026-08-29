@@ -1,8 +1,8 @@
 /**
  * The core sim tick — pure of rendering, pure of the DOM, runs at a fixed
- * 10 Hz per §21 ("world/survival sim at 10 Hz"). Everything in here is
- * integers; nothing in here reads a clock, iterates a Map/object in
- * insertion-order-dependent ways for anything that matters, or calls
+ * 10 Hz per doc/world/PLAN.md §21 ("world/survival sim at 10 Hz"). Everything
+ * in here is integers; nothing in here reads a clock, iterates a Map/object
+ * in insertion-order-dependent ways for anything that matters, or calls
  * Math.random. See src/sim/fixed.ts and src/sim/rng.ts for why.
  */
 import { TILE, clamp, distSq } from "./fixed.js";
@@ -13,7 +13,7 @@ import { Player, Lieutenant, Needs, NEED_MAX, HEALTH_MAX, DeathCause, newLieuten
 export const TICK_HZ = 10;
 
 const PLAYER_SPEED = 300; // fixed-point units/tick — 3 tiles/sec
-const LIEUTENANT_SPEED = 260; // slightly slower than the player: fleeing must work (§21)
+const LIEUTENANT_SPEED = 260; // slightly slower than the player: fleeing must work (doc/world/PLAN.md §21)
 
 const HYDRATION_DRAIN_EVERY = 1; // ticks per -1 hydration
 const SATIETY_DRAIN_EVERY = 2;

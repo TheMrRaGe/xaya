@@ -1,14 +1,16 @@
 /**
- * Stage B — "the smallest loop that can kill you" (plan §44).
+ * Stage B — "the smallest loop that can kill you" (doc/world/PLAN.md §44).
  *
  * One zone (the Verge). Gather wood, drink, eat berries, build a fire.
  * Hunger, thirst and cold all tick. One Lieutenant hunts you, and hunting
  * you is louder the more you've built. Permadeath, with a Barrow-list that
  * remembers every soul that came before this one.
  *
- * This is deliberately not the full game — see the Stage B cut list in the
- * plan. It exists to answer one question: does dying hurt, and do you
- * start again anyway?
+ * This is deliberately not the full game — see the Stage B cut list in
+ * doc/world/PLAN.md §44. It exists to answer one question: does dying
+ * hurt, and do you start again anyway?
+ *
+ * Section numbers cited throughout this file (§N) refer to doc/world/PLAN.md.
  */
 import { WORLD_W, WORLD_H } from "./sim/world.js";
 import { TILE_PX, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";

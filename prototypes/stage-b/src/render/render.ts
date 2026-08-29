@@ -1,6 +1,6 @@
 /**
- * The renderer — the one place floats are allowed (§43A). It reads sim
- * state and draws it; it never writes back into it.
+ * The renderer — the one place floats are allowed (doc/world/PLAN.md §43A).
+ * It reads sim state and draws it; it never writes back into it.
  */
 import { TILE } from "../sim/fixed.js";
 import { World, Tile } from "../sim/world.js";

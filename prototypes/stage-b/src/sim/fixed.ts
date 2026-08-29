@@ -1,7 +1,7 @@
 /**
  * Fixed-point arithmetic for the sim tier.
  *
- * The plan (§43A, §49 "Adopt the discipline, skip the harness") is explicit:
+ * doc/world/PLAN.md (§43A, §49 "Adopt the discipline, skip the harness") is explicit:
  * no floats anywhere in the tick, from line one, even before a chain exists
  * to make it matter. It costs almost nothing to write correctly now and is
  * expensive to retrofit later. Floats are permitted only in the renderer
