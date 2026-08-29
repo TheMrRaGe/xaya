@@ -93,6 +93,11 @@ Two module accounts, neither with a private key:
 - **Genesis Endowment** — fixed mint at genesis.
 - **The Barrow** — everything taken from the dead. Monotonically increasing.
 
+Both are denominated in game coin, which has no exit to real value (§6.4).
+The invariant below therefore protects the integrity of the game's central
+prize rather than custody of anyone's money — a much better thing to have to
+get right.
+
 Outflow is possible through exactly two code paths: `MsgClaimVictory` validated
 against the season's Victory Predicate, and the scheduled inter-season
 carry-over. This is enforced as a **Cosmos invariant that halts the chain** if
@@ -275,6 +280,12 @@ timelock, if at all):
 
 ## 6. Death and the Economy
 
+**Nobody buys in.** Entry is free and worldwide: no stake, no wallet, no key,
+no purchase. A soul starts with zero coin and earns everything it has by
+working in the world — and what it earns stays in the world. There is no
+cash-out. That one decision is what makes everything below buildable, and
+§6.8 is the argument for why it costs far less than it looks like it does.
+
 ### 6.1 Permadeath with lineage
 
 The **character** dies, with 100% of its gear, and never acts again — it gets a
@@ -286,14 +297,48 @@ advantage carries forward.
 
 Every run is brutal. Retention does not go to zero after week one.
 
-### 6.2 The flywheel
+### 6.2 A production economy, not a payout
 
-Deaths grow the Hoard → a bigger prize attracts stronger raiders → stronger
-raiders die → the Hoard grows. Difficulty and reward scale together with no
-tuning required. This is the strongest structural idea in the concept and the
-design should protect it.
+Coin is earned by working: gathering, crafting, hunting, hauling, guarding,
+and selling the results to other players. **Nothing pays for time alone.** A
+faucet that pays by the hour is a wage, and a wage prices everything at the
+cost of the cheapest hour anyone anywhere will work — which is how every
+play-to-earn economy so far has ended.
 
-### 6.3 Beating the Overlord
+Supply of anything worth having is gated instead by **risk and skill**: ore
+from the deep Realms where the Lieutenants patrol, gear only a soul that has
+survived long enough knows how to make, anything that requires being loud in
+a dangerous place. Time gets a player in the door. Nerve decides what they
+are paid.
+
+### 6.3 Permadeath is the economic engine
+
+Virtual economies usually die of accumulation. The sword crafted in the
+first month still exists in the third year, supply only ever grows, and the
+crafting professions collapse into irrelevance.
+
+Here every death destroys a full kit, permanently. Demand for replacement is
+constant and cannot be satisfied — a crafter has a job forever, because
+their customers keep dying. The mechanic written for drama turns out to be
+the largest sink any game economy has had, and the whole coin-supply problem
+reduces to keeping the faucets smaller than it.
+
+### 6.4 The Hoard is a prize, not a pot of anyone's money
+
+The Hoard is denominated in game coin and has no exit to real value. It is
+enormous, public, and unreachable except through §6.5. Check what survives
+that change:
+
+> deaths grow the Hoard → a bigger prize attracts stronger raiders →
+> stronger raiders die → the Hoard grows
+
+All of it. The flywheel never depended on the coin being worth money; it
+depended on the prize being worth *wanting*, and standing among other
+players has outlasted every payout scheme ever bolted onto a game.
+Everything written about the Hoard was always about drama. Keep the drama,
+drop the money.
+
+### 6.5 Beating the Overlord
 
 Victory must be consensus-checkable, hard, and require *coordination* — a
 social event, not a solo grind, and not brute-forceable by capital.
@@ -308,7 +353,7 @@ followed by holding the Citadel through a final siege window.
 Critically, **the Overlord repairs sigils.** It spends action budget re-sealing
 what players break and fail to defend. It is a race, not a checklist.
 
-### 6.4 Distribution, and paying the dead
+### 6.6 Distribution, and paying the dead
 
 On victory the Hoard splits by verifiable contribution — sigil-breakers, siege
 holders, and **a share to the fallen**, paid to the lineages of everyone who
@@ -318,21 +363,61 @@ This is what converts permadeath from pure punishment into buy-in. Dying *for
 the cause* becomes rational. A doomed charge that breaks a sigil pays your
 descendants. Without this, the game is only cruel; with it, it has martyrs.
 
-### 6.5 If nobody wins
+### 6.7 If nobody wins
 
 At season end ~60% carries into the next Hoard and the Overlord grows stronger.
 The remainder is distributed to survivors as tribute for enduring. A pot
 compounding across seasons is the long-term hook — and a public, undeniable
 scoreboard of how badly everyone has failed so far.
 
-### 6.6 Sybils
+### 6.8 Access, and why free entry is the cheap option
 
-Entry is bonded and lineage is soulbound. Perfect sybil resistance is unsolved;
-the goal is to make sybils *unprofitable* rather than impossible. Note the
-happy accident: since everything the dead own flows to the Hoard, **a sybil
-farm is just a donation to the prize pool.** Design so the cheapest attack is
-also a gift.
+Free entry with a sealed economy is not a concession, it is the structure
+that lets the game exist anywhere. Gambling requires consideration, chance
+and a prize *together*; with entry free and the prize unable to become
+money, two of the three are simply absent. No stake, no wagering. No
+cash-out, no money transmission, no payout reporting, no identity check at
+the door, and no reason to geo-gate a player in any country.
 
+The ladder that follows:
+
+| rung | needs | can play | can win the Hoard |
+|---|---|---|---|
+| spectator | nothing | watches | no |
+| free soul | an account | all of it | yes |
+| sovereign soul | own key | all of it | yes, and can govern |
+
+**The chain gates settlement and governance. It never gates play.** The sim
+tier imports no chain, no wallet, no network call and no clock; that
+isolation is what makes a rung a deployment detail instead of a rewrite.
+
+Cash-out is a valve that can be opened later and never closed again.
+Opening it is a compliance project, and it needs only that trades were
+authoritative, logged, replayable and attached to durable identities from
+the first day. Those four are nearly free now and impossible to retrofit —
+so we build them now and decide later.
+
+### 6.9 Sybils, bots and the black market
+
+Free entry retires the old happy accident (a sybil farm was a donation,
+because sybils had to buy in). The live threat is now the bot farm: many
+accounts, grinding, and selling the proceeds outside the game for cash we
+neither see nor sanction.
+
+Three properties already in the design do most of the defending:
+
+- **Souls are soulbound.** An account's reputation cannot be sold, so the
+  black market's most valuable product does not exist.
+- **Permadeath.** Nothing accumulates. A farm's inventory evaporates on the
+  same schedule as everyone else's.
+- **The Overlord hunts predictable behaviour.** A grinder repeating an
+  optimal loop is the most legible thing in a Realm. The adaptive antagonist
+  we are building for narrative reasons is also, exactly, a bot detector —
+  worth remembering when choosing its reward function.
+
+What is left is ordinary operational work: trade logs we can unwind, terms
+that make coin a licence rather than property, and rate limits that cost a
+farm more than they cost a person.
 ---
 
 ## 7. Roadmap
@@ -354,8 +439,21 @@ Vote extensions, committee inference, determinism harness.
 *Gate: 10k consecutive ticks at >2/3 convergence, plus graceful Understudy
 fallback under forced divergence.*
 
-**Phase 3 — Season 0, valueless testnet.**
-Full loop, real players, worthless tokens.
+**Phase 3 — Season 0, public beta.**
+Full loop, real players, free entry, coin that cannot leave the world. Run
+the public beta on the cheapest authoritative server that works, with the
+chain proving itself in parallel on a devnet: a testnet is a deployment
+target for Season 0, not a prerequisite for a beta, and chain ops compete
+directly with making the game good. Say in advance whether the season wipes,
+and mean it — the worst outcome is players who believed their beta wealth
+carried over.
+
+Testnet stays a separate chain from main, permanently, so Season 0's coin
+and gear never migrate. That is a wipe, and it is survivable because of
+§6.1: a soul carries reputation, titles, epochs survived and a death log,
+and **zero material advantage**. So carry the souls and wipe the wealth. The
+beta's Barrow-list is the one thing worth migrating, and it is exactly the
+thing that costs nothing to honour.
 *Gate: the controller holds survival rate in band; victory is demonstrably
 achievable; the injection red team can annoy the Overlord but cannot reach the
 Hoard.*
@@ -365,7 +463,9 @@ Adapter training, eval harness, first ratification vote.
 *Gate: independent trainers converge on score; the constitution regression
 suite passes.*
 
-**Phase 5 — Mainnet, capped stakes.** Real value, per-lineage caps, Warden active.
+**Phase 5 — Mainnet.** Governance and settlement on chain, coin still sealed
+inside the world, Warden active. Cash-out stays shut until there is both a
+reason and a budget to open it.
 
 **Phase 6 — Sovereignty expansion, Warden sunset.**
 
@@ -379,12 +479,16 @@ The mitigation is to accept it: **the spectacle is the product.** Most people
 watch; few play. Build for spectators from day one — the audience is what makes
 the Hoard grow and what makes a victory mean anything.
 
-**2. Regulatory.** Players stake real value, lose it permanently into a pot
-someone eventually wins. Structurally that is a real-money tournament, and in
-several jurisdictions it reads as gambling regardless of how skill-dominant it
-is. Not a reason to stop; a reason to get counsel before Phase 5, geo-gate, and
-keep skill-determinacy documentable from the start. Phase 0–3 being valueless
-buys the time to do this properly.
+**2. Regulatory — largely designed out.** An earlier version of this plan had
+players stake real value into a pot someone eventually wins. That is
+structurally a real-money tournament, and reads as gambling in several
+jurisdictions no matter how skill-dominant it is. Free entry and a sealed
+economy remove the consideration and the prize-of-value, and most of the
+exposure goes with them. What remains is ordinary: consumer terms,
+age-appropriate content, and the discipline not to let coin leak into real
+value by accident — one leak recreates every problem at once, from an
+unlicensed market to payout reporting. Get counsel before opening cash-out,
+not before opening the beta.
 
 **3. Inference cost.** Per tick, per committee member. Mitigations: small
 consensus model, a committee subset rather than the full validator set, ticks
