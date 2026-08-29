@@ -17,6 +17,8 @@ import { WebSocketServer } from "ws";
 import { staticHandler } from "./serve.mjs";
 import { newSim, stepTick, addSoul, replaceSoul, TICK_HZ, NO_INPUT } from "./dist/sim/tick.js";
 import { snapshot } from "./dist/net/snapshot.js";
+import { createOverlord } from "./overlord.mjs";
+import { isNight, CROW_THRESHOLD } from "./dist/sim/tick.js";
 
 const PORT = Number(process.env.PORT) || 8000;
 const WORLD_SEED = 0xc0ffee;
@@ -32,6 +34,16 @@ const pending = new Map();
 
 /** The Barrow-list, server-side: every soul this Verge has buried. */
 const barrow = [];
+
+/**
+ * The Grey King watches. He cannot touch the world — he only reads the same
+ * notices the players do and says something about them (DESIGN §3.3).
+ */
+let logRead = 0;
+const overlord = await createOverlord((line) => {
+  state.log.push(`The Grey King: “${line}”`);
+  if (state.log.length > 40) state.log.shift();
+});
 
 function freshInput() {
   return { ...NO_INPUT };
@@ -115,8 +127,21 @@ setInterval(() => {
 
   for (const death of deaths) {
     barrow.push(death);
+    overlord.noteDeath(death);
     console.log(`soul #${death.lineage} — ${death.cause} at tick ${death.tick}`);
   }
+
+  // Everything the world told the players, he also hears. The log is a
+  // ring buffer, so an index into it can go stale when it trims.
+  if (logRead > state.log.length) logRead = Math.max(0, state.log.length - 8);
+  for (; logRead < state.log.length; logRead++) overlord.note(state.log[logRead]);
+  overlord.consider({
+    tick: state.tick,
+    night: isNight(state.tick),
+    souls: state.players.filter((p) => p.alive).length,
+    noise: state.noise,
+    crows: state.noise >= CROW_THRESHOLD,
+  });
 
   const snap = snapshot(state);
   const payload = JSON.stringify({ t: "state", snap, deaths, souls: sockets.size });

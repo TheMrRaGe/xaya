@@ -32,9 +32,20 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm run build` and `npm run serve` are available separately, and
-`npm run watch` recompiles on save. `node serve.mjs` serves the files with
-no game attached, if that is ever useful.
+`npm test` runs the checks (65 of them, ~2s, no browser). `npm run build`
+and `npm run serve` are available separately, and `npm run watch` recompiles
+on save.
+
+**The Grey King speaks for himself** if you set `OVERLORD=1` — the server
+then sends what happened to the Claude API and puts his answer in everyone's
+log. It needs your own `ANTHROPIC_API_KEY` (or `ant auth login`), costs real
+money, and is off by default. Without it the **Understudy** speaks: canned
+lines, chosen to match what happened, no network and no cost. That split is
+DESIGN §3.2's liveness guarantee in miniature — the world never goes quiet
+because inference was unavailable.
+
+`node serve.mjs` serves the files with no game attached, if that is ever
+useful.
 
 The static server is hand-rolled rather than `python -m http.server` for one
 reason: Python takes its MIME types from the Windows registry, where `.js`

@@ -6,6 +6,7 @@
   "description": "Stage B prototype — the smallest loop that can kill you.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node test/sim.test.mjs && node test/overlord.test.mjs",
     "watch": "tsc -p tsconfig.json --watch",
     "serve": "node server.mjs",
     "start": "npm run build && node server.mjs"
@@ -14,6 +15,7 @@
     "typescript": "^5.5.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
     "ws": "^8.21.3"
   }
 }
