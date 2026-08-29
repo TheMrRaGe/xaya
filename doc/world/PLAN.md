@@ -1621,6 +1621,7 @@ Four real precedents, checked rather than assumed, because our situation is spec
 
 Documents, not code, and in this order — world design determines what state exists, and what state exists determines the tier split.
 
+0. `doc/world/CONTENT.md` — **written.** The flat index over everything below: every creature, material, item, crafting chain, profession, command, Realm, Sigil and custom this document names, in one enumerable list, each tagged for whether it exists in code, is specced here, or is only a name. It exists because this plan is organised by *argument* rather than by type — the creatures are spread across §7, §7A, §9, §13 and §44, and his verbs across §3, §29, §29A, §31 and §32 — so "what is there?" was a question nothing could answer in one place. Every document below expands one of its sections; it is the map, not the territory, and where it disagrees with this plan, this plan wins.
 1. `doc/world/WORLD.md` — the Grey King's reign premise, the Grey King's voice, the Realms, corruption, creature factions, Eras.
 2. `doc/world/SURVIVAL.md` — needs model, tick rates, pressure→profession derivation, offline/camp rules, Mortal Wound.
 3. `doc/world/PROFESSIONS.md` — full tree, mastery and post-death degradation, teaching, crafting graph.
