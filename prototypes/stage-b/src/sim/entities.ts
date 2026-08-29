@@ -3,7 +3,8 @@
  *
  * The Verge holds more than one soul now (Stage C), so everything here is
  * per-player and nothing assumes there is only ever one of them.
- * Still one Lieutenant, per the cut list: no Captain, no Warden, no Muster.
+ * Still one Lieutenant, per doc/world/PLAN.md §44's cut list: "one
+ * Lieutenant. No Captain, no Warden, no Muster."
  */
 import { TILE } from "./fixed.js";
 import { Skills, newSkills } from "./skills.js";
@@ -12,7 +13,7 @@ export const NEED_MAX = 1000;
 export const HEALTH_MAX = 100;
 
 export interface Needs {
-  satiety: number; // hunger — Farmer/Hunter/Fisher answer this (§17)
+  satiety: number; // hunger — Farmer/Hunter/Fisher answer this (doc/world/PLAN.md §17)
   hydration: number; // thirst — Dowser/Brewer
   warmth: number; // cold — Tailor/Mason/Charcoaler, and a campfire
 }

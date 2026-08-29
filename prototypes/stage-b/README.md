@@ -99,6 +99,9 @@ is often registered as `text/plain`, and Chrome refuses a
 
 ## What's actually happening under the hood
 
+Section numbers below (§N) refer to `doc/world/PLAN.md`, the full design
+plan committed at the repo root's `doc/world/`.
+
 - **Fixed-point, seeded, no floats in the sim tick** (`src/sim/fixed.ts`,
   `src/sim/rng.ts`) — per §43A / §49's "adopt the discipline, skip the
   harness." The renderer (`src/render/`) is the only place a float appears.

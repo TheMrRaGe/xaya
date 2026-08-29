@@ -3,7 +3,7 @@
  *
  * xorshift32 is not cryptographic and isn't meant to be; it only needs to be
  * the same sequence on every machine for the same seed, which it is. The
- * full design (§36) calls for per-entity ChaCha streams keyed off
+ * full design (doc/world/PLAN.md §36) calls for per-entity ChaCha streams keyed off
  * (epoch_seed, entity_id, tick, tag) so adding an entity never perturbs
  * anyone else's rolls — overkill for a single-player Stage B prototype, but
  * the shape (seed in, integers out, never Math.random) is worth keeping

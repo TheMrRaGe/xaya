@@ -1,11 +1,17 @@
 /**
- * The client. It owns the keyboard and the canvas and nothing else.
+ * The client, for Stage B — "the smallest loop that can kill you"
+ * (doc/world/PLAN.md §44). It owns the keyboard and the canvas and nothing
+ * else.
  *
  * It runs no sim. The server decides what is true and says so ten times a
  * second; this file draws whatever it was told and reports which keys are
  * down. That split is DESIGN §6.8's whole point — swap the authority for a
  * chain and neither the renderer nor `src/sim/` notices — and it is also
  * the only honest way to have two people in one Verge.
+ *
+ * This is deliberately not the full game — see the Stage B cut list in
+ * doc/world/PLAN.md §44. It exists to answer one question: does dying
+ * hurt, and do you start again anyway?
  */
 import { WORLD_W, WORLD_H, World } from "./sim/world.js";
 import { TILE_PX, ViewState, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";

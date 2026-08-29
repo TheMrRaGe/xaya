@@ -1,5 +1,5 @@
 /**
- * The Verge — the only Realm that exists yet (Stage B cut list, §44).
+ * The Verge — the only Realm that exists yet (Stage B cut list, doc/world/PLAN.md §44).
  *
  * A single small zone, generated deterministically from a seed so that a
  * given seed always produces the same map. No terraforming, no ecology
