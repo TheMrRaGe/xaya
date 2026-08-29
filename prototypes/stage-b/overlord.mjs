@@ -33,7 +33,7 @@ const DEFAULT_URL = "http://127.0.0.1:11434/v1";
 const DEFAULT_MODEL = "llama3.2:3b";
 
 /** Don't speak more often than this, however much is happening. */
-const MIN_GAP_MS = 25_000;
+const MIN_GAP_MS = Number(process.env.OVERLORD_MIN_GAP_MS ?? 25_000);
 /** A slow local model must never pile requests up behind itself. */
 const TIMEOUT_MS = 20_000;
 
