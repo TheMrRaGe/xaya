@@ -25,6 +25,7 @@ import {
   newLieutenant,
 } from "./entities.js";
 import { stepToward, moveWithCollision, walkable } from "./move.js";
+import { OverlordAction, GRIEF_PER_DEATH, GRIEF_DECAY_EVERY, isColdSnap, isBlighted } from "./director.js";
 import {
   Skill,
   XP,
@@ -171,6 +172,17 @@ export interface TradeRecord {
   item: Tradeable;
 }
 
+/**
+ * Everything the Overlord has done, in order. Kept for the same reason the
+ * trade ledger is (§6.8): an action a player cannot audit is an action they
+ * cannot learn from, and a season nobody can replay proves nothing.
+ */
+export interface Incident {
+  tick: number;
+  action: OverlordAction;
+  why: string;
+}
+
 export interface SimState {
   tick: number;
   world: World;
@@ -178,7 +190,13 @@ export interface SimState {
   lieutenant: Lieutenant;
   creatures: Creature[];
   trades: TradeRecord[];
+  incidents: Incident[];
   noise: number;
+  /** What the Storyteller has done to the Verge, and for how long (§3.5). */
+  grief: number; // recent deaths buy the survivors quiet
+  coldUntil: number;
+  blightUntil: number;
+  marked: number; // a soul the Lieutenant wants above all others, or -1
   noiseX: number; // where the last loud thing happened — the crows remember it
   noiseY: number;
   crowX: number; // the flock's drifting centre
@@ -207,7 +225,12 @@ export function newSim(seed: number, players: Player[]): SimState {
     lieutenant,
     creatures: spawnCreatures(world, rng, players),
     trades: [],
+    incidents: [],
     noise: 0,
+    grief: 0,
+    coldUntil: 0,
+    blightUntil: 0,
+    marked: -1,
     noiseX: first ? first.x : 0,
     noiseY: first ? first.y : 0,
     crowX: first ? first.x : 0,
@@ -316,8 +339,9 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
     if (death) deaths.push(death);
   }
 
-  world.tickRegrowth(state.tick);
+  if (!isBlighted(state)) world.tickRegrowth(state.tick);
   if (world.tickFires(state.tick) > 0) say(state, "A fire burns out. The cold comes back in.");
+  if (state.grief > 0 && state.tick % GRIEF_DECAY_EVERY === 0) state.grief--;
   if (state.tick % NOISE_DECAY_EVERY === 0) state.noise = clamp(state.noise - 1, 0, NOISE_MAX);
 
   // --- the crows drift toward whatever was last loud ---
@@ -374,6 +398,9 @@ function kill(state: SimState, player: Player): DeathEvent {
   const cause = state.lastDamageSource[player.id] ?? "starved";
   say(state, `Soul #${player.lineage} is dead — ${cause}.`);
 
+  state.grief += GRIEF_PER_DEATH;
+  if (state.marked === player.id) state.marked = -1;
+
   const { lieutenant } = state;
   if (lieutenant.target === player.id) {
     lieutenant.state = "patrol";
@@ -420,7 +447,9 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   if (state.tick % HYDRATION_DRAIN_EVERY === 0) player.needs.hydration = clamp(player.needs.hydration - 1, 0, NEED_MAX);
   if (state.tick % SATIETY_DRAIN_EVERY === 0) player.needs.satiety = clamp(player.needs.satiety - 1, 0, NEED_MAX);
 
-  const coldEvery = pack.cloak > 0 ? WARMTH_DRAIN_EVERY_CLOAKED : WARMTH_DRAIN_EVERY;
+  let coldEvery = pack.cloak > 0 ? WARMTH_DRAIN_EVERY_CLOAKED : WARMTH_DRAIN_EVERY;
+  // A cold snap takes twice as much, cloak or no cloak.
+  if (isColdSnap(state)) coldEvery = Math.max(1, Math.trunc(coldEvery / 2));
   if (player.atFire) {
     player.needs.warmth = clamp(player.needs.warmth + WARMTH_REGEN_NEAR_FIRE, 0, NEED_MAX);
   } else if (state.tick % coldEvery === 0) {
@@ -707,6 +736,13 @@ function tickLieutenant(state: SimState): void {
   // With several in the Verge that makes proximity to another player a real
   // risk and a real shield at once, which is the first genuinely social
   // thing in this prototype.
+  // A marked soul is wanted above all others, wherever they are (§3.5).
+  const markedSoul = state.players[state.marked];
+  if (markedSoul && markedSoul.alive && markedSoul.graceUntil <= state.tick) {
+    lieutenant.state = "hunt";
+    lieutenant.target = markedSoul.id;
+  }
+
   let nearest: Player | null = null;
   let nearestSq = Number.MAX_SAFE_INTEGER;
   for (const p of state.players) {

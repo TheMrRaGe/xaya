@@ -4,7 +4,7 @@
 // never hears its own words back.
 //
 //     node test/overlord.test.mjs
-import { createOverlord, tidy } from "../overlord.mjs";
+import { createOverlord, tidy, parseChoice } from "../overlord.mjs";
 
 let failures = 0;
 const check = (name, cond, detail = "") => {
@@ -85,6 +85,28 @@ async function fresh() {
   check("two sentences at the outside", rambled === "One. Two.", rambled);
   check("and nothing runs on forever", tidy("x".repeat(400)).length <= 240);
   check("an empty answer stays empty", tidy("") === "" && tidy(null) === "");
+}
+
+// A decision has to survive the ways a small model writes it down. It
+// reliably writes the CHOICE line and reliably forgets the SAY label, and an
+// id that was never on the menu must never be honoured.
+{
+  const MENU = [{ id: 0 }, { id: 1 }, { id: 2 }];
+
+  const both = parseChoice("CHOICE: 2\nSAY: The cold is mine tonight.", MENU);
+  check("a well-formed answer parses", both.offerId === 2 && both.line === "The cold is mine tonight.", JSON.stringify(both));
+
+  const noLabel = parseChoice("CHOICE: 1\nYou are cutting my trees.", MENU);
+  check("a forgotten SAY label is forgiven", noLabel.offerId === 1 && noLabel.line === "You are cutting my trees.", JSON.stringify(noLabel));
+
+  const offMenu = parseChoice("CHOICE: 9\nSAY: I do as I please.", MENU);
+  check("an id that was never offered is refused", offMenu.offerId === null, JSON.stringify(offMenu));
+
+  const noChoice = parseChoice("I think I shall wait.", MENU);
+  check("no choice at all is refused", noChoice.offerId === null);
+
+  const messy = parseChoice("<think>hmm</think>\nCHOICE - 0\nSAY - \u201cWait.\u201d", MENU);
+  check("dashes and quotes and thinking are all survivable", messy.offerId === 0 && messy.line === "Wait.", JSON.stringify(messy));
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

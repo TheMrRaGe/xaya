@@ -188,6 +188,59 @@ knows who you are — never from rewriting physics.
 
 ---
 
+### 3.5 The Overlord is a Storyteller, not a commentator
+
+The working model for this is RimWorld, which has shipped the idea for a
+decade. Its AI storytellers do not narrate: they **pick incidents**. Threat
+is paced by how rich the colony has become — roughly one threat point per
+160 wealth, so a colony that doubles what it owns faces nearly twice the
+pressure — damped by an adaptation factor after a death so the game does not
+kick someone who is already down, with the expensive incidents locked behind
+a points threshold. The storyteller chooses *what happens and when*. The
+simulation decides how it turns out.
+
+That division is the one this design already needs, and adopting it settles
+three separate problems at once.
+
+**It makes the Overlord's job a choice rather than an essay.** Picking one
+option from a legal menu and giving a reason is classification; writing
+menacing prose is not. That is a far better fit for a schema-constrained
+model under §3.2 — the output space is small, typed, and trivially
+validated, and an id that was never on the menu is refused no matter who
+proposed it. It is also the difference between a small model being adequate
+and being embarrassing, which matters for anyone self-hosting.
+
+**Narration becomes a by-product.** The Overlord says why it did what it
+did, and that reason is the line players see. Flavor stops being a separate
+feature that can be flat and starts being the visible half of a decision
+that had consequences.
+
+**Pressure is §1's thesis at season scale.** Noise is the minute-to-minute
+version of "everything you build makes you easier to see." Pressure is the
+same statement measured in what the Realm has accumulated: goods carried,
+tools held, skills learned, fires lit, souls alive. Wealth is not a proxy
+for threat here, it *is* the threat, and it is the same sentence the game
+opens with.
+
+Three rules the controller in §4.2 inherits from this:
+
+1. **Doing nothing is always on the menu, and is the commonest choice.** A
+   storyteller that acts every cycle is a slot machine.
+2. **A death buys the survivors quiet.** Grief subtracts from pressure and
+   decays, so a wipe is followed by a lull rather than a spiral. This is the
+   single mechanism most responsible for RimWorld's pacing feeling authored.
+3. **Every incident is logged with its reason.** An action a player cannot
+   audit is an action they cannot learn from, and a season nobody can replay
+   proves nothing — the same argument as the trade ledger in §6.8.
+
+The legal action space (§3.4) is therefore not a list of attacks. It is a
+list of *pressures*: send someone walking, gather crows over an empty field,
+bring a cold snap, blight the ground, loose something angry, mark a soul as
+wanted. None of them decides an outcome; all of them change what the next
+hour costs.
+
+---
+
 ## 4. Learning — three timescales
 
 ### 4.1 Blocks: retrieval memory (`x/codex`)

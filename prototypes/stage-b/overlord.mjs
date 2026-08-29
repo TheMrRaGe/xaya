@@ -15,6 +15,18 @@
  *      reply, the Understudy speaks instead — §3.2's liveness guarantee in
  *      miniature. The world never stalls because inference was unavailable.
  *
+ * It has two jobs. Given a menu of legal actions it is the **Storyteller**:
+ * it picks one and says why, and the reason it gives is the line players
+ * see — so narration arrives as a by-product of a decision rather than as
+ * the product. Given no menu it only narrates. Picking from a list is
+ * classification rather than creative writing, which is why a three-billion
+ * parameter model can do the first job well and the second one badly.
+ *
+ * It never applies anything itself. It returns a choice; the authority
+ * validates it against the menu and applies it, and an id that was not on
+ * the menu is refused — DESIGN §3.2, where an illegal action is rejected no
+ * matter who proposed it.
+ *
  * **It talks to whatever model you point it at, and the default is one
  * running on your own machine.** Any OpenAI-compatible `/chat/completions`
  * endpoint works — Ollama, LM Studio, llama.cpp's server, or a hosted free
@@ -49,6 +61,17 @@ const TIMEOUT_MS = Number(process.env.OVERLORD_TIMEOUT_MS ?? 45_000);
  * speaking until you point the server at a model. Grouped so the line at
  * least matches the shape of what happened.
  */
+/** What the Understudy says for each kind of incident it falls back to. */
+const INCIDENT_LINES = {
+  nothing: "Carry on. I am not going anywhere.",
+  false_crows: "Birds, over there. You should probably go and look.",
+  send_lieutenant: "One of mine is walking. Not at you. Near you.",
+  cold_snap: "The cold is mine tonight. Spend your wood or don't.",
+  blight: "Nothing will grow for a while. That was me.",
+  loose_a_boar: "Something with tusks has taken an interest in you.",
+  mark: "One of you is wanted. The rest of you may relax.",
+};
+
 const UNDERSTUDY = {
   death: [
     "Another one stops moving. The Verge keeps what it is owed.",
@@ -121,12 +144,27 @@ export function tidy(raw) {
 }
 
 /**
+ * Pull the decision back out, forgiving the ways a small model gets it
+ * wrong. It reliably writes the CHOICE line and then reliably forgets the
+ * SAY label, so anything after the choice is taken as the line.
+ */
+export function parseChoice(text, menu) {
+  const choice = text.match(/CHOICE\s*[:\-]?\s*(\d+)/i);
+  const id = choice ? Number(choice[1]) : NaN;
+  const legal = menu.some((offer) => offer.id === id);
+
+  const labelled = text.match(/SAY\s*[:\-]\s*([\s\S]+)/i);
+  const trailing = choice ? text.slice(choice.index + choice[0].length) : "";
+  return { offerId: legal ? id : null, line: tidy(labelled ? labelled[1] : trailing) };
+}
+
+/**
  * One request to an OpenAI-compatible chat endpoint. Deliberately plain:
  * that shape is spoken by Ollama, LM Studio, llama.cpp, vLLM and every
  * hosted free tier worth pointing at, so there is nothing to install here
  * and nothing to rewrite when you change your mind about the model.
  */
-async function askModel({ url, model, key, system, prompt }) {
+async function askModel({ url, model, key, system, prompt, raw = false }) {
   const response = await fetch(`${url.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
     headers: {
@@ -151,13 +189,19 @@ async function askModel({ url, model, key, system, prompt }) {
     throw new Error(`${response.status} ${detail}`.slice(0, 160));
   }
   const data = await response.json();
-  return tidy(data?.choices?.[0]?.message?.content);
+  const content = data?.choices?.[0]?.message?.content ?? "";
+  // A decision comes back as two labelled lines; tidying it here would eat
+  // the labels. The line inside it is tidied after parsing.
+  return raw ? String(content).replace(/<think>[\s\S]*?<\/think>/gi, "").trim() : tidy(content);
 }
 
 /**
  * @param {(line: string) => void} say  where a finished line goes
+ * @param {(choice: {offerId: number|null, line: string}) => void} [decide]
+ *   where a chosen incident goes. `offerId: null` means "you pick" — the
+ *   authority falls back to its own weighted choice.
  */
-export async function createOverlord(say) {
+export async function createOverlord(say, decide) {
   const enabled = process.env.OVERLORD === "1";
   const url = process.env.OVERLORD_URL || DEFAULT_URL;
   const model = process.env.OVERLORD_MODEL || DEFAULT_MODEL;
@@ -224,6 +268,33 @@ export async function createOverlord(say) {
     return pick(UNDERSTUDY[kind], turn);
   }
 
+  /** The storyteller's prompt: what happened, and what may happen next. */
+  function menuPrompt(world, menu) {
+    const lines = pending.slice(-12).map((l) => `- ${l}`).join("\n");
+    return [
+      `It is ${world.night ? "night" : "day"} in the Verge.`,
+      `Souls alive: ${world.souls}.${world.crows ? " The crows have gathered over something loud." : ""}`,
+      `What they have built weighs ${world.pressure} against them.`,
+      "",
+      "Since you last acted, the world recorded:",
+      lines || "- nothing worth recording",
+      "",
+      "You may do exactly one of these, and nothing else:",
+      ...menu.map((offer) => `  ${offer.id}) ${offer.what}`),
+      "",
+      "Most of the time the right answer is 0. Choose cruelty when they have",
+      "grown comfortable, and patience when they have just buried someone.",
+      "",
+      "Things you said on other days, for tone only. Never reuse them:",
+      ...VOICE.map((line) => `  ${line}`),
+      "",
+      "Reply with exactly two lines and nothing else:",
+      "CHOICE: <the number>",
+      "SAY: <one sentence, aloud, to everyone in the Verge>",
+    ].join("\n");
+  }
+
+
   function digest(world) {
     const lines = pending.slice(-12).map((l) => `- ${l}`).join("\n");
     return [
@@ -247,8 +318,9 @@ export async function createOverlord(say) {
     ].join("\n");
   }
 
-  async function speak(world) {
-    const shouldSpeak = deaths > 0 || pending.length >= 2;
+  async function speak(world, menu) {
+    const directing = Boolean(menu && menu.length > 1 && decide);
+    const shouldSpeak = directing || deaths > 0 || pending.length >= 2;
     const now = Date.now();
     if (!shouldSpeak || inFlight || now - lastSpokeAt < MIN_GAP_MS) return;
 
@@ -256,20 +328,32 @@ export async function createOverlord(say) {
     turn++;
     const notices = pending;
     const hadDeath = deaths > 0;
-    const prompt = digest(world);
+    const prompt = directing ? menuPrompt(world, menu) : digest(world);
     pending = [];
     deaths = 0;
 
     if (!system) {
-      say(understudy(notices, hadDeath));
+      // No model: the authority picks by weight, and says so in his voice.
+      if (directing) decide({ offerId: null, line: understudy(notices, hadDeath) });
+      else say(understudy(notices, hadDeath));
       return;
     }
 
     inFlight = true;
     calls++;
     try {
-      const line = await askModel({ url, model, key, system, prompt });
-      say(line || understudy(notices, hadDeath));
+      const answer = await askModel({ url, model, key, system, prompt, raw: directing });
+      if (process.env.OVERLORD_DEBUG === "1") console.log(`[overlord] raw: ${answer}`);
+      if (directing) {
+        const choice = parseChoice(answer, menu);
+        const chosen = menu.find((offer) => offer.id === choice.offerId);
+        decide({
+          offerId: choice.offerId,
+          line: choice.line || (chosen ? INCIDENT_LINES[chosen.action.kind] : understudy(notices, hadDeath)),
+        });
+      } else {
+        say(answer || understudy(notices, hadDeath));
+      }
       failures = 0;
     } catch (err) {
       // A model that isn't there is not a reason for the world to go quiet.
@@ -278,7 +362,8 @@ export async function createOverlord(say) {
         console.log(`the Grey King fell silent (${err.message}) — the Understudy speaks`);
         if (failures === 3) console.log("(further failures go unmentioned; the Understudy has it)");
       }
-      say(understudy(notices, hadDeath));
+      if (directing) decide({ offerId: null, line: understudy(notices, hadDeath) });
+      else say(understudy(notices, hadDeath));
     } finally {
       inFlight = false;
     }
@@ -287,9 +372,24 @@ export async function createOverlord(say) {
   return {
     note,
     noteDeath,
-    /** Called every tick. Cheap, and almost always does nothing. */
-    consider(world) {
-      void speak(world);
+    /**
+     * Called every tick. Cheap, and almost always does nothing. Pass the
+     * menu of legal actions to get a decision; pass none to get commentary.
+     */
+    consider(world, menu = null) {
+      void speak(world, menu);
+    },
+    /**
+     * Whether he is due to act. The authority asks first, because building
+     * the menu draws on the world's random stream — doing that every tick
+     * would make the Verge's luck depend on how often we polled it.
+     */
+    ready() {
+      return !inFlight && Date.now() - lastSpokeAt >= MIN_GAP_MS;
+    },
+    /** What the Understudy would say about an incident it was handed. */
+    lineFor(kind) {
+      return INCIDENT_LINES[kind] ?? INCIDENT_LINES.nothing;
     },
     get stats() {
       return { enabled: Boolean(system), model, url, calls, failures, waiting: pending.length };

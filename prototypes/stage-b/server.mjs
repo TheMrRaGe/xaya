@@ -19,6 +19,7 @@ import { newSim, stepTick, addSoul, replaceSoul, TICK_HZ, NO_INPUT } from "./dis
 import { snapshot } from "./dist/net/snapshot.js";
 import { createOverlord } from "./overlord.mjs";
 import { isNight, CROW_THRESHOLD } from "./dist/sim/tick.js";
+import { pressure, offers, chooseByWeight, applyAction, IDLE_PRESSURE } from "./dist/sim/director.js";
 
 const PORT = Number(process.env.PORT) || 8000;
 const WORLD_SEED = 0xc0ffee;
@@ -40,9 +41,23 @@ const barrow = [];
  * notices the players do and says something about them (DESIGN §3.3).
  */
 let logRead = 0;
-const overlord = await createOverlord((line) => {
+let menu = [];
+
+function announce(line) {
   state.log.push(`The Grey King: “${line}”`);
   if (state.log.length > 40) state.log.shift();
+}
+
+const overlord = await createOverlord(announce, ({ offerId, line }) => {
+  // He proposes; the authority disposes. An id that was not on the menu is
+  // refused and the weighted choice stands in for it (DESIGN §3.2).
+  const chosen = menu.find((offer) => offer.id === offerId) ?? chooseByWeight(menu, state.rng);
+  applyAction(state, chosen.action);
+  state.incidents.push({ tick: state.tick, action: chosen.action, why: line });
+  if (chosen.action.kind !== "nothing") {
+    console.log(`incident: ${chosen.action.kind} — ${line}`);
+  }
+  announce(line || overlord.lineFor(chosen.action.kind));
 });
 
 function freshInput() {
@@ -135,13 +150,20 @@ setInterval(() => {
   // ring buffer, so an index into it can go stale when it trims.
   if (logRead > state.log.length) logRead = Math.max(0, state.log.length - 8);
   for (; logRead < state.log.length; logRead++) overlord.note(state.log[logRead]);
-  overlord.consider({
-    tick: state.tick,
-    night: isNight(state.tick),
-    souls: state.players.filter((p) => p.alive).length,
-    noise: state.noise,
-    crows: state.noise >= CROW_THRESHOLD,
-  });
+  // Pressure is cheap and touches no randomness, so it is read every tick.
+  // The menu is not, so it is built only when he is actually due to act.
+  const points = pressure(state);
+  const due = overlord.ready() && points >= IDLE_PRESSURE;
+  menu = due ? offers(state, points) : [];
+  overlord.consider(
+    {
+      night: isNight(state.tick),
+      souls: state.players.filter((p) => p.alive).length,
+      crows: state.noise >= CROW_THRESHOLD,
+      pressure: points,
+    },
+    menu,
+  );
 
   const snap = snapshot(state);
   const payload = JSON.stringify({ t: "state", snap, deaths, souls: sockets.size });

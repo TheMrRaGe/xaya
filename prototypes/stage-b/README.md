@@ -50,6 +50,23 @@ Studio, llama.cpp's server, or a hosted free tier — via `OVERLORD_URL`,
 account: it is one `fetch` against a shape every local runner already
 speaks, so the voice costs nothing to run and is tied to no vendor.
 
+He is a **Storyteller**, not a commentator (DESIGN §3.5). Every half minute
+he is handed a menu of things he may legally do — send the Lieutenant
+walking, gather crows over an empty field, bring a cold snap, blight the
+ground, loose an angry boar, mark a soul as wanted, or do nothing — and he
+picks one and says why. The reason is the line you see, so narration is the
+visible half of a decision rather than decoration.
+
+What he may choose from depends on **pressure**: what the Verge has built.
+Goods carried, tools held, skills learned, fires lit, souls alive. The
+expensive incidents stay locked until the camp has earned them, and a death
+buys the survivors quiet for a while. That is §1's thesis at a longer
+timescale — noise is what your last minute cost you, pressure is what your
+whole camp costs you.
+
+Doing nothing is always on the menu and is the commonest single choice. A
+storyteller that acts every cycle is a slot machine.
+
 Without it the **Understudy** speaks: canned lines chosen to match what
 happened, no network and no cost. It also covers whenever the model is
 missing, slow, or answers with something unusable. That split is DESIGN

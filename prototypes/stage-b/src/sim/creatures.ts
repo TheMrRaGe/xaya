@@ -76,7 +76,7 @@ export interface CreatureCtx {
   noiseMax: number;
 }
 
-function newCreature(kind: CreatureKind, x: number, y: number): Creature {
+export function newCreature(kind: CreatureKind, x: number, y: number): Creature {
   return {
     kind,
     x,

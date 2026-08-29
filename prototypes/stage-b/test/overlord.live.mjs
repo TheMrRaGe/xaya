@@ -11,6 +11,9 @@
 // He paces himself in the game; here we want every answer at once.
 process.env.OVERLORD_MIN_GAP_MS = "0";
 const { createOverlord } = await import("../overlord.mjs");
+const { newSim } = await import("../dist/sim/tick.js");
+const { newPlayer } = await import("../dist/sim/entities.js");
+const { pressure, offers, applyAction } = await import("../dist/sim/director.js");
 
 const SITUATIONS = [
   {
@@ -71,4 +74,50 @@ for (const situation of SITUATIONS) {
   console.log(`  ${lines[lines.length - 1] ?? "— nothing came back —"}\n`);
 }
 
-console.log(`${overlord.stats.calls} calls, ${overlord.stats.failures} failures.`);
+// --- and now the job that actually matters: choosing what happens next ---
+console.log("--- as Storyteller ---\n");
+
+const decisions = [];
+const storyteller = await createOverlord(
+  () => {},
+  (choice) => decisions.push(choice),
+);
+
+const sim = newSim(0xc0ffee, [newPlayer(1, 0), newPlayer(2, 1)]);
+const RICHES = [
+  { name: "a camp with nothing", wood: 0, fires: 0, skill: 0 },
+  { name: "a camp doing well", wood: 30, fires: 1, skill: 200 },
+  { name: "a camp that has got comfortable", wood: 90, fires: 3, skill: 800 },
+];
+
+for (const state of RICHES) {
+  sim.players[0].pack.wood = state.wood;
+  sim.players[0].skills.woodcraft = state.skill;
+  sim.world.fires.clear();
+  for (let i = 0; i < state.fires; i++) sim.world.lightFire(4 + i, 4, 3000);
+
+  const points = pressure(sim);
+  const menu = offers(sim, points);
+  storyteller.note("Soul #1 hands Soul #2 one wood.");
+  storyteller.note("You build a fire. It will keep you warm. It will also be seen.");
+
+  if (menu.length <= 1) {
+    console.log(`${state.name} — pressure ${points}: nothing is legal yet, so he is not asked.\n`);
+    continue;
+  }
+
+  const before = decisions.length;
+  const started = Date.now();
+  storyteller.consider({ night: false, souls: 2, crows: false, pressure: points }, menu);
+  while (decisions.length === before && Date.now() - started < 60_000) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  const choice = decisions[decisions.length - 1];
+  const chosen = menu.find((o) => o.id === choice?.offerId);
+  console.log(`${state.name} — pressure ${points}, ${menu.length} options (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+  console.log(`  chose: ${chosen ? chosen.action.kind : "(nothing legal — fell back to weights)"}`);
+  console.log(`  said:  ${choice?.line || "—"}\n`);
+  if (chosen) applyAction(sim, chosen.action);
+}
+
+console.log(`${overlord.stats.calls + storyteller.stats.calls} calls, ${overlord.stats.failures + storyteller.stats.failures} failures.`);
