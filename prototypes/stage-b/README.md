@@ -224,11 +224,15 @@ With two people, the only question that matters:
   professions aren't different enough from each other yet, and that is a
   content problem rather than an economy one.
 
-Numbers you may want to move after playing: `KILL_REST_TICKS` (how long he
-loses interest for after a kill), `RESPAWN_GRACE_TICKS` (how long a new soul
-is beneath notice) and `SPAWN_CLEAR_TILES` (how far away it arrives), all at
-the top of `src/sim/tick.ts`. They are set generously on purpose — a death
-loop is far worse than an easy minute.
+**Don't tune the attention numbers here.** Every constant governing how fast
+the Grey King's forces notice you — detection radius, noise decay,
+`KILL_REST_TICKS`, `RESPAWN_GRACE_TICKS`, `SPAWN_CLEAR_TILES` — is squeezed
+into a 24×16 zone where a soul crosses the whole world in eight seconds. The
+real Realms are much larger and drawing real attention is meant to take far
+longer: hours of visible activity, not ninety seconds of chopping. These
+values exist so a playtest fits in a coffee break, and every one of them is
+throwaway. Judge the *shape* of the mechanic — noise accrues, birds show it,
+something comes — and ignore the magnitudes.
 
 That's the whole gate. Tuning numbers (drain rates, detection radius,
 Lieutenant speed, how hard a boar hits) are all placeholders at the top of
