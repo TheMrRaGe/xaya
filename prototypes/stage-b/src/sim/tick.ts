@@ -126,6 +126,27 @@ const SNARE_CORDAGE_COST = 2;
 const SNARE_WOOD_COST = 1;
 
 const NOISE_PER_CHIP = 260; // hammering stone is the loudest work in the Verge
+const NOISE_PER_ORE = 320; // and a vein is worse — this is the loudest work there is
+
+/**
+ * The sword chain (doc/world/PLAN.md §15's worked example, compressed to what
+ * one soul can do alone): ore + charcoal → bar → sword. Charcoal costs three
+ * logs for one lump on purpose — a real charcoal burn wastes most of the
+ * wood as heat, and that waste is what makes this chain expensive rather
+ * than merely long.
+ */
+const CHARCOAL_WOOD_COST = 3;
+const CHARCOAL_YIELD = 1;
+
+const SMELT_ORE_COST = 2;
+const SMELT_CHARCOAL_COST = 1;
+const BAR_YIELD = 1;
+
+const SWORD_BAR_COST = 2;
+const SWORD_WOOD_COST = 1; // the haft
+const SWORD_CORDAGE_COST = 1; // binding the grip
+const SWORD_DAMAGE = 6; // double the spear
+const SWORD_DURABILITY = 30; // and outlasts it by more than double
 
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
@@ -162,6 +183,9 @@ export interface Input {
   makeAxe: boolean; // 6
   makeCordage: boolean; // 7 — needs a knife
   setSnare: boolean; // 8 — place one you are carrying
+  makeCharcoal: boolean; // 9 — at a fire, smother wood down
+  smelt: boolean; // 0 — at a fire, ore and charcoal to a bar
+  makeSword: boolean; // B — bar, wood and cordage, once each
   cycleOffer: boolean; // T — what you would hand over
   give: boolean; // G — hand one over to whoever is standing next to you
 }
@@ -180,6 +204,9 @@ export const NO_INPUT: Input = {
   makeAxe: false,
   makeCordage: false,
   setSnare: false,
+  makeCharcoal: false,
+  smelt: false,
+  makeSword: false,
   cycleOffer: false,
   give: false,
 };
@@ -249,6 +276,8 @@ export interface SimState {
     firstTrade: boolean;
     firstStone: boolean;
     firstSnare: boolean;
+    firstOre: boolean;
+    firstSword: boolean;
   };
 }
 
@@ -285,6 +314,8 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstTrade: false,
       firstStone: false,
       firstSnare: false,
+      firstOre: false,
+      firstSword: false,
     },
   };
 }
@@ -560,6 +591,9 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   if (input.makeAxe) doMakeAxe(state, player);
   if (input.makeCordage) doMakeCordage(state, player);
   if (input.setSnare) doSetSnare(state, player, px, py);
+  if (input.makeCharcoal) doMakeCharcoal(state, player);
+  if (input.smelt) doSmelt(state, player);
+  if (input.makeSword) doMakeSword(state, player);
   if (input.cycleOffer) cycleOffer(player);
   if (input.give) doGive(state, player);
 
@@ -634,6 +668,17 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       }
       return;
     }
+    if (t === Tile.Ore) {
+      // Same deal as a rock, one tier up: never runs out, and the loudest
+      // thing you can do in the Verge.
+      pack.ore++;
+      bumpNoise(state, NOISE_PER_ORE, player);
+      if (!state.flags.firstOre) {
+        state.flags.firstOre = true;
+        say(state, "The Grey King: “Ore, now. You are digging for something worth taking.”");
+      }
+      return;
+    }
     if (t === Tile.Bush) {
       world.harvest(gx, gy, state.tick, REGROW_TICKS);
       player.needs.satiety = clamp(player.needs.satiety + 200, 0, NEED_MAX);
@@ -653,12 +698,18 @@ function doStrike(state: SimState, player: Player): void {
   if (!quarry) return;
 
   const pack = player.pack;
-  const damage = (pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE) + strikeBonus(player.skills);
+  // The best weapon in hand wins: a sword over a spear over a fist. Nothing
+  // is ever discarded to make room, so carrying both just means the spear
+  // is the one you fall back on when the sword finally gives out.
+  const damage = (pack.sword > 0 ? SWORD_DAMAGE : pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE) + strikeBonus(player.skills);
   const killed = woundCreature(quarry, damage, state.tick, player.id);
   bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
   learn(state, player, "hunting", killed ? XP.kill : XP.strike);
 
-  if (pack.spear > 0) {
+  if (pack.sword > 0) {
+    pack.sword--;
+    if (pack.sword === 0) say(state, "The sword's edge finally gives out. It was a blade, once.");
+  } else if (pack.spear > 0) {
     pack.spear--;
     if (pack.spear === 0) say(state, "A spear splinters on the last blow.");
   }
@@ -804,6 +855,43 @@ function doSetSnare(state: SimState, player: Player, px: number, py: number): vo
   if (!state.flags.firstSnare) {
     state.flags.firstSnare = true;
     say(state, "The Grey King: “Patience. That is new. I dislike it.”");
+  }
+}
+
+/** 9 — at a fire, smother wood down to charcoal. Most of the log is heat, not char. */
+function doMakeCharcoal(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (!player.atFire || pack.wood < CHARCOAL_WOOD_COST) return;
+  pack.wood -= CHARCOAL_WOOD_COST;
+  pack.charcoal += CHARCOAL_YIELD;
+  bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 6), player); // banking a fire down is quiet work
+  say(state, "Wood smothered down under ash. What is left burns far hotter than the log did.");
+}
+
+/** 0 — at a fire, ore and charcoal become a bar. The one step no tool skips. */
+function doSmelt(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (!player.atFire || pack.ore < SMELT_ORE_COST || pack.charcoal < SMELT_CHARCOAL_COST) return;
+  pack.ore -= SMELT_ORE_COST;
+  pack.charcoal -= SMELT_CHARCOAL_COST;
+  pack.bar += BAR_YIELD;
+  bumpNoise(state, NOISE_PER_CRAFT, player); // a fire hot enough to run ore is not a quiet fire
+  say(state, "Ore goes soft, then runs. A bar, dull and heavy, where stone used to be.");
+}
+
+/** B — bar, wood and cordage, once each. The sword chain's whole point. */
+function doMakeSword(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.sword > 0 || pack.bar < SWORD_BAR_COST || pack.wood < SWORD_WOOD_COST || pack.cordage < SWORD_CORDAGE_COST) return;
+  pack.bar -= SWORD_BAR_COST;
+  pack.wood -= SWORD_WOOD_COST;
+  pack.cordage -= SWORD_CORDAGE_COST;
+  pack.sword = SWORD_DURABILITY;
+  bumpNoise(state, NOISE_PER_CRAFT, player);
+  say(state, "A blade, hafted and bound. Everything else you have made was a stopgap until this.");
+  if (!state.flags.firstSword) {
+    state.flags.firstSword = true;
+    say(state, "The Grey King: “...A sword, in the Verge. That took you longer than it should have — and I noticed every hour of it.”");
   }
 }
 

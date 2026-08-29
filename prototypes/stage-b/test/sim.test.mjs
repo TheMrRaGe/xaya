@@ -11,7 +11,7 @@ import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
 import { level, mastery, trapChance } from "../dist/sim/skills.js";
-import { woundCreature, WOLF_ANGER_TICKS } from "../dist/sim/creatures.js";
+import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
 
 
 const I = (o = {}) => ({ ...NO_INPUT, ...o });
@@ -577,6 +577,63 @@ function check(name, cond, detail = "") {
 
   check("nobody starts better than one in three", trapChance({ trapping: 0 })[0] === 33);
   check("mastery does noticeably better", trapChance({ trapping: 10000 })[0] >= 33 + 4 * 9);
+}
+
+// --- 22. the sword chain: ore, charcoal and a bar, before the blade ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px + 1, py, Tile.Ore);
+  const quiet = s.noise;
+  p.x = px * TILE;
+  p.y = py * TILE;
+  stepTick(s, [I({ gather: true })]);
+  check("a vein yields ore", p.pack.ore === 1, `ore=${p.pack.ore}`);
+  check("and the vein is still there", s.world.get(px + 1, py) === Tile.Ore);
+  check("and it is the loudest work of all — louder than chipping stone", s.noise - quiet >= 260, `+${s.noise - quiet}`);
+
+  // Charcoal and smelting both need a fire.
+  s.world.set(px, py, Tile.Grass);
+  p.pack.wood = 20;
+  stepTick(s, [I({ makeCharcoal: true })]);
+  check("no fire, no charcoal", p.pack.charcoal === 0 && p.pack.wood === 20);
+
+  stepTick(s, [I({ build: true })]);
+  stepTick(s, IDLE);
+  check("standing at the fire", p.atFire === true);
+
+  stepTick(s, [I({ makeCharcoal: true })]);
+  check("wood becomes charcoal, wastefully", p.pack.charcoal === 1 && p.pack.wood === 20 - 5 - 3, JSON.stringify(p.pack));
+
+  p.pack.ore = 4;
+  stepTick(s, [I({ smelt: true })]);
+  check("ore and charcoal become a bar", p.pack.bar === 1 && p.pack.ore === 2 && p.pack.charcoal === 0, JSON.stringify(p.pack));
+
+  const noBar = fresh();
+  stepTick(noBar, [I({ makeSword: true })]);
+  check("no bar, no sword", noBar.players[0].pack.sword === 0);
+
+  p.pack.bar = 2;
+  p.pack.wood = 1;
+  p.pack.cordage = 1;
+  stepTick(s, [I({ makeSword: true })]);
+  check("bar, wood and cord make a sword", p.pack.sword > 0 && p.pack.bar === 0 && p.pack.wood === 0 && p.pack.cordage === 0, JSON.stringify(p.pack));
+}
+
+// --- 23. a sword outfights a spear, and a soul keeps both ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  p.pack.spear = 12;
+  p.pack.sword = 30;
+  const boar = s.creatures.find((c) => c.kind === "hedge-boar");
+  p.x = boar.x;
+  p.y = boar.y;
+  stepTick(s, [I({ strike: true })]);
+  check("the sword strikes first, not the spear", p.pack.sword === 29 && p.pack.spear === 12, `sword=${p.pack.sword} spear=${p.pack.spear}`);
+  check("a hedge-boar takes real damage from it", boar.health <= STATS["hedge-boar"].health - 6, `hp=${boar.health}`);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

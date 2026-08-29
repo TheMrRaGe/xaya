@@ -255,13 +255,15 @@ the Lieutenant's detection radius and opens the wolves' noses.
 Grass · Tree · Stump (harvested, regrows) · Water · Bush · BareBush (picked,
 regrows) · Campfire (player-built, burns down) · Ash (a fire that went out;
 grass takes it back) · **Rock** (chip stone off it forever; it never depletes) ·
-**Snare** (set, waiting, and spent once it catches).
+**Snare** (set, waiting, and spent once it catches) · **Ore** (same rule as
+Rock — never depletes — but rarer, and the loudest tile in the Verge to work).
 
 ### 3.5 Terrain the world implies but code lacks
 
-Rock and quarry face, ore seam, marsh, road `[plan §8 — "nobody bothered to
-destroy them"]`, ruin, snow, sand, tidal flat, cave mouth. All `[named]` at best;
-each is implied by a Realm in §3.1 rather than specced anywhere.
+~~Rock and quarry face, ore seam~~ — closed: an ore vein is built (§3.4).
+Marsh, road `[plan §8 — "nobody bothered to destroy them"]`, ruin, snow, sand,
+tidal flat, cave mouth remain `[named]` at best; each is implied by a Realm in
+§3.1 rather than specced anywhere.
 
 **Terraforming** `[plan §22]` — dig, raise, flatten, tunnel, reshape, and it
 persists. In a world that never resets, the strongest "we were here" mechanic
@@ -300,9 +302,9 @@ fen-bread, bitter fenroot and eel in the Moorfen; ash-salt, hard biscuit and
 carried water in the Kiln; in Rimeholt, anything fat — rendered tallow eaten
 plain, without embarrassment, because the cold takes what it wants.
 
-**In code today:** wood, **stone**, **cordage**, raw meat, cooked meat, hide
-`[built]` — plus water and berries consumed straight off the tile rather than
-carried.
+**In code today:** wood, **stone**, **cordage**, raw meat, cooked meat, hide,
+**ore, charcoal, bar** `[built]` — plus water and berries consumed straight off
+the tile rather than carried.
 
 Stone is worth calling out because it inverts how every other material here
 behaves. A tree runs out and regrows on a timer; a rock outcrop never runs out
@@ -345,11 +347,13 @@ maintenance is the war.
 ### 5.2 By kind
 
 - **Tools** — spear `[built, 12 strikes]`, knife `[built, 20 butcherings]`, axe
-  `[built, 25 chops]`, snare `[built]`; pick, needle, fishing line, hammer, saw,
-  loom, quern all `[named]`. The three built ones each buy a different thing:
-  the knife buys *yield* (more off a carcass, and the only way to cut cord), the
-  axe buys yield **and quiet**, and the snare buys *absence* — it is the only
-  work that pays out while you are somewhere else.
+  `[built, 25 chops]`, snare `[built]`, **sword** `[built, 30 strikes, double the
+  spear's bite]`; pick, needle, fishing line, hammer, saw, loom, quern all
+  `[named]`. The built ones each buy a different thing: the knife buys *yield*
+  (more off a carcass, and the only way to cut cord), the axe buys yield **and
+  quiet**, the snare buys *absence* — the only work that pays out while you are
+  somewhere else — and the sword buys nothing but raw damage, because it is the
+  end of a chain rather than a shortcut through one (§6).
 - **Wearables** — hide cloak `[built, wears through on the cold it stops]`,
   boots, gloves, hats, mail and plate at the Kiln tier and above `[named]`.
 - **Placed and built** — campfire `[built, burns fuel and leaves ash]`, set snare
@@ -405,18 +409,28 @@ or a cure for the Kiln's ashlung. Capped at the Weald for a reason: it is the
 Realm where the ingredients lie to you, so **every apothecary's reputation is
 built on having survived being wrong.**
 
-**In code today** `[built]`: two chains that cross.
+**In code today** `[built]`: three chains that cross.
 
 - **Food:** kill → butcher → cook at a fire → eat.
 - **Tools:** stone + wood → knife → (hide → cord) → cord + wood → snare → hare
   → back into the food chain.
+- **The sword**, compressed to what one soul can do alone: ore + (wood → char­coal,
+  at a fire) → bar (smelted at a fire) → bar + wood + cord → sword.
 
-The second is the first appearance of §15's generative rule in the prototype:
+All three are the first appearance of §15's generative rule in the prototype:
 a snare needs cordage *and* wood, cordage needs hide *and* a knife already in
-hand, and hide only comes off an animal someone hunted. Nothing in that chain
-can be self-supplied from a single activity, which is the property that makes
-trade arithmetic rather than courtesy. Plus wood → spear, hide → cloak,
-wood → fire.
+hand, hide only comes off an animal someone hunted, and a sword needs a vein,
+a fire kept long enough to burn wood down twice over, *and* the cord the
+tools chain already produces. Nothing in any of them can be self-supplied
+from a single activity, which is the property that makes trade arithmetic
+rather than courtesy. Plus wood → spear, hide → cloak, wood → fire.
+
+**Where the built sword chain falls short of §15's rule:** the full version
+gates real steel behind Realm-gated coal and spreads the work across eight
+professions (above); Stage B has one Realm and one soul doing every step, so
+what is built proves the *no-self-supply* half of the rule and not yet the
+*Realm-gated input* half — there is nothing else to gate it against until a
+second Realm exists.
 
 ---
 
@@ -972,10 +986,19 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   a felled deer already works (first to arrive butchers it, not the striker),
   not an oversight. Whether a stranger's theft of a *catch* should ever be
   distinguished from a stranger's theft of a *kill* is still open.
-- **Terrain beyond the ten tiles** (§3.5) is implied by every Realm and specced
-  nowhere.
+- **Terrain beyond the eleven tiles** (§3.5) is implied by every Realm and
+  specced nowhere.
 - **Killed-by-another-soul** is absent from the death causes (§11.3), and the
-  entire outlawry, bounty and murder-guild layer hangs off it.
+  entire outlawry, bounty and murder-guild layer hangs off it. Not an
+  oversight to close casually: §44's Stage B cut is explicit that PvP, marks
+  and bounties are Stage C ("does cooperation beat predation with real
+  people"), not a Stage B task — this one stays a gap until that gate opens.
+- **The sword chain compresses eight professions into zero new skills.**
+  Ore, charcoal, smelting and forging all run on bare pack checks with no
+  Miner/Smelter/Blacksmith skill behind any of them, unlike every other
+  craft that touches a named skill somewhere in its chain. Deliberate for
+  now — Stage B's roster is already six skills for one soul to carry — but
+  the first candidate if smithing ever earns its own line.
 
 ---
 

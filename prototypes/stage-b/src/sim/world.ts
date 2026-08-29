@@ -29,13 +29,22 @@ export enum Tile {
   Rock = 8,
   /** A set snare, waiting. Catches what walks onto it, then it is spent. */
   Snare = 9,
+  /**
+   * A vein of ore. Same rule as Rock — it never runs out — but rarer and
+   * louder to work, because it sits at the top of the one crafting chain
+   * doc/world/PLAN.md §15 actually names for Stage B: ore + charcoal → bar →
+   * sword. A rock outcrop gets you a knife in an afternoon; a vein gets you
+   * a sword after you have also kept a fire, cut wood down to charcoal, and
+   * smelted the result — which is the point of putting it last.
+   */
+  Ore = 10,
 }
 
 /** How long a burnt-out camp is still visible before the grass closes over it. */
 export const ASH_TICKS = 600;
 
 export function isSolid(t: Tile): boolean {
-  return t === Tile.Tree || t === Tile.Water || t === Tile.Campfire || t === Tile.Rock;
+  return t === Tile.Tree || t === Tile.Water || t === Tile.Campfire || t === Tile.Rock || t === Tile.Ore;
 }
 
 export interface Resource {
@@ -72,6 +81,9 @@ export class World {
         else if (roll < 19) this.set(x, y, Tile.Water);
         else if (roll < 26) this.set(x, y, Tile.Bush);
         else if (roll < 29) this.set(x, y, Tile.Rock);
+        // Rarer than a rock outcrop on purpose — a sword is meant to take
+        // longer to reach than a knife.
+        else if (roll < 31) this.set(x, y, Tile.Ore);
       }
     }
   }

@@ -72,6 +72,11 @@ export function pressure(state: DirectorState): number {
     if (pack.knife > 0) wealth += 12;
     if (pack.axe > 0) wealth += 18;
     wealth += pack.snare * 6;
+    // The sword chain, tier by tier: ore is barely worth more than stone,
+    // charcoal is spent labour, a bar is nearly finished work, and a sword
+    // in hand is the most expensive single thing a soul can carry.
+    wealth += pack.ore + pack.charcoal * 3 + pack.bar * 10;
+    if (pack.sword > 0) wealth += 40;
     for (const skill of SKILLS) wealth += level(player.skills[skill]) * 8;
   }
   // A fire is the loudest thing you own, so it is also the most expensive.

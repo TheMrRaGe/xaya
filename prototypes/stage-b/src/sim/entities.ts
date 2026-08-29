@@ -23,7 +23,16 @@ export interface Needs {
  * wear counter rather than a countable object, so handing one over is a
  * different problem and it is not this one yet.
  */
-export type Tradeable = "wood" | "stone" | "cordage" | "rawMeat" | "cookedMeat" | "hide";
+export type Tradeable =
+  | "wood"
+  | "stone"
+  | "cordage"
+  | "rawMeat"
+  | "cookedMeat"
+  | "hide"
+  | "ore"
+  | "charcoal"
+  | "bar";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -32,6 +41,9 @@ export const TRADEABLES: readonly Tradeable[] = [
   "rawMeat",
   "cookedMeat",
   "hide",
+  "ore",
+  "charcoal",
+  "bar",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -45,6 +57,15 @@ export interface Pack {
   cookedMeat: number;
   hide: number;
   /**
+   * Dug from a vein, never scarce, loud — same deal as stone, one tier up.
+   * Its only use is at a fire: paired with charcoal, it becomes a bar.
+   */
+  ore: number;
+  /** Wood, smothered down at a fire. Burns hotter than the log ever did — the only thing hot enough to run ore. */
+  charcoal: number;
+  /** What ore becomes once smelted. The last material before the sword itself. */
+  bar: number;
+  /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
    * permanent, which is what gives anyone a reason to make one for someone
@@ -55,6 +76,8 @@ export interface Pack {
   knife: number; // uses left. More off a carcass, and the only way to cut cordage
   axe: number; // chops left. More wood off a tree, and quieter doing it
   snare: number; // how many you are carrying, unset
+  /** Strikes left. Double the spear's bite, and outlasts it — the whole chain's payoff. */
+  sword: number;
 }
 
 export type DeathCause =
@@ -102,11 +125,15 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       rawMeat: 0,
       cookedMeat: 0,
       hide: 0,
+      ore: 0,
+      charcoal: 0,
+      bar: 0,
       spear: 0,
       cloak: 0,
       knife: 0,
       axe: 0,
       snare: 0,
+      sword: 0,
     },
     skills: newSkills(),
     offer: "wood",

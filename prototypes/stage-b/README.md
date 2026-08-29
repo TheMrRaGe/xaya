@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (144 of them across 4 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (155 of them across 4 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -98,7 +98,10 @@ is often registered as `text/plain`, and Chrome refuses a
 | **6** | bind an axe (2 stone, 1 wood) — two more logs a tree *and a third less noise*, for 25 chops |
 | **7** | cut cord (1 hide → 2 cord) — needs a knife in hand |
 | **8** | make a snare (2 cord, 1 wood); press again to set the one you're carrying |
-| **T** | cycle what you're offering (wood / stone / cord / raw meat / cooked meat / hide) |
+| **9** | smother wood into charcoal (3 wood → 1 charcoal, at a fire) |
+| **0** | smelt a bar (2 ore, 1 charcoal, at a fire) |
+| **B** | forge a sword (2 bar, 1 wood, 1 cord) — double the spear's damage, for 30 hits |
+| **T** | cycle what you're offering (wood / stone / cord / raw meat / cooked meat / hide / ore / charcoal / bar) |
 | **G** | give one of it to the nearest other soul |
 
 ## What's actually happening under the hood
@@ -168,6 +171,18 @@ plan committed at the repo root's `doc/world/`.
   cord) and an **axe** — two more logs a tree *and a third less noise*,
   which makes it the one tool that leaves you safer than owning no tool at
   all. Same argument skill makes, bought with stone instead of hours.
+- **The sword chain is PLAN §15's worked example, compressed to one soul.**
+  The full version is eight professions and a Realm gate; the Verge is one
+  Realm and one pair of hands, so it collapses to ore + (wood smothered to
+  charcoal, at a fire) → bar (smelted at a fire) → bar + wood + cord →
+  sword. A vein of ore is rarer than a rock outcrop and louder to work than
+  anything else in the game — mining is meant to be the biggest single
+  noise a soul can make on purpose. What comes out the other end is the
+  first weapon in Stage B that is not a stopgap: double a spear's damage,
+  more than double its durability, and nothing else touches it. It is also
+  the first chain that fails §15's "at least one Realm-gated input" half —
+  there is no second Realm yet to gate anything against, which is a scope
+  limit worth being honest about rather than a design claim.
 - **The snare is the only work that pays while you are somewhere else.**
   Hide → cord (needs a knife) → snare → set it in the grass and walk away.
   It takes hares and nothing bigger, it is nearly silent to set, and it
@@ -287,7 +302,7 @@ Per the plan's own named cut list (§44), checked off:
 | In scope | Built |
 |---|---|
 | The Verge, nothing else | ✅ one zone, no Realm gating |
-| A few professions worth of actions | ✅ gather, chip, hunt, trap, butcher, cook, craft (spear, cloak, fire, knife, axe, cord, snare) |
+| A few professions worth of actions | ✅ gather, chip, mine, hunt, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar) |
 | Three creatures | ✅ and then some — hare, deer, river-goat, hedge-boar, wolf, and the crows. §44 asked for three; the extras came after the gate passed, and each one answers a different question rather than padding a bestiary |
 | Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
 | One Lieutenant, no Muster | ✅ |

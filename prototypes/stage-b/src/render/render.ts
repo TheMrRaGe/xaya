@@ -38,6 +38,7 @@ const COLORS: Record<Tile, string> = {
   [Tile.Ash]: "#2b2723",
   [Tile.Rock]: "#6e6e73",
   [Tile.Snare]: "#3a5a34", // grass — a set snare is meant to be easy to lose
+  [Tile.Ore]: "#5a5248",
 };
 
 /** Fuel at which a fire is drawn as embers rather than a blaze. */
@@ -59,6 +60,17 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
         ctx.fillStyle = "#5a5a60";
         ctx.beginPath();
         ctx.arc(x * TILE_PX + TILE_PX * 0.66, y * TILE_PX + TILE_PX * 0.62, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (t === Tile.Ore) {
+        // A vein: two flecks of ore-gold in the dark rock, distinct from a
+        // rock outcrop's plain grey boulders at a glance.
+        ctx.fillStyle = "#c9a227";
+        ctx.beginPath();
+        ctx.arc(x * TILE_PX + TILE_PX * 0.4, y * TILE_PX + TILE_PX * 0.4, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x * TILE_PX + TILE_PX * 0.62, y * TILE_PX + TILE_PX * 0.6, 3, 0, Math.PI * 2);
         ctx.fill();
       }
       if (t === Tile.Snare) {
@@ -185,11 +197,12 @@ export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, lo
       ctx.fillText(`#${player.lineage}`, toPx(player.x) + TILE_PX / 2, toPx(player.y) + TILE_PX / 2 - 12);
       ctx.textAlign = "left";
     }
-    if (player.pack.spear > 0) {
+    if (player.pack.sword > 0 || player.pack.spear > 0) {
       // A stick held out to one side — enough to tell at a glance whether
-      // that soul is the sort that can fight back yet.
-      ctx.strokeStyle = "#c8b088";
-      ctx.lineWidth = 2;
+      // that soul is the sort that can fight back yet, and a sword reads as
+      // the same gesture in a colour that says it is no longer a stick.
+      ctx.strokeStyle = player.pack.sword > 0 ? "#d8d8e0" : "#c8b088";
+      ctx.lineWidth = player.pack.sword > 0 ? 3 : 2;
       ctx.beginPath();
       ctx.moveTo(toPx(player.x) + TILE_PX / 2 + 8, toPx(player.y) + TILE_PX / 2 - 8);
       ctx.lineTo(toPx(player.x) + TILE_PX / 2 + 16, toPx(player.y) + TILE_PX / 2 + 6);
@@ -255,6 +268,7 @@ export function drawHud(
   // "spear" is not.
   const kit = [
     pack.spear > 0 ? `spear ${pack.spear}` : null,
+    pack.sword > 0 ? `sword ${pack.sword}` : null,
     pack.cloak > 0 ? `cloak ${pack.cloak}` : null,
     pack.knife > 0 ? `knife ${pack.knife}` : null,
     pack.axe > 0 ? `axe ${pack.axe}` : null,
@@ -278,35 +292,44 @@ export function drawHud(
     10,
     hudY + 60,
   );
+  // The sword chain's own materials, kept off the line above so that line
+  // still reads at a glance for a soul who never touches a vein.
+  ctx.fillText(`ore ${pack.ore}  charcoal ${pack.charcoal}  bar ${pack.bar}`, 10, hudY + 76);
+
   // Tools show what is left in them, because "axe 3" is a decision.
   ctx.fillStyle = "#c8b088";
-  ctx.fillText(kit || "no tools", 10, hudY + 76);
+  ctx.fillText(kit || "no tools", 10, hudY + 92);
 
   // Skill is the only thing that separates two souls, so it gets a line.
   const learned = SKILLS.map((sk) => `${sk.slice(0, 4)} ${level(p.skills[sk])}`).join("  ");
   ctx.fillStyle = "#9ab08a";
-  ctx.fillText(learned, 10, hudY + 92);
+  ctx.fillText(learned, 10, hudY + 108);
 
   ctx.fillStyle = "#8a8a8a";
   ctx.fillText(
     "WASD move · E gather/chip/butcher · SPACE strike · F fire (5 wood) / feed (1)",
     10,
-    hudY + 110,
+    hudY + 126,
   );
   ctx.fillText(
     "1 spear (3w) · 2 cook · 3 cloak (2 hide) · 4 eat · 5 knife (1s 1w) · 6 axe (2s 1w)",
     10,
-    hudY + 124,
+    hudY + 140,
   );
   ctx.fillText(
     `7 cord (1 hide, needs knife) · 8 snare (2 cord 1w), again to set · T offer: ${p.offer} · G give`,
     10,
-    hudY + 138,
+    hudY + 154,
+  );
+  ctx.fillText(
+    "9 charcoal (3w, at fire) · 0 smelt (2 ore 1 char, at fire) · B sword (2 bar 1w 1 cord)",
+    10,
+    hudY + 168,
   );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 158 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 186 + i * 15));
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {
