@@ -1,0 +1,148 @@
+/**
+ * The authority.
+ *
+ * One Verge, one sim, one process. Clients send what they are pressing and
+ * are told what is true; nothing a client says is trusted beyond "these
+ * keys are down." That is the arrangement DESIGN §6.8 asks for — the sim
+ * tier does not know a server exists, and this file does not know a
+ * renderer exists — and it is the same arrangement a chain would want, with
+ * a cheaper answer to "who decides."
+ *
+ * Whole state goes out every tick. At 24x16 tiles and six beasts that is
+ * ~2.5 KB of JSON at 10 Hz, so a client that joins late, lags, or
+ * reconnects is correct on the next tick with no reconciliation code.
+ */
+import { createServer } from "node:http";
+import { WebSocketServer } from "ws";
+import { staticHandler } from "./serve.mjs";
+import { newSim, stepTick, TICK_HZ, NO_INPUT } from "./dist/sim/tick.js";
+import { newPlayer } from "./dist/sim/entities.js";
+import { snapshot } from "./dist/net/snapshot.js";
+
+const PORT = Number(process.env.PORT) || 8000;
+const WORLD_SEED = 0xc0ffee;
+const TICK_MS = 1000 / TICK_HZ;
+
+const state = newSim(WORLD_SEED, []);
+let nextLineage = 1;
+
+/** id -> socket, for the souls that still have someone driving them. */
+const sockets = new Map();
+/** id -> the input being accumulated for the next tick. */
+const pending = new Map();
+
+/** The Barrow-list, server-side: every soul this Verge has buried. */
+const barrow = [];
+
+function freshInput() {
+  return { ...NO_INPUT };
+}
+
+function joinSoul() {
+  const id = state.players.length;
+  const player = newPlayer(nextLineage++, id);
+  state.players.push(player);
+  state.lastDamageSource.push("starved");
+  pending.set(id, freshInput());
+  return player;
+}
+
+function respawnSoul(id) {
+  const fresh = newPlayer(nextLineage++, id);
+  state.players[id] = fresh;
+  state.lastDamageSource[id] = "starved";
+  pending.set(id, freshInput());
+  return fresh;
+}
+
+const server = createServer(staticHandler());
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (socket) => {
+  const player = joinSoul();
+  const id = player.id;
+  sockets.set(id, socket);
+  console.log(`soul #${player.lineage} joined as player ${id} (${sockets.size} playing)`);
+
+  socket.send(JSON.stringify({ t: "welcome", id, seed: WORLD_SEED, tickHz: TICK_HZ }));
+
+  socket.on("message", (raw) => {
+    let msg;
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      return; // a client that sends nonsense is simply not heard
+    }
+
+    if (msg.t === "in") {
+      const input = pending.get(id) ?? freshInput();
+      // Movement is whatever is held right now; verbs latch until the tick
+      // consumes them, so a press between ticks is never swallowed.
+      input.dx = msg.dx === -1 || msg.dx === 1 ? msg.dx : 0;
+      input.dy = msg.dy === -1 || msg.dy === 1 ? msg.dy : 0;
+      for (const verb of Array.isArray(msg.verbs) ? msg.verbs : []) {
+        if (verb in NO_INPUT && verb !== "dx" && verb !== "dy") input[verb] = true;
+      }
+      pending.set(id, input);
+      return;
+    }
+
+    if (msg.t === "respawn") {
+      const current = state.players[id];
+      if (current && !current.alive) {
+        const soul = respawnSoul(id);
+        console.log(`soul #${soul.lineage} takes player ${id}'s place`);
+      }
+    }
+  });
+
+  socket.on("close", () => {
+    sockets.delete(id);
+    pending.delete(id);
+    // A soul with nobody driving it is lost rather than left standing in a
+    // field — otherwise every page reload leaves a body in the Verge. The
+    // slot itself is never reused, so ids stay stable for everyone still
+    // playing, and a reconnect is simply a new soul.
+    const abandoned = state.players[id];
+    if (abandoned && abandoned.alive) {
+      abandoned.alive = false;
+      state.log.push(`Soul #${abandoned.lineage} is gone from the Verge.`);
+    }
+    console.log(`player ${id} disconnected (${sockets.size} playing)`);
+  });
+});
+
+setInterval(() => {
+  const inputs = state.players.map((p) => pending.get(p.id) ?? NO_INPUT);
+  const deaths = stepTick(state, inputs);
+  for (const [id, input] of pending) pending.set(id, { ...input, ...verbsCleared() });
+
+  for (const death of deaths) {
+    barrow.push(death);
+    console.log(`soul #${death.lineage} — ${death.cause} at tick ${death.tick}`);
+  }
+
+  const snap = snapshot(state);
+  const payload = JSON.stringify({ t: "state", snap, deaths, souls: sockets.size });
+  for (const socket of sockets.values()) {
+    if (socket.readyState === socket.OPEN) socket.send(payload);
+  }
+}, TICK_MS);
+
+function verbsCleared() {
+  const cleared = {};
+  for (const key of Object.keys(NO_INPUT)) {
+    if (key !== "dx" && key !== "dy") cleared[key] = false;
+  }
+  return cleared;
+}
+
+// Local-only by default. `HOST=0.0.0.0 npm start` opens it to the network,
+// which is what you want for two machines and not what you want by accident.
+const HOST = process.env.HOST || "127.0.0.1";
+
+server.listen(PORT, HOST, () => {
+  console.log(`The Verge is open at http://localhost:${PORT}/`);
+  console.log("Open it in two tabs and you have two souls in one world.");
+  if (HOST === "127.0.0.1") console.log("For two machines: HOST=0.0.0.0 npm start");
+});

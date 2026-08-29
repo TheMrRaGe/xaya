@@ -4,12 +4,28 @@
  */
 import { TILE } from "../sim/fixed.js";
 import { World, WORLD_W, WORLD_H, Tile } from "../sim/world.js";
-import { SimState, isNight, CROW_THRESHOLD } from "../sim/tick.js";
-import { Player, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
+import { isNight, CROW_THRESHOLD } from "../sim/tick.js";
+import { Player, Lieutenant, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
 import { Obituary } from "../persist/lineage.js";
 
 export const TILE_PX = 32;
+
+/**
+ * Everything the renderer is allowed to know. A local SimState satisfies
+ * it and so does a snapshot off the wire, which is the point: the client
+ * draws what it is told without caring who told it.
+ */
+export interface ViewState {
+  tick: number;
+  players: Player[];
+  lieutenant: Lieutenant;
+  creatures: Creature[];
+  noise: number;
+  crowX: number;
+  crowY: number;
+  log: string[];
+}
 
 const COLORS: Record<Tile, string> = {
   [Tile.Grass]: "#3a5a34",
@@ -93,7 +109,7 @@ function drawCreature(ctx: CanvasRenderingContext2D, c: Creature): void {
  * and the Lieutenant walks toward them — so this is not decoration, it is
  * the detection channel, drawn where the player can read it.
  */
-function drawCrows(ctx: CanvasRenderingContext2D, state: SimState): void {
+function drawCrows(ctx: CanvasRenderingContext2D, state: ViewState): void {
   if (state.noise < CROW_THRESHOLD) return;
   const strength = Math.min(1, (state.noise - CROW_THRESHOLD) / (1000 - CROW_THRESHOLD));
   const count = 3 + Math.round(strength * 4);
@@ -120,7 +136,7 @@ function drawCrows(ctx: CanvasRenderingContext2D, state: SimState): void {
 /** Souls are told apart by colour; the one you are driving is the pale one. */
 const SOUL_COLORS = ["#e8e0c8", "#88c0e8", "#c8a0e0", "#a0e0a8"];
 
-export function drawEntities(ctx: CanvasRenderingContext2D, state: SimState, localId: number): void {
+export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, localId: number): void {
   const { lieutenant } = state;
 
   for (const c of state.creatures) drawCreature(ctx, c);
@@ -182,7 +198,7 @@ function drawBar(ctx: CanvasRenderingContext2D, x: number, y: number, w: number,
 
 export function drawHud(
   ctx: CanvasRenderingContext2D,
-  state: SimState,
+  state: ViewState,
   p: Player,
   hudY: number,
   hudW: number,

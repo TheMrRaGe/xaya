@@ -1,24 +1,17 @@
 /**
- * Stage B/C — "the smallest loop that can kill you" (plan §44), now with
- * room for more than one soul in it.
+ * The client. It owns the keyboard and the canvas and nothing else.
  *
- * One zone (the Verge). Gather wood, drink, eat, hunt, build a fire, cook
- * what you killed, stitch what you skinned, and hand what you have spare to
- * whoever is standing next to you. Hunger, thirst and cold all tick. Deer
- * run from you, boar run at you, and one Lieutenant hunts whichever soul is
- * nearest — guided by the crows that gather over everything loud you do.
- * Permadeath, with a Barrow-list that remembers every soul before this one.
- *
- * This file is the *client*: it owns the keyboard, the canvas and nothing
- * else. The sim runs locally for now, which is one of the three authorities
- * DESIGN §6.8 describes — a server or a chain slots in here without the sim
- * tier noticing.
+ * It runs no sim. The server decides what is true and says so ten times a
+ * second; this file draws whatever it was told and reports which keys are
+ * down. That split is DESIGN §6.8's whole point — swap the authority for a
+ * chain and neither the renderer nor `src/sim/` notices — and it is also
+ * the only honest way to have two people in one Verge.
  */
-import { WORLD_W, WORLD_H } from "./sim/world.js";
-import { TILE_PX, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";
-import { newSim, stepTick, TICK_HZ, Input, NO_INPUT, SimState } from "./sim/tick.js";
-import { newPlayer } from "./sim/entities.js";
-import { loadBarrowList, recordDeath, nextLineage, Obituary } from "./persist/lineage.js";
+import { WORLD_W, WORLD_H, World } from "./sim/world.js";
+import { TILE_PX, ViewState, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";
+import { Snapshot } from "./net/snapshot.js";
+import { DeathEvent } from "./sim/tick.js";
+import { loadBarrowList, recordDeath, Obituary } from "./persist/lineage.js";
 
 const HUD_H = 140;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -26,112 +19,143 @@ canvas.width = WORLD_W * TILE_PX;
 canvas.height = WORLD_H * TILE_PX + HUD_H;
 const ctx = canvas.getContext("2d")!;
 
-// A fixed seed keeps the Verge itself the same every run — only what
-// happens to you in it changes. Change this to reroll the map.
-const WORLD_SEED = 0xc0ffee;
-
-/** Which soul this client drives. Every other soul in `players` is someone else. */
-const LOCAL_ID = 0;
-
-let state: SimState = startRun();
+let myId = -1;
+let seed = 0;
+let snap: Snapshot | null = null;
+let world: World | null = null;
 let lastDeath: Obituary | null = null;
 let barrowList = loadBarrowList();
+let connection = "connecting to the Verge...";
 
-function startRun(): SimState {
-  const lineage = nextLineage();
-  return newSim(WORLD_SEED, [newPlayer(lineage, LOCAL_ID)]);
-}
+const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`);
+
+socket.addEventListener("open", () => {
+  connection = "";
+});
+
+socket.addEventListener("close", () => {
+  connection = "the Verge is unreachable — is the server still running?";
+});
+
+socket.addEventListener("message", (event) => {
+  const msg = JSON.parse(event.data as string);
+  if (msg.t === "welcome") {
+    myId = msg.id;
+    seed = msg.seed;
+    return;
+  }
+  if (msg.t !== "state") return;
+
+  snap = msg.snap as Snapshot;
+  world = World.restore(seed, snap.tiles, snap.fires);
+  publishDebug(snap);
+
+  for (const death of msg.deaths as DeathEvent[]) {
+    if (death.id !== myId) continue;
+    lastDeath = {
+      lineage: death.lineage,
+      cause: death.cause,
+      tick: death.tick,
+      wood: death.wood,
+      kills: death.kills,
+    };
+    barrowList = recordDeath(lastDeath);
+  }
+});
 
 /**
- * Presses are latched here and consumed by exactly one tick, so a verb
- * fires once per keypress no matter what the frame rate is doing.
+ * Movement is whatever is held. Verbs latch until they are sent, so a press
+ * between two sends is never swallowed by a frame boundary.
  */
 const held = new Set<string>();
-const pressed = new Set<string>();
+let verbs = new Set<string>();
 
-const VERB_KEYS = ["e", " ", "f", "1", "2", "3", "4", "t", "g"];
+const VERBS: Record<string, string> = {
+  e: "gather",
+  " ": "strike",
+  f: "build",
+  "1": "makeSpear",
+  "2": "cook",
+  "3": "makeCloak",
+  "4": "eat",
+  t: "cycleOffer",
+  g: "give",
+};
 
 window.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
   held.add(key);
-  if (VERB_KEYS.includes(key)) {
-    pressed.add(key);
+  const verb = VERBS[key];
+  if (verb) {
+    verbs.add(verb);
     if (key === " ") e.preventDefault(); // space scrolls the page otherwise
   }
-  if (lastDeath) respawn();
+  if (lastDeath) {
+    socket.send(JSON.stringify({ t: "respawn" }));
+    lastDeath = null;
+    verbs = new Set();
+  }
 });
 window.addEventListener("keyup", (e) => held.delete(e.key.toLowerCase()));
 
-function respawn(): void {
-  state = startRun();
-  lastDeath = null;
-  pressed.clear();
-}
-
-function readInput(): Input {
-  let dx: -1 | 0 | 1 = 0;
-  let dy: -1 | 0 | 1 = 0;
+// Twice the tick rate, so the server always has something current to use
+// and a dropped packet costs at most half a tick of movement.
+setInterval(() => {
+  if (socket.readyState !== WebSocket.OPEN) return;
+  let dx = 0;
+  let dy = 0;
   if (held.has("arrowleft") || held.has("a")) dx = -1;
   else if (held.has("arrowright") || held.has("d")) dx = 1;
   if (held.has("arrowup") || held.has("w")) dy = -1;
   else if (held.has("arrowdown") || held.has("s")) dy = 1;
 
-  const input: Input = {
-    ...NO_INPUT,
-    dx,
-    dy,
-    gather: pressed.has("e"),
-    strike: pressed.has(" "),
-    build: pressed.has("f"),
-    makeSpear: pressed.has("1"),
-    cook: pressed.has("2"),
-    makeCloak: pressed.has("3"),
-    eat: pressed.has("4"),
-    cycleOffer: pressed.has("t"),
-    give: pressed.has("g"),
-  };
-  pressed.clear();
-  return input;
+  socket.send(JSON.stringify({ t: "in", dx, dy, verbs: [...verbs] }));
+  verbs = new Set();
+}, 50);
+
+/**
+ * A readout for whoever is testing this, stamped on the canvas element
+ * rather than hung off `window` — a headless browser driving the page from
+ * an isolated world can see the DOM but not our globals.
+ */
+function publishDebug(current: Snapshot): void {
+  canvas.dataset.verge = JSON.stringify({
+    id: myId,
+    tick: current.tick,
+    souls: current.players.length,
+    me: myId >= 0 ? current.players[myId] : null,
+    others: current.players.filter((p) => p.id !== myId).map((p) => ({ id: p.id, x: p.x, y: p.y, alive: p.alive })),
+    trades: current.trades,
+  });
 }
 
-const TICK_MS = 1000 / TICK_HZ;
-let accumulator = 0;
-let lastFrame = performance.now();
+function drawWaiting(text: string): void {
+  ctx.fillStyle = "#0a0a0a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#8a8a8a";
+  ctx.font = "14px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.textAlign = "left";
+}
 
-function frame(now: number): void {
-  const delta = now - lastFrame;
-  lastFrame = now;
-  // A backgrounded tab hands back a huge delta on return; catching up on
-  // thirty seconds of ticks at once is how a soul dies in a loading screen.
-  accumulator = Math.min(accumulator + delta, TICK_MS * 10);
+function frame(): void {
+  requestAnimationFrame(frame);
 
-  if (!lastDeath) {
-    while (accumulator >= TICK_MS) {
-      const inputs: Input[] = state.players.map((p) => (p.id === LOCAL_ID ? readInput() : NO_INPUT));
-      for (const death of stepTick(state, inputs)) {
-        if (death.id !== LOCAL_ID) continue;
-        lastDeath = {
-          lineage: death.lineage,
-          cause: death.cause,
-          tick: death.tick,
-          wood: death.wood,
-          kills: death.kills,
-        };
-        barrowList = recordDeath(lastDeath);
-      }
-      accumulator -= TICK_MS;
-    }
+  if (!snap || !world || myId < 0) {
+    drawWaiting(connection || "waiting for the first tick...");
+    return;
   }
 
-  const local = state.players[LOCAL_ID]!;
+  const view: ViewState = snap;
+  const me = snap.players[myId];
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawWorld(ctx, state.world, state.tick);
-  drawEntities(ctx, state, LOCAL_ID);
-  drawNight(ctx, WORLD_W * TILE_PX, WORLD_H * TILE_PX, state.tick);
-  drawHud(ctx, state, local, WORLD_H * TILE_PX, canvas.width, HUD_H);
+  drawWorld(ctx, world, snap.tick);
+  drawEntities(ctx, view, myId);
+  drawNight(ctx, WORLD_W * TILE_PX, WORLD_H * TILE_PX, snap.tick);
+  if (me) drawHud(ctx, view, me, WORLD_H * TILE_PX, canvas.width, HUD_H);
   if (lastDeath) drawDeathScreen(ctx, canvas.width, canvas.height, lastDeath, barrowList);
-
-  requestAnimationFrame(frame);
+  if (connection) drawWaiting(connection);
 }
 
 requestAnimationFrame(frame);

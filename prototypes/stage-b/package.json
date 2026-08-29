@@ -7,10 +7,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch",
-    "serve": "node serve.mjs",
-    "start": "npm run build && node serve.mjs"
+    "serve": "node server.mjs",
+    "start": "npm run build && node server.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
   }
 }

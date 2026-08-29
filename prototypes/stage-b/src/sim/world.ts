@@ -58,6 +58,19 @@ export class World {
     }
   }
 
+  /**
+   * Rebuild a world from a snapshot. Clients are *told* the world rather
+   * than generating it, so that the server stays the only thing that
+   * decides what is true (DESIGN §6.8).
+   */
+  static restore(seed: number, tiles: ReadonlyArray<Tile>, fires: ReadonlyArray<readonly [number, number]>): World {
+    const w = new World(seed);
+    for (let i = 0; i < w.tiles.length; i++) w.tiles[i] = tiles[i] ?? Tile.Grass;
+    w.fires.clear();
+    for (const [idx, fuel] of fires) w.fires.set(idx, fuel);
+    return w;
+  }
+
   index(x: number, y: number): number {
     return y * WORLD_W + x;
   }

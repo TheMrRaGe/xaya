@@ -14,24 +14,33 @@ start again as the next soul.
 ## Run it
 
 ```
-npm install    # pulls in the TypeScript compiler only — no other deps
-npm start      # compiles src/ to dist/ and serves at http://localhost:8000
+npm install    # the TypeScript compiler, and ws for the server
+npm start      # compiles src/ to dist/ and opens the Verge on :8000
 ```
 
-Then open `http://localhost:8000/` in a browser. (It has to be served, not
-opened as a `file://` URL — browsers block ES module imports from disk.)
-`npm run build` and `npm run serve` are also available separately, and
-`npm run watch` recompiles on save.
+Then open `http://localhost:8000/`. **Open it in a second tab and there are
+two souls in the same world** — they can see each other, get hunted by the
+same Lieutenant, and hand each other things.
 
-If you don't want the `npm install`, any global `tsc` works too:
-`tsc -p tsconfig.json`, then `node serve.mjs`.
+For two people on two machines on the same network:
 
-`serve.mjs` is a twenty-line static server rather than `python -m
-http.server` for one reason: Python takes its MIME types from the Windows
-registry, where `.js` is often registered as `text/plain`, and Chrome
-refuses a `<script type="module">` served as `text/plain`. The symptom is a
-blank 300×150 canvas on a black page with the game's own code never
-running.
+```
+HOST=0.0.0.0 npm start
+```
+
+and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
+by default, because opening a game server to the network should be a thing
+you typed rather than a thing that happened.
+
+`npm run build` and `npm run serve` are available separately, and
+`npm run watch` recompiles on save. `node serve.mjs` serves the files with
+no game attached, if that is ever useful.
+
+The static server is hand-rolled rather than `python -m http.server` for one
+reason: Python takes its MIME types from the Windows registry, where `.js`
+is often registered as `text/plain`, and Chrome refuses a
+`<script type="module">` served as `text/plain`. The symptom is a blank
+300×150 canvas on a black page with the game's own code never running.
 
 ## Controls
 
@@ -87,6 +96,14 @@ running.
   Raw meat rots on a timer; cooked meat keeps. Solo, this reads as pressure.
   With a second player it reads as *demand* — the reason anyone would make a
   spear for someone else, which is the thing Stage C has to test.
+- **The server is the only thing that decides what is true.** `server.mjs`
+  owns the sim and runs it at 10 Hz; a client sends which keys are down and
+  draws whatever it is told, and runs no sim of its own. Whole state goes
+  out every tick — at 24×16 tiles and six beasts that is ~2.5 KB of JSON,
+  so a client that joins late, lags or reconnects is correct on the next
+  tick with no reconciliation code at all. That split is DESIGN §6.8's
+  point: swap this authority for a chain and neither the renderer nor
+  `src/sim/` notices.
 - **The Verge holds more than one soul.** The tick takes one `Input` per
   player and returns every death that happened in it — the same shape a
   server or a chain would hand it, so nothing above `src/sim/` needs to know
@@ -141,7 +158,7 @@ Per the plan's own named cut list (§44), checked off:
 | The Verge, nothing else | ✅ one zone, no Realm gating |
 | A few professions worth of actions | ✅ gather, hunt, butcher, cook, craft (spear, cloak, fire) |
 | Three creatures | ✅ deer, boar, and the crows |
-| Barter economy | Half-built — the sim holds N souls and logs every hand-over. What's missing is a way for two people at two keyboards to be in the same Verge |
+| Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
 | One Lieutenant, no Muster | ✅ |
 | Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
 
@@ -180,6 +197,20 @@ Play until you die at least twice. Then ask, honestly:
 - When the fire burned low, did going for wood feel like a chore or like a
   risk? If it's a chore, the wood cost is too high or the danger too low —
   that number is the difference between a treadmill and a livelihood.
+
+With two people, the only question that matters:
+
+- **Did you trade because you wanted to, or because I asked you to?** If
+  two souls with different luck don't start handing each other things
+  unprompted, no currency, escrow or market UI will fix that — it means the
+  professions aren't different enough from each other yet, and that is a
+  content problem rather than an economy one.
+
+One thing you'll notice immediately with two people: an idle soul is dead in
+about 23 seconds, because the Lieutenant is tuned for a solo run where you
+are always moving. Standing still to talk or to hand something over is
+currently lethal. That number wants revisiting once two people have actually
+tried to have a conversation in the Verge — but feel it first.
 
 That's the whole gate. Tuning numbers (drain rates, detection radius,
 Lieutenant speed, how hard a boar hits) are all placeholders at the top of
