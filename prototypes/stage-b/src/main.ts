@@ -1,19 +1,22 @@
 /**
- * Stage B — "the smallest loop that can kill you" (plan §44).
+ * Stage B/C — "the smallest loop that can kill you" (plan §44), now with
+ * room for more than one soul in it.
  *
  * One zone (the Verge). Gather wood, drink, eat, hunt, build a fire, cook
- * what you killed, stitch what you skinned. Hunger, thirst and cold all
- * tick. Deer run from you, boar run at you, and one Lieutenant hunts you —
- * guided by the crows that gather over everything loud you do. Permadeath,
- * with a Barrow-list that remembers every soul that came before this one.
+ * what you killed, stitch what you skinned, and hand what you have spare to
+ * whoever is standing next to you. Hunger, thirst and cold all tick. Deer
+ * run from you, boar run at you, and one Lieutenant hunts whichever soul is
+ * nearest — guided by the crows that gather over everything loud you do.
+ * Permadeath, with a Barrow-list that remembers every soul before this one.
  *
- * This is deliberately not the full game — see the Stage B cut list in the
- * plan. It exists to answer one question: does dying hurt, and do you
- * start again anyway?
+ * This file is the *client*: it owns the keyboard, the canvas and nothing
+ * else. The sim runs locally for now, which is one of the three authorities
+ * DESIGN §6.8 describes — a server or a chain slots in here without the sim
+ * tier noticing.
  */
 import { WORLD_W, WORLD_H } from "./sim/world.js";
 import { TILE_PX, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";
-import { newSim, stepTick, TICK_HZ, Input, SimState } from "./sim/tick.js";
+import { newSim, stepTick, TICK_HZ, Input, NO_INPUT, SimState } from "./sim/tick.js";
 import { newPlayer } from "./sim/entities.js";
 import { loadBarrowList, recordDeath, nextLineage, Obituary } from "./persist/lineage.js";
 
@@ -27,10 +30,17 @@ const ctx = canvas.getContext("2d")!;
 // happens to you in it changes. Change this to reroll the map.
 const WORLD_SEED = 0xc0ffee;
 
-let lineage = nextLineage();
-let state: SimState = newSim(WORLD_SEED, lineage, newPlayer(lineage));
+/** Which soul this client drives. Every other soul in `players` is someone else. */
+const LOCAL_ID = 0;
+
+let state: SimState = startRun();
 let lastDeath: Obituary | null = null;
 let barrowList = loadBarrowList();
+
+function startRun(): SimState {
+  const lineage = nextLineage();
+  return newSim(WORLD_SEED, [newPlayer(lineage, LOCAL_ID)]);
+}
 
 /**
  * Presses are latched here and consumed by exactly one tick, so a verb
@@ -39,7 +49,7 @@ let barrowList = loadBarrowList();
 const held = new Set<string>();
 const pressed = new Set<string>();
 
-const VERB_KEYS = ["e", " ", "f", "1", "2", "3", "4"];
+const VERB_KEYS = ["e", " ", "f", "1", "2", "3", "4", "t", "g"];
 
 window.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
@@ -53,8 +63,7 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => held.delete(e.key.toLowerCase()));
 
 function respawn(): void {
-  lineage = nextLineage();
-  state = newSim(WORLD_SEED, lineage, newPlayer(lineage));
+  state = startRun();
   lastDeath = null;
   pressed.clear();
 }
@@ -68,6 +77,7 @@ function readInput(): Input {
   else if (held.has("arrowdown") || held.has("s")) dy = 1;
 
   const input: Input = {
+    ...NO_INPUT,
     dx,
     dy,
     gather: pressed.has("e"),
@@ -77,6 +87,8 @@ function readInput(): Input {
     cook: pressed.has("2"),
     makeCloak: pressed.has("3"),
     eat: pressed.has("4"),
+    cycleOffer: pressed.has("t"),
+    give: pressed.has("g"),
   };
   pressed.clear();
   return input;
@@ -95,10 +107,11 @@ function frame(now: number): void {
 
   if (!lastDeath) {
     while (accumulator >= TICK_MS) {
-      const death = stepTick(state, readInput());
-      if (death) {
+      const inputs: Input[] = state.players.map((p) => (p.id === LOCAL_ID ? readInput() : NO_INPUT));
+      for (const death of stepTick(state, inputs)) {
+        if (death.id !== LOCAL_ID) continue;
         lastDeath = {
-          lineage: state.player.lineage,
+          lineage: death.lineage,
           cause: death.cause,
           tick: death.tick,
           wood: death.wood,
@@ -110,11 +123,12 @@ function frame(now: number): void {
     }
   }
 
+  const local = state.players[LOCAL_ID]!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawWorld(ctx, state.world, state.tick);
-  drawEntities(ctx, state);
+  drawEntities(ctx, state, LOCAL_ID);
   drawNight(ctx, WORLD_W * TILE_PX, WORLD_H * TILE_PX, state.tick);
-  drawHud(ctx, state, WORLD_H * TILE_PX, canvas.width, HUD_H);
+  drawHud(ctx, state, local, WORLD_H * TILE_PX, canvas.width, HUD_H);
   if (lastDeath) drawDeathScreen(ctx, canvas.width, canvas.height, lastDeath, barrowList);
 
   requestAnimationFrame(frame);

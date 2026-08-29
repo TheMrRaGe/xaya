@@ -1,8 +1,8 @@
 /**
- * Player and Lieutenant state — plus what the player is carrying, now that
- * there is a short chain of things to carry (§44's "a few professions worth
- * of actions": gather it, kill it, cook it, wear it).
+ * Souls, what they carry, and the Lieutenant that wants them dead.
  *
+ * The Verge holds more than one soul now (Stage C), so everything here is
+ * per-player and nothing assumes there is only ever one of them.
  * Still one Lieutenant, per the cut list: no Captain, no Warden, no Muster.
  */
 import { TILE } from "./fixed.js";
@@ -15,6 +15,11 @@ export interface Needs {
   hydration: number; // thirst — Dowser/Brewer
   warmth: number; // cold — Tailor/Mason/Charcoaler, and a campfire
 }
+
+/** The things one soul can hand another. Tools are not on the list yet. */
+export type Tradeable = "wood" | "rawMeat" | "cookedMeat" | "hide";
+
+export const TRADEABLES: readonly Tradeable[] = ["wood", "rawMeat", "cookedMeat", "hide"];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
 export interface Pack {
@@ -40,24 +45,31 @@ export type DeathCause =
   | "cut down by a Lieutenant";
 
 export interface Player {
+  id: number; // index into SimState.players, stable for the run
   x: number; // fixed-point world units (TILE per tile)
   y: number;
   health: number;
   needs: Needs;
   pack: Pack;
+  offer: Tradeable; // what this soul hands over when it gives
   kills: number;
+  atFire: boolean; // derived each tick; the HUD and the crafting verbs want it
   alive: boolean;
   lineage: number; // which soul this is — the heir count
 }
 
-export function newPlayer(lineage: number): Player {
+/** Souls wash up a couple of tiles apart, inside the clearing world.ts keeps free. */
+export function newPlayer(lineage: number, id = 0): Player {
   return {
-    x: 3 * TILE,
+    id,
+    x: (3 + id * 2) * TILE,
     y: 3 * TILE,
     health: HEALTH_MAX,
     needs: { satiety: NEED_MAX, hydration: NEED_MAX, warmth: NEED_MAX },
     pack: { wood: 0, rawMeat: 0, cookedMeat: 0, hide: 0, spear: 0, cloak: 0 },
+    offer: "wood",
     kills: 0,
+    atFire: false,
     alive: true,
     lineage,
   };
@@ -69,11 +81,12 @@ export interface Lieutenant {
   x: number;
   y: number;
   state: LieutenantState;
+  target: number; // player id he is hunting, -1 when patrolling
   waypointX: number;
   waypointY: number;
-  contactTicks: number; // consecutive ticks in a Mortal Wound with the player
+  contactTicks: number; // consecutive ticks in a Mortal Wound with a soul
 }
 
 export function newLieutenant(x: number, y: number): Lieutenant {
-  return { x, y, state: "patrol", waypointX: x, waypointY: y, contactTicks: 0 };
+  return { x, y, state: "patrol", target: -1, waypointX: x, waypointY: y, contactTicks: 0 };
 }

@@ -5,7 +5,7 @@
 import { TILE } from "../sim/fixed.js";
 import { World, WORLD_W, WORLD_H, Tile } from "../sim/world.js";
 import { SimState, isNight, CROW_THRESHOLD } from "../sim/tick.js";
-import { NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
+import { Player, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
 import { Obituary } from "../persist/lineage.js";
 
@@ -117,17 +117,31 @@ function drawCrows(ctx: CanvasRenderingContext2D, state: SimState): void {
   }
 }
 
-export function drawEntities(ctx: CanvasRenderingContext2D, state: SimState): void {
-  const { player, lieutenant } = state;
+/** Souls are told apart by colour; the one you are driving is the pale one. */
+const SOUL_COLORS = ["#e8e0c8", "#88c0e8", "#c8a0e0", "#a0e0a8"];
+
+export function drawEntities(ctx: CanvasRenderingContext2D, state: SimState, localId: number): void {
+  const { lieutenant } = state;
 
   for (const c of state.creatures) drawCreature(ctx, c);
   drawCrows(ctx, state);
 
-  if (player.alive) {
-    dot(ctx, player.x, player.y, 8, "#e8e0c8", player.pack.cloak > 0 ? "#8a6a4a" : undefined);
+  for (const player of state.players) {
+    if (!player.alive) continue;
+    const fill = SOUL_COLORS[player.id % SOUL_COLORS.length]!;
+    dot(ctx, player.x, player.y, 8, fill, player.pack.cloak > 0 ? "#8a6a4a" : undefined);
+    if (player.id !== localId) {
+      // Another soul gets its lineage over its head, because "who is that"
+      // is the first question anyone asks when they see one.
+      ctx.fillStyle = "#cfc7b0";
+      ctx.font = "10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(`#${player.lineage}`, toPx(player.x) + TILE_PX / 2, toPx(player.y) + TILE_PX / 2 - 12);
+      ctx.textAlign = "left";
+    }
     if (player.pack.spear > 0) {
       // A stick held out to one side — enough to tell at a glance whether
-      // you are the sort of soul that can fight back yet.
+      // that soul is the sort that can fight back yet.
       ctx.strokeStyle = "#c8b088";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -166,11 +180,17 @@ function drawBar(ctx: CanvasRenderingContext2D, x: number, y: number, w: number,
   ctx.fillText(label, x + 4, y + h - 3);
 }
 
-export function drawHud(ctx: CanvasRenderingContext2D, state: SimState, hudY: number, hudW: number, hudH: number): void {
+export function drawHud(
+  ctx: CanvasRenderingContext2D,
+  state: SimState,
+  p: Player,
+  hudY: number,
+  hudW: number,
+  hudH: number,
+): void {
   ctx.fillStyle = "#111";
   ctx.fillRect(0, hudY, hudW, hudH);
 
-  const p = state.player;
   const pack = p.pack;
   drawBar(ctx, 10, hudY + 8, 150, 16, p.needs.satiety / NEED_MAX, "satiety");
   drawBar(ctx, 170, hudY + 8, 150, 16, p.needs.hydration / NEED_MAX, "hydration");
@@ -190,8 +210,10 @@ export function drawHud(ctx: CanvasRenderingContext2D, state: SimState, hudY: nu
   const kit = [pack.spear > 0 ? `spear ${pack.spear}` : null, pack.cloak > 0 ? `cloak ${pack.cloak}` : null]
     .filter(Boolean)
     .join("  ");
+  const others = state.players.filter((o) => o.id !== p.id && o.alive).length;
   ctx.fillText(
-    `soul #${p.lineage}  ${isNight(state.tick) ? "night" : "day"}  kills ${p.kills}${state.atFire ? "  [at fire]" : ""}`,
+    `soul #${p.lineage}  ${isNight(state.tick) ? "night" : "day"}  kills ${p.kills}` +
+      `${p.atFire ? "  [at fire]" : ""}${others > 0 ? `  ${others} other soul${others > 1 ? "s" : ""}` : ""}`,
     10,
     hudY + 44,
   );
@@ -203,7 +225,11 @@ export function drawHud(ctx: CanvasRenderingContext2D, state: SimState, hudY: nu
 
   ctx.fillStyle = "#8a8a8a";
   ctx.fillText("WASD move · E gather/butcher · SPACE strike · F build fire (5 wood) / feed it (1)", 10, hudY + 78);
-  ctx.fillText("1 spear (3 wood) · 2 cook (at fire) · 3 cloak (2 hide, at fire) · 4 eat", 10, hudY + 92);
+  ctx.fillText(
+    `1 spear (3 wood) · 2 cook · 3 cloak · 4 eat · T offer: ${p.offer} · G give`,
+    10,
+    hudY + 92,
+  );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";

@@ -4,8 +4,9 @@
 > yourself, playing your own game, nobody else will." — the plan's Stage B
 > gate.
 
-A single-zone browser prototype. One player, one Realm (the Verge), one
-Lieutenant, and enough living things to make the zone worth walking into.
+A single-zone browser prototype. One Realm (the Verge), one Lieutenant,
+enough living things to make the zone worth walking into, and room for more
+than one soul to be standing in it.
 This is deliberately not the game — it's the smallest possible version of the
 loop the whole design is built on: survive, build, get seen, maybe die, and
 start again as the next soul.
@@ -44,6 +45,8 @@ running.
 | **2** | cook one raw meat (must be at a fire) |
 | **3** | stitch a hide cloak (2 hide, at a fire) — cold takes half as much, until it wears through |
 | **4** | eat — cooked if you have it, raw if you're desperate |
+| **T** | cycle what you're offering (wood / raw meat / cooked meat / hide) |
+| **G** | give one of it to the nearest other soul |
 
 ## What's actually happening under the hood
 
@@ -84,6 +87,21 @@ running.
   Raw meat rots on a timer; cooked meat keeps. Solo, this reads as pressure.
   With a second player it reads as *demand* — the reason anyone would make a
   spear for someone else, which is the thing Stage C has to test.
+- **The Verge holds more than one soul.** The tick takes one `Input` per
+  player and returns every death that happened in it — the same shape a
+  server or a chain would hand it, so nothing above `src/sim/` needs to know
+  which one is driving (DESIGN §6.8). The Lieutenant hunts whichever soul is
+  nearest, which makes standing near someone else a risk and a shield at
+  once. A boar holds its grudge against whoever swung first.
+- **Giving, and a ledger.** **T** picks what you're offering, **G** hands one
+  to the soul beside you. Giving is one-sided on purpose: two people who
+  each want what the other has will trade by giving twice, and that is
+  enough to answer Stage C's only question — *do they?* Escrow and a
+  currency are for when the other soul is a stranger, which is a later
+  problem. Every hand-over is appended to `state.trades` from the very first
+  one, because DESIGN §6.8 says trades have to be authoritative, logged and
+  replayable if cash-out is ever to be possible, and that is free now and
+  impossible to retrofit.
 - **Fleeing works.** Contact damage only applies while you're standing in
   the Lieutenant's contact radius; break away and it stops. He also loses
   interest if you get far enough away, with hysteresis so he doesn't flicker
@@ -123,7 +141,7 @@ Per the plan's own named cut list (§44), checked off:
 | The Verge, nothing else | ✅ one zone, no Realm gating |
 | A few professions worth of actions | ✅ gather, hunt, butcher, cook, craft (spear, cloak, fire) |
 | Three creatures | ✅ deer, boar, and the crows |
-| Barter economy | N/A solo — but the demand side is built: everything made is consumed, so there is something to trade for when Stage C adds a second player |
+| Barter economy | Half-built — the sim holds N souls and logs every hand-over. What's missing is a way for two people at two keyboards to be in the same Verge |
 | One Lieutenant, no Muster | ✅ |
 | Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
 
