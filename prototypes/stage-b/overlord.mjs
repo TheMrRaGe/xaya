@@ -34,8 +34,15 @@ const DEFAULT_MODEL = "llama3.2:3b";
 
 /** Don't speak more often than this, however much is happening. */
 const MIN_GAP_MS = Number(process.env.OVERLORD_MIN_GAP_MS ?? 25_000);
-/** A slow local model must never pile requests up behind itself. */
-const TIMEOUT_MS = 20_000;
+/**
+ * A slow local model must never pile requests up behind itself — but a cold
+ * one is *very* slow. Measured on a 3B: about twenty seconds to load and
+ * process the character bible, then half a second per line once it is
+ * resident and the prompt prefix is cached. So the ceiling is generous and
+ * the model gets warmed at startup; a late line costs nothing, because
+ * none of this is on the tick.
+ */
+const TIMEOUT_MS = Number(process.env.OVERLORD_TIMEOUT_MS ?? 45_000);
 
 /**
  * The Understudy. Pure code, no network, no cost — and the only thing
@@ -65,6 +72,22 @@ const UNDERSTUDY = {
 function pick(list, n) {
   return list[n % list.length];
 }
+
+/**
+ * Four lines in his voice, shown to the model every time.
+ *
+ * A character bible describes; a small model imitates. Three billion
+ * parameters will read a page about who someone is and still answer in
+ * generic portentous fantasy — including itself in "we", which the Grey
+ * King would never do. Four examples fix more of that than four more pages
+ * of description would.
+ */
+const VOICE = [
+  "Someone has lit a fire in my Verge. How careless. How warm.",
+  "That one lasted eleven days. The record is nineteen, and he is also dead.",
+  "You are cutting my trees. Cut quietly and I may not send anyone.",
+  "Two of you, sharing. I will remember which two.",
+];
 
 /**
  * Make a small model's answer usable.
@@ -155,6 +178,12 @@ export async function createOverlord(say) {
     try {
       system = await readFile(fileURLToPath(BIBLE), "utf-8");
       console.log(`the Grey King is listening (${model} at ${url})`);
+      // Wake him before anyone needs him. Loading the weights and reading
+      // the bible is the expensive part and it happens exactly once, so pay
+      // for it at boot rather than in front of a player.
+      void askModel({ url, model, key, system, prompt: "Say nothing. Reply with a single full stop." })
+        .then(() => console.log("the Grey King is awake"))
+        .catch((err) => console.log(`the Grey King did not stir (${err.message}) — first line may be slow`));
     } catch (err) {
       console.log(`the Grey King is mute (${err.message}) — the Understudy will speak`);
       system = null;
@@ -175,7 +204,12 @@ export async function createOverlord(say) {
 
   function noteDeath(death) {
     deaths++;
-    pending.push(`Soul #${death.lineage}, ${death.mastery}, is dead — ${death.cause}.`);
+    const who = `Soul #${death.lineage}, ${death.mastery}`;
+    pending.push(
+      death.cause === "cut down by a Lieutenant"
+        ? `Your Lieutenant killed ${who}.`
+        : `${who} died. The cause was: ${death.cause}.`,
+    );
   }
 
   /** Reads the notices it is handed, because by now `pending` has been cleared. */
@@ -199,9 +233,17 @@ export async function createOverlord(say) {
       "Since you last spoke, the world recorded:",
       lines || "- nothing worth recording",
       "",
-      "Say one line aloud to everyone in the Verge. One sentence, two at the",
-      "outside. Do not explain a rule, do not use numbers, do not narrate for",
-      "a reader, and do not repeat yourself. Reply with the line and nothing else.",
+      "Say one line aloud to everyone in the Verge, about something in that",
+      "list and nothing else. You are watching them do it; you are not doing",
+      "it. One sentence, two at the outside. No riddles and no proverbs.",
+      "Do not explain a rule, do not use numbers, do not narrate for a reader,",
+      "and never say *we* or *us* — you are not one of them.",
+      "",
+      "Things you said on other days, for tone only. Never reuse them, and",
+      "never answer today with yesterday's subject:",
+      ...VOICE.map((line) => `  ${line}`),
+      "",
+      "Reply with your line and nothing else.",
     ].join("\n");
   }
 
