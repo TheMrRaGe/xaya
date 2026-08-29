@@ -489,9 +489,12 @@ A master Smith who has never left the Moorfen is not a bad Smith — they are th
 best Smith the world currently has access to. Nobody's work is obsolete; it is
 *ceilinged*, and the ceiling only moves when the whole world moves it together.
 
-**In code today** `[built]`: five skills — woodcraft, hunting, butchery, cooking,
-tailoring — earned by doing, dying with the character, and **quiet**: a practised
-hand makes less noise, so competence and safety are the same stat.
+**In code today** `[built]`: six skills — woodcraft, hunting, butchery, cooking,
+tailoring, trapping — earned by doing, dying with the character, and **quiet**: a
+practised hand makes less noise, so competence and safety are the same stat.
+Trapping is the odd one: it earns nothing from noise (a snare is nearly silent
+either way) and instead raises the catch chance of whatever a soul's snares
+spring — the only skill that pays out while its owner is somewhere else.
 
 **Stage B's cut list** `[plan §44]` names ten professions in scope: Farmer,
 Hunter, Miner, Logger, Charcoaler, Smelter, Blacksmith, Leatherworker, Tanner,
@@ -958,14 +961,18 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   enough that farming apprentices with alts is unprofitable.
 - ~~**The Verge's own aggressive Wild** has no name~~ — closed: it is the
   hedge-boar (see §14).
-- **Trapping has no skill of its own.** Setting snares currently teaches
-  nothing, while every other way of getting food teaches something. §17 names a
-  Trapper; either that becomes a sixth skill or trapping folds into hunting on
-  purpose rather than by omission.
-- **A set snare is nobody's property.** Anything can spring it and anyone could
-  pick it up, which is fine with two friendly souls and is not fine the moment
-  the Verge holds a stranger.
-- **Terrain beyond the eight tiles** (§3.5) is implied by every Realm and specced
+- ~~**Trapping has no skill of its own.**~~ — closed: trapping is now the sixth
+  skill, matching §17's Trapper. It earns nothing from noise (a snare is
+  already near-silent) and instead raises the catch chance of a soul's own
+  snares — the only skill that pays out while its owner is elsewhere.
+- ~~**A set snare is nobody's property.**~~ — half-closed: a snare now
+  remembers which soul set it, and that is whose trapping skill and XP a catch
+  credits. It is still not *locked* — anything can walk up and butcher what it
+  caught, the same as any other carcass — which is a deliberate match to how
+  a felled deer already works (first to arrive butchers it, not the striker),
+  not an oversight. Whether a stranger's theft of a *catch* should ever be
+  distinguished from a stranger's theft of a *kill* is still open.
+- **Terrain beyond the ten tiles** (§3.5) is implied by every Realm and specced
   nowhere.
 - **Killed-by-another-soul** is absent from the death causes (§11.3), and the
   entire outlawry, bounty and murder-guild layer hangs off it.

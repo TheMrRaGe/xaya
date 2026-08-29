@@ -10,7 +10,7 @@ import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT } from
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
-import { level, mastery } from "../dist/sim/skills.js";
+import { level, mastery, trapChance } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS } from "../dist/sim/creatures.js";
 
 
@@ -541,6 +541,42 @@ function check(name, cond, detail = "") {
   stepTick(s, IDLE);
   check("a hare bolts from across the field", hare.state === "flee", hare.state);
   check("a river-goat lets you walk up to it", goat.state !== "flee", goat.state);
+}
+
+// --- 21. trapping is a skill, and a snare remembers whose it is ---
+{
+  const s = fresh(2);
+  const p = s.players[0];
+  const stranger = s.players[1];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Grass);
+
+  p.pack.cordage = 2;
+  p.pack.wood = 1;
+  stepTick(s, [I({ setSnare: true }), I()]);
+  stepTick(s, [I({ setSnare: true }), I()]);
+  check("setting a snare teaches trapping", p.skills.trapping > 0, `xp=${p.skills.trapping}`);
+  check("the snare knows who set it", s.world.snares.get(s.world.index(px, py)) === p.id);
+
+  const hare = s.creatures.find((c) => c.kind === "hare");
+  let ticks = 0;
+  while (s.world.snares.size > 0 && ticks < 60) {
+    hare.x = px * TILE;
+    hare.y = py * TILE;
+    p.health = 100;
+    stranger.health = 100;
+    stepTick(s, IDLE);
+    ticks++;
+  }
+  check(
+    "a catch credits the soul who set it, not a soul standing near",
+    p.skills.trapping > 0 && stranger.skills.trapping === 0,
+    `setter=${p.skills.trapping} stranger=${stranger.skills.trapping}`,
+  );
+
+  check("nobody starts better than one in three", trapChance({ trapping: 0 })[0] === 33);
+  check("mastery does noticeably better", trapChance({ trapping: 10000 })[0] >= 33 + 4 * 9);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

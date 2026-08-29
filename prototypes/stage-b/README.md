@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (112 of them, ~2s, no browser). `npm run build`
+`npm test` runs the checks (144 of them across 4 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -176,13 +176,21 @@ plan committed at the repo root's `doc/world/`.
   happens; a trapline is work you did *earlier*, quietly, and it is the
   first thing in Stage B that rewards patience over nerve. The Grey King
   has a line about that, and he does not enjoy it.
+
+  A snare remembers whose hands set it, so a catch teaches *that* soul's
+  trapping — one in three at nothing, better than two in three at mastery —
+  and nobody else's. It is not locked: whoever gets to a caught hare first
+  still butchers it, the same as any other carcass. It just means a soul who
+  never sets a line never gets better at reading one.
 - **Skill is earned by doing, and dies with you** (DESIGN §6.10). No perks,
   no classes, no starting traits — every soul arrives at zero and can learn
   anything, and the only difference between two players is which hours they
-  spent. Chopping teaches woodcraft, skinning teaches butchery. A practised
-  hand gets more wood off a tree, more meat off a carcass, more out of a
-  meal — and, importantly, **makes less noise doing it**, so competence and
-  safety are the same stat.
+  spent. Chopping teaches woodcraft, skinning teaches butchery, tending a
+  trapline teaches trapping. A practised hand gets more wood off a tree,
+  more meat off a carcass, more out of a meal — and, importantly, **makes
+  less noise doing it**, so competence and safety are the same stat.
+  Trapping is the exception: a snare is already near-silent, so skill there
+  buys a better catch instead of a quieter one.
 
   It all dies with the character. The Barrow-list keeps the title ("they
   were a fair butcher") as reputation and hands the next soul none of the

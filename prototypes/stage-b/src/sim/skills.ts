@@ -17,14 +17,14 @@
  * what gives their work value.
  */
 
-export type Skill = "woodcraft" | "hunting" | "butchery" | "cooking" | "tailoring";
+export type Skill = "woodcraft" | "hunting" | "butchery" | "cooking" | "tailoring" | "trapping";
 
-export const SKILLS: readonly Skill[] = ["woodcraft", "hunting", "butchery", "cooking", "tailoring"];
+export const SKILLS: readonly Skill[] = ["woodcraft", "hunting", "butchery", "cooking", "tailoring", "trapping"];
 
 export type Skills = Record<Skill, number>; // experience, not level
 
 export function newSkills(): Skills {
-  return { woodcraft: 0, hunting: 0, butchery: 0, cooking: 0, tailoring: 0 };
+  return { woodcraft: 0, hunting: 0, butchery: 0, cooking: 0, tailoring: 0, trapping: 0 };
 }
 
 /** Experience for one use of each verb. */
@@ -35,6 +35,8 @@ export const XP = {
   butcher: 15,
   cook: 12,
   stitch: 40,
+  snare: 8, // coiling and setting one
+  trap: 25, // a catch, earned while you were somewhere else entirely
 } as const;
 
 export const MAX_LEVEL = 9;
@@ -95,12 +97,24 @@ export function cloakDurability(skills: Skills): number {
   return 400 + level(skills.tailoring) * 60;
 }
 
+/**
+ * A snare's odds of catching whatever walks onto it this tick, as
+ * [numerator, denominator] for `Rng.chance`. One in three at nothing —
+ * a trapline is a thing you come back to, not a thing you watch — rising to
+ * better than two in three at mastery, because a trapper's snares are set
+ * where the hare actually runs rather than where the grass is open.
+ */
+export function trapChance(skills: Skills): readonly [number, number] {
+  return [33 + level(skills.trapping) * 4, 100];
+}
+
 const TITLES: Record<Skill, string> = {
   woodcraft: "woodcutter",
   hunting: "hunter",
   butchery: "butcher",
   cooking: "cook",
   tailoring: "tailor",
+  trapping: "trapper",
 };
 
 const RANKS = ["", "a poor", "a passable", "a fair", "a good", "a skilled", "a fine", "an expert", "a master", "a master"];

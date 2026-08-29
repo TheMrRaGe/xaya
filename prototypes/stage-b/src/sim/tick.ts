@@ -427,9 +427,15 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
   }
 
   // A trapline pays out whether or not anyone is standing there.
-  for (const idx of checkSnares(state.creatures, ctx)) {
-    world.clearSnare(idx);
-    say(state, "A snare has taken something. It is still there, waiting to be cut out.");
+  for (const catch_ of checkSnares(state.creatures, ctx)) {
+    world.clearSnare(catch_.idx);
+    const owner = state.players[catch_.owner];
+    if (owner && owner.alive) {
+      learn(state, owner, "trapping", XP.trap);
+      say(state, `Soul #${owner.lineage}'s snare has taken something. It is still there, waiting to be cut out.`);
+    } else {
+      say(state, "A snare has taken something. It is still there, waiting to be cut out.");
+    }
   }
 
   // --- the Lieutenant, and whoever he catches ---
@@ -789,7 +795,8 @@ function doSetSnare(state: SimState, player: Player, px: number, py: number): vo
     say(state, "A snare, coiled and ready. Set it somewhere a hare would run.");
     return;
   }
-  if (!state.world.setSnare(px, py)) return;
+  if (!state.world.setSnare(px, py, player.id)) return;
+  learn(state, player, "trapping", XP.snare);
   pack.snare--;
   // Setting one is nearly silent — that is the point of it.
   bumpNoise(state, 10, player);

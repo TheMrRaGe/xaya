@@ -49,8 +49,13 @@ export class World {
   readonly resources: Map<number, Resource> = new Map();
   /** Lit fires, by tile index, holding the ticks of fuel each has left. */
   readonly fires: Map<number, number> = new Map();
-  /** Set snares, by tile index. A snare has no state but where it is. */
-  readonly snares: Set<number> = new Set();
+  /**
+   * Set snares, by tile index, holding the id of whoever set each one — so a
+   * catch can credit the right soul's patience rather than a shared pool.
+   * The Verge does not enforce this against a stranger (nothing else here
+   * is locked either); it only decides whose trapping gets better at it.
+   */
+  readonly snares: Map<number, number> = new Map();
 
   constructor(seed: number) {
     const rng = new Rng(seed);
@@ -81,10 +86,11 @@ export class World {
     for (let i = 0; i < w.tiles.length; i++) w.tiles[i] = tiles[i] ?? Tile.Grass;
     w.fires.clear();
     for (const [idx, fuel] of fires) w.fires.set(idx, fuel);
-    // A snare holds no state but its position, which the tiles already carry —
-    // so it rebuilds itself and costs the snapshot nothing.
+    // A client-restored snare doesn't know whose it is — ownership is only
+    // ever read server-side, to credit a catch — so it rebuilds itself as
+    // ownerless and costs the snapshot nothing.
     w.snares.clear();
-    for (let i = 0; i < w.tiles.length; i++) if (w.tiles[i] === Tile.Snare) w.snares.add(i);
+    for (let i = 0; i < w.tiles.length; i++) if (w.tiles[i] === Tile.Snare) w.snares.set(i, -1);
     return w;
   }
 
@@ -140,10 +146,10 @@ export class World {
   }
 
   /** Set a snare on open ground. False if something is already there. */
-  setSnare(x: number, y: number): boolean {
+  setSnare(x: number, y: number, owner: number): boolean {
     if (this.get(x, y) !== Tile.Grass) return false;
     this.set(x, y, Tile.Snare);
-    this.snares.add(this.index(x, y));
+    this.snares.set(this.index(x, y), owner);
     return true;
   }
 

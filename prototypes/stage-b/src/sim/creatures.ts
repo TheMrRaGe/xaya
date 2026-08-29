@@ -22,6 +22,7 @@ import { TILE, clamp, distSq } from "./fixed.js";
 import { Rng } from "./rng.js";
 import { World, WORLD_W, WORLD_H } from "./world.js";
 import { stepToward, stepAway, moveWithCollision, walkable } from "./move.js";
+import { Skills, trapChance } from "./skills.js";
 
 export type CreatureKind = "deer" | "hedge-boar" | "wolf" | "hare" | "river-goat";
 export type CreatureState = "graze" | "flee" | "charge" | "hunt" | "dead";
@@ -118,7 +119,7 @@ export interface CreatureCtx {
   world: World;
   rng: Rng;
   tick: number;
-  souls: ReadonlyArray<{ id: number; x: number; y: number; alive: boolean }>;
+  souls: ReadonlyArray<{ id: number; x: number; y: number; alive: boolean; skills?: Skills }>;
   noise: number;
   noiseMax: number;
   /** Wolves hunt on sight only after dark — see `wolfPrey`. */
@@ -325,6 +326,12 @@ function spooker(c: Creature, ctx: CreatureCtx): { x: number; y: number } | null
   return distSq(c.x, c.y, near.x, near.y) <= radius * radius ? near : null;
 }
 
+/** A snare that sprang this tick: where, and whose patience it was. */
+export interface SnareCatch {
+  idx: number;
+  owner: number; // player id, or -1 if the world doesn't know (a client's copy)
+}
+
 /**
  * A set snare catches what walks onto it.
  *
@@ -335,11 +342,15 @@ function spooker(c: Creature, ctx: CreatureCtx): { x: number; y: number } | null
  * certainly does not hold a boar — so it is the hare's counterpart rather
  * than a replacement for hunting.
  *
- * Returns the tile indices of every snare that sprang this tick, so the
- * caller can clear them and say so.
+ * Whose trapping skill applies is read off the snare's owner, not whoever
+ * happens to be standing nearest when it springs — the same soul who
+ * quietly walked the line earlier is the one whose hours this rewards.
+ *
+ * Returns every snare that sprang this tick, so the caller can clear them,
+ * credit whoever set them, and say so.
  */
-export function checkSnares(creatures: Creature[], ctx: CreatureCtx): number[] {
-  const sprung: number[] = [];
+export function checkSnares(creatures: Creature[], ctx: CreatureCtx): SnareCatch[] {
+  const sprung: SnareCatch[] = [];
   if (!ctx.world.snares.size) return sprung;
 
   for (const c of creatures) {
@@ -347,14 +358,17 @@ export function checkSnares(creatures: Creature[], ctx: CreatureCtx): number[] {
     const tx = Math.floor(c.x / TILE);
     const ty = Math.floor(c.y / TILE);
     const idx = ctx.world.index(tx, ty);
-    if (!ctx.world.snares.has(idx)) continue;
-    // Even standing on one it is a coin-flip per tick, so a trapline is a
-    // thing you come back to rather than a thing you watch.
-    if (!ctx.rng.chance(1, 3)) continue;
+    const owner = ctx.world.snares.get(idx);
+    if (owner === undefined) continue;
+    const soul = ctx.souls.find((s) => s.id === owner);
+    const [num, den] = soul?.skills ? trapChance(soul.skills) : [33, 100];
+    // Even standing on one it is a coin-flip most souls lose more often than
+    // they win, so a trapline is a thing you come back to, not watch.
+    if (!ctx.rng.chance(num, den)) continue;
     c.state = "dead";
     c.health = 0;
     c.diedAtTick = ctx.tick;
-    sprung.push(idx);
+    sprung.push({ idx, owner });
   }
   return sprung;
 }
