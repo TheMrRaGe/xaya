@@ -49,6 +49,8 @@ import {
   CREATURE_RESPAWN_TICKS,
   BOAR_GORE_DAMAGE,
   BOAR_GORE_COOLDOWN,
+  WOLF_BITE_DAMAGE,
+  WOLF_BITE_COOLDOWN,
 } from "./creatures.js";
 
 export const TICK_HZ = 10;
@@ -361,16 +363,22 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
     souls: state.players,
     noise: state.noise,
     noiseMax: NOISE_MAX,
+    night: isNight(state.tick),
   };
   for (const c of state.creatures) {
     stepCreature(c, ctx);
-    if (c.kind !== "boar" || c.state !== "charge" || c.goreCooldown > 0) continue;
-    const gored = state.players[c.angryAt];
-    if (!gored || !gored.alive) continue;
-    if (distSq(c.x, c.y, gored.x, gored.y) > CONTACT_RADIUS * CONTACT_RADIUS) continue;
-    gored.health = clamp(gored.health - BOAR_GORE_DAMAGE, 0, HEALTH_MAX);
-    state.lastDamageSource[gored.id] = "gored by a boar";
-    c.goreCooldown = BOAR_GORE_COOLDOWN;
+    // A charging boar and a hunting wolf both bite the same way: contact,
+    // a cooldown, and whoever the beast currently holds a grudge against.
+    const biting = (c.kind === "boar" && c.state === "charge") || (c.kind === "wolf" && c.state === "hunt");
+    if (!biting || c.goreCooldown > 0) continue;
+    const target = state.players[c.angryAt];
+    if (!target || !target.alive) continue;
+    if (distSq(c.x, c.y, target.x, target.y) > CONTACT_RADIUS * CONTACT_RADIUS) continue;
+    const damage = c.kind === "boar" ? BOAR_GORE_DAMAGE : WOLF_BITE_DAMAGE;
+    const cause: DeathCause = c.kind === "boar" ? "gored by a boar" : "savaged by wolves";
+    target.health = clamp(target.health - damage, 0, HEALTH_MAX);
+    state.lastDamageSource[target.id] = cause;
+    c.goreCooldown = c.kind === "boar" ? BOAR_GORE_COOLDOWN : WOLF_BITE_COOLDOWN;
   }
 
   // --- the Lieutenant, and whoever he catches ---

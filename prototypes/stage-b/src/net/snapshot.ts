@@ -1,7 +1,7 @@
 /**
  * What the server tells a client about the world, each tick.
  *
- * The Verge is 24x16 tiles with six beasts in it, so the honest thing to do
+ * The Verge is 24x16 tiles with eight beasts in it, so the honest thing to do
  * at this size is send all of it: about 2.5 KB of JSON at 10 Hz, which is
  * 25 KB/s per player and not worth optimising until it is. Sending whole
  * state rather than a stream of deltas means a client that joins late, lags,

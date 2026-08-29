@@ -11,6 +11,7 @@ import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
 import { level, mastery } from "../dist/sim/skills.js";
+import { woundCreature, WOLF_ANGER_TICKS } from "../dist/sim/creatures.js";
 
 
 const I = (o = {}) => ({ ...NO_INPUT, ...o });
@@ -31,8 +32,8 @@ function check(name, cond, detail = "") {
   const s = fresh();
   const p = s.players[0];
   const kinds = s.creatures.map((c) => c.kind).sort().join(",");
-  check("six creatures spawn", s.creatures.length === 6, `got ${s.creatures.length}`);
-  check("roster is 4 deer + 2 boar", kinds === "boar,boar,deer,deer,deer,deer", kinds);
+  check("eight creatures spawn", s.creatures.length === 8, `got ${s.creatures.length}`);
+  check("roster is 4 deer + 2 boar + 2 wolves", kinds === "boar,boar,deer,deer,deer,deer,wolf,wolf", kinds);
   const tooClose = s.creatures.filter((c) => Math.hypot(c.x - p.x, c.y - p.y) < 6 * TILE);
   check("nothing spawns in your lap", tooClose.length === 0, `${tooClose.length} within 6 tiles`);
 }
@@ -385,6 +386,43 @@ function check(name, cond, detail = "") {
   check("the one who hunted cannot", level(woodcutter.skills.hunting) === 0);
   check("and the reverse", level(hunter.skills.hunting) > 0 && level(hunter.skills.woodcraft) === 0);
   check("which is where trade comes from", mastery(woodcutter.skills) !== mastery(hunter.skills), `${mastery(woodcutter.skills)} / ${mastery(hunter.skills)}`);
+}
+
+// --- 15. wolves hunt by scent after dark, not by daylight, and remember being struck ---
+{
+  // by day: proximity alone does not provoke a hunt
+  const day = fresh();
+  const wDay = day.creatures.find((c) => c.kind === "wolf");
+  day.players[0].x = wDay.x + 2 * TILE;
+  day.players[0].y = wDay.y;
+  stepTick(day, IDLE);
+  check("a wolf ignores you by daylight", wDay.state !== "hunt", wDay.state);
+
+  // after dark, the same distance is enough
+  const night = fresh();
+  const wNight = night.creatures.find((c) => c.kind === "wolf");
+  night.players[0].x = wNight.x + 2 * TILE;
+  night.players[0].y = wNight.y;
+  night.tick = 2999; // the next tick crosses into night
+  stepTick(night, IDLE);
+  check("the same distance hunts you after dark", wNight.state === "hunt", wNight.state);
+  check("and it knows who", wNight.angryAt === night.players[0].id);
+
+  // struck and not killed, it holds the grudge far longer than a boar does
+  const s = fresh();
+  const wolf = s.creatures.find((c) => c.kind === "wolf");
+  woundCreature(wolf, 1, s.tick, s.players[0].id);
+  check("striking one buys a long memory", wolf.angerTicks === WOLF_ANGER_TICKS, `${wolf.angerTicks}`);
+
+  // and a bite that lands says what it was
+  const s2 = fresh();
+  const w2 = s2.creatures.find((c) => c.kind === "wolf");
+  s2.players[0].health = 5;
+  s2.players[0].x = w2.x;
+  s2.players[0].y = w2.y;
+  s2.tick = 2999;
+  const deaths = stepTick(s2, IDLE);
+  check("a bite that lands can kill", deaths.length === 1 && deaths[0].cause === "savaged by wolves", JSON.stringify(deaths));
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

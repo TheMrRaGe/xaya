@@ -69,6 +69,7 @@ const INCIDENT_LINES = {
   cold_snap: "The cold is mine tonight. Spend your wood or don't.",
   blight: "Nothing will grow for a while. That was me.",
   loose_a_boar: "Something with tusks has taken an interest in you.",
+  loose_the_wolves: "I sent two. They do not tire the way you do.",
   mark: "One of you is wanted. The rest of you may relax.",
 };
 

@@ -26,7 +26,7 @@ import { Rng } from "./rng.js";
 import { World, WORLD_W, WORLD_H } from "./world.js";
 import { Player } from "./entities.js";
 import { SKILLS, level } from "./skills.js";
-import { newCreature } from "./creatures.js";
+import { newCreature, WOLF_ANGER_TICKS } from "./creatures.js";
 import { walkable } from "./move.js";
 
 /** Everything the Overlord may do. Nothing outside this list is possible. */
@@ -37,6 +37,7 @@ export type OverlordAction =
   | { kind: "cold_snap"; ticks: number }
   | { kind: "blight"; ticks: number }
   | { kind: "loose_a_boar"; x: number; y: number }
+  | { kind: "loose_the_wolves"; x: number; y: number }
   | { kind: "mark"; soul: number };
 
 export type ActionKind = OverlordAction["kind"];
@@ -174,6 +175,16 @@ export function offers(state: DirectorState, points: number): Offer[] {
     250,
   );
 
+  // Pricier than one boar, and meaner: two beasts that hold the same
+  // grudge, rather than one that holds it twice as long.
+  const wolfSpot = openNear(state, richest.x, richest.y, 4);
+  push(
+    { kind: "loose_the_wolves", x: wolfSpot.x, y: wolfSpot.y },
+    `Loose a pair of wolves near Soul #${richest.lineage}. They hunt as one animal.`,
+    40,
+    300,
+  );
+
   push(
     { kind: "mark", soul: richest.id },
     `Mark Soul #${richest.lineage}. Your Lieutenant will want no one else until they are dead.`,
@@ -237,6 +248,27 @@ export function applyAction(state: DirectorState, action: OverlordAction): void 
         boar.angryAt = nearest.id;
       }
       state.creatures.push(boar as never);
+      return;
+    }
+
+    case "loose_the_wolves": {
+      const nearest = livingSouls(state).reduce<Player | null>((best, p) => {
+        if (!best) return p;
+        const db = (best.x - action.x) ** 2 + (best.y - action.y) ** 2;
+        const dp = (p.x - action.x) ** 2 + (p.y - action.y) ** 2;
+        return dp < db ? p : best;
+      }, null);
+      // Two wolves, not one twice — a pack arrives together and holds the
+      // same grudge, which is the whole point of it costing more than a boar.
+      for (let i = 0; i < 2; i++) {
+        const spot = openNear(state, action.x, action.y, 1);
+        const wolf = newCreature("wolf", spot.x, spot.y);
+        if (nearest) {
+          wolf.angerTicks = WOLF_ANGER_TICKS;
+          wolf.angryAt = nearest.id;
+        }
+        state.creatures.push(wolf as never);
+      }
       return;
     }
 

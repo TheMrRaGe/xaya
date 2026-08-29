@@ -43,6 +43,7 @@ export type DeathCause =
   | "died of thirst"
   | "froze"
   | "gored by a boar"
+  | "savaged by wolves"
   | "cut down by a Lieutenant";
 
 export interface Player {

@@ -53,9 +53,9 @@ speaks, so the voice costs nothing to run and is tied to no vendor.
 He is a **Storyteller**, not a commentator (DESIGN §3.5). Every half minute
 he is handed a menu of things he may legally do — send the Lieutenant
 walking, gather crows over an empty field, bring a cold snap, blight the
-ground, loose an angry boar, mark a soul as wanted, or do nothing — and he
-picks one and says why. The reason is the line you see, so narration is the
-visible half of a decision rather than decoration.
+ground, loose an angry boar, loose a pair of wolves, mark a soul as wanted,
+or do nothing — and he picks one and says why. The reason is the line you
+see, so narration is the visible half of a decision rather than decoration.
 
 What he may choose from depends on **pressure**: what the Verge has built.
 Goods carried, tools held, skills learned, fires lit, souls alive. The
@@ -117,12 +117,24 @@ is often registered as `text/plain`, and Chrome refuses a
   is *visible*, to you and to him, and the counter-play falls out of it for
   free: work in short bursts, or go quiet and let the flock thin, or be loud
   somewhere on purpose and leave before he arrives.
-- **Deer spook, boar charge.** Deer flee from you, and from a radius that
-  grows with your noise — a camp that gathers hard all day is a camp whose
-  meat has walked to the far side of the map. Boar ignore you until you
-  swing at one, and a boar is *faster than you are*. You cannot outrun what
-  you started; you can only outlast its temper (~26s) or put a spear in it.
-  That is the one place in Stage B where greed, not bad luck, kills you.
+- **Deer spook, boar charge, wolves hunt.** Deer flee from you, and from a
+  radius that grows with your noise — a camp that gathers hard all day is a
+  camp whose meat has walked to the far side of the map. Boar ignore you
+  until you swing at one, and a boar is *faster than you are*. You cannot
+  outrun what you started; you can only outlast its temper (~26s) or put a
+  spear in it. That is the one place in Stage B where greed, not bad luck,
+  kills you.
+
+  Wolves are the odd one out, and the newest thing in the Verge: they are
+  the only beast that comes looking for you rather than waiting to be
+  found. By day they graze like deer, harmless. After dark, the same noise
+  radius that grows the Lieutenant's reach also opens their nose — get
+  close enough while the sun is down and a pair starts hunting, unprompted,
+  no strike required. Wound one and fail to finish it and the grudge outlasts
+  a boar's by nearly a factor of two; leave one alone and it forgets you by
+  sunrise. That is the noise thesis applied a second time, aimed at your
+  hide instead of your dinner, and it is the first hazard in Stage B that
+  the clock itself turns on.
 - **A short refining chain**, which is §44's "a few professions worth of
   actions" at its smallest: kill → butcher → cook at a fire → eat. Raw meat
   is worth little and makes you sick one bite in four; cooked meat is worth
@@ -232,7 +244,7 @@ Per the plan's own named cut list (§44), checked off:
 |---|---|
 | The Verge, nothing else | ✅ one zone, no Realm gating |
 | A few professions worth of actions | ✅ gather, hunt, butcher, cook, craft (spear, cloak, fire) |
-| Three creatures | ✅ deer, boar, and the crows |
+| Three creatures | ✅ deer, boar, and the crows — plus a fourth, the wolf, added after this gate passed |
 | Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
 | One Lieutenant, no Muster | ✅ |
 | Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
@@ -269,6 +281,8 @@ Play until you die at least twice. Then ask, honestly:
   one that tells you whether the noise thesis reads as a mechanic or just as
   a number in the HUD.
 - Did you ever pick a fight with a boar on purpose? Did you regret it?
+- Did a wolf ever find you before you found it — and did you notice it was
+  night that did it, or did it just feel like bad luck?
 - When the fire burned low, did going for wood feel like a chore or like a
   risk? If it's a chore, the wood cost is too high or the danger too low —
   that number is the difference between a treadmill and a livelihood.
@@ -289,7 +303,8 @@ temporarily steeper skill effects.
 
 **Don't tune the attention numbers here.** Every constant governing how fast
 the Grey King's forces notice you — detection radius, noise decay,
-`KILL_REST_TICKS`, `RESPAWN_GRACE_TICKS`, `SPAWN_CLEAR_TILES` — is squeezed
+`KILL_REST_TICKS`, `RESPAWN_GRACE_TICKS`, `SPAWN_CLEAR_TILES`, the wolves'
+own `WOLF_DETECT_BASE` and `WOLF_ANGER_TICKS` — is squeezed
 into a 24×16 zone where a soul crosses the whole world in eight seconds. The
 real Realms are much larger and drawing real attention is meant to take far
 longer: hours of visible activity, not ninety seconds of chopping. These

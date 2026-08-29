@@ -73,11 +73,19 @@ const check = (name, cond, detail = "") => {
   check("with nothing owed, he can only wait", poor.length === 1 && poor[0] === "nothing", JSON.stringify(poor));
 
   const rich = offers(s, 500).map((o) => o.action.kind);
-  check("everything unlocks eventually", rich.includes("mark") && rich.includes("loose_a_boar"), JSON.stringify(rich));
+  check(
+    "everything unlocks eventually",
+    rich.includes("mark") && rich.includes("loose_a_boar") && rich.includes("loose_the_wolves"),
+    JSON.stringify(rich),
+  );
   check("and doing nothing is always on the menu", rich[0] === "nothing");
 
   const middling = offers(s, 100).map((o) => o.action.kind);
-  check("the expensive ones stay locked", !middling.includes("mark") && !middling.includes("loose_a_boar"), JSON.stringify(middling));
+  check(
+    "the expensive ones stay locked",
+    !middling.includes("mark") && !middling.includes("loose_a_boar") && !middling.includes("loose_the_wolves"),
+    JSON.stringify(middling),
+  );
   check("while the cheap ones are open", middling.includes("false_crows"), JSON.stringify(middling));
 }
 
@@ -129,6 +137,17 @@ const check = (name, cond, detail = "") => {
   applyAction(c, { kind: "loose_a_boar", x: c.players[0].x + TILE, y: c.players[0].y });
   check("a loosed boar arrives", c.creatures.filter((x) => x.kind === "boar").length === boars + 1);
   check("and it arrives angry", c.creatures[c.creatures.length - 1].angerTicks > 0);
+
+  const w = fresh();
+  const wolves = w.creatures.filter((x) => x.kind === "wolf").length;
+  applyAction(w, { kind: "loose_the_wolves", x: w.players[0].x + TILE, y: w.players[0].y });
+  check("loosed wolves arrive in a pair", w.creatures.filter((x) => x.kind === "wolf").length === wolves + 2);
+  const newWolves = w.creatures.slice(-2);
+  check(
+    "and both hold the same grudge",
+    newWolves.every((x) => x.angerTicks > 0 && x.angryAt === w.players[0].id),
+    JSON.stringify(newWolves.map((x) => [x.angerTicks, x.angryAt])),
+  );
 
   const d = fresh(2);
   applyAction(d, { kind: "mark", soul: 1 });

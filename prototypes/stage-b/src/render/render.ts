@@ -99,6 +99,8 @@ function drawCreature(ctx: CanvasRenderingContext2D, c: Creature): void {
 
   if (c.kind === "deer") {
     dot(ctx, c.x, c.y, 7, c.state === "flee" ? "#e6d2a8" : "#c8a878");
+  } else if (c.kind === "wolf") {
+    dot(ctx, c.x, c.y, 7, "#888890", c.state === "hunt" ? "#c02020" : undefined);
   } else {
     dot(ctx, c.x, c.y, 9, "#6b4a2a", c.state === "charge" ? "#c02020" : undefined);
   }
