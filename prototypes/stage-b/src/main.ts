@@ -13,7 +13,7 @@ import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
 import { loadBarrowList, recordDeath, Obituary } from "./persist/lineage.js";
 
-const HUD_H = 140;
+const HUD_H = 165;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 canvas.width = WORLD_W * TILE_PX;
 canvas.height = WORLD_H * TILE_PX + HUD_H;
@@ -58,6 +58,7 @@ socket.addEventListener("message", (event) => {
       tick: death.tick,
       wood: death.wood,
       kills: death.kills,
+      mastery: death.mastery,
     };
     barrowList = recordDeath(lastDeath);
   }

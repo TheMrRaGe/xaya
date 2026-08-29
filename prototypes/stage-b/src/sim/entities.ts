@@ -6,6 +6,7 @@
  * Still one Lieutenant, per the cut list: no Captain, no Warden, no Muster.
  */
 import { TILE } from "./fixed.js";
+import { Skills, newSkills } from "./skills.js";
 
 export const NEED_MAX = 1000;
 export const HEALTH_MAX = 100;
@@ -51,6 +52,8 @@ export interface Player {
   health: number;
   needs: Needs;
   pack: Pack;
+  /** Earned by doing, never given, and lost with this character (§6.1). */
+  skills: Skills;
   offer: Tradeable; // what this soul hands over when it gives
   kills: number;
   atFire: boolean; // derived each tick; the HUD and the crafting verbs want it
@@ -73,6 +76,7 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     health: HEALTH_MAX,
     needs: { satiety: NEED_MAX, hydration: NEED_MAX, warmth: NEED_MAX },
     pack: { wood: 0, rawMeat: 0, cookedMeat: 0, hide: 0, spear: 0, cloak: 0 },
+    skills: newSkills(),
     offer: "wood",
     kills: 0,
     atFire: false,

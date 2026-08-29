@@ -26,6 +26,19 @@ import {
 } from "./entities.js";
 import { stepToward, moveWithCollision, walkable } from "./move.js";
 import {
+  Skill,
+  XP,
+  gain,
+  level,
+  mastery,
+  woodPerTree,
+  noiseScale,
+  strikeBonus,
+  butcherBonus,
+  mealValue,
+  cloakDurability,
+} from "./skills.js";
+import {
   Creature,
   STATS,
   spawnCreatures,
@@ -82,8 +95,7 @@ const SPEAR_DAMAGE = 3;
 const SPEAR_DURABILITY = 12; // strikes: about four deer, or two boar
 const FIST_DAMAGE = 1;
 
-const CLOAK_HIDE_COST = 2;
-const CLOAK_DURABILITY = 400; // cold ticks it can take before it is rags
+const CLOAK_HIDE_COST = 2; // how long it then lasts is up to the tailor — see skills.ts
 
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
@@ -141,6 +153,8 @@ export interface DeathEvent {
   tick: number;
   wood: number;
   kills: number;
+  /** What this character was best at. Goes on the Barrow-list as a name, not as a bonus. */
+  mastery: string;
 }
 
 /**
@@ -378,6 +392,7 @@ function kill(state: SimState, player: Player): DeathEvent {
     tick: state.tick,
     wood: player.pack.wood,
     kills: player.kills,
+    mastery: mastery(player.skills),
   };
 }
 
@@ -461,11 +476,15 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
   const carcass = nearestCreature(state, player, isCarcass);
   if (carcass) {
     const stats = STATS[carcass.kind];
-    pack.rawMeat += stats.meat;
-    pack.hide += stats.hide;
+    const extra = butcherBonus(player.skills);
+    const meat = stats.meat + extra;
+    const hide = stats.hide + extra;
+    pack.rawMeat += meat;
+    pack.hide += hide;
     carcass.butchered = true;
     carcass.respawnAtTick = state.tick + CREATURE_RESPAWN_TICKS;
-    say(state, `You butcher the ${carcass.kind}: ${stats.meat} meat, ${stats.hide} hide.`);
+    say(state, `You butcher the ${carcass.kind}: ${meat} meat, ${hide} hide.`);
+    learn(state, player, "butchery", XP.butcher);
     return;
   }
 
@@ -482,8 +501,9 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     const t = world.get(gx, gy);
     if (t === Tile.Tree) {
       world.harvest(gx, gy, state.tick, REGROW_TICKS);
-      pack.wood += 3;
-      bumpNoise(state, NOISE_PER_GATHER, player);
+      pack.wood += woodPerTree(player.skills);
+      bumpNoise(state, skilledNoise(NOISE_PER_GATHER, player, "woodcraft"), player);
+      learn(state, player, "woodcraft", XP.chop);
       if (!state.flags.firstGather) {
         state.flags.firstGather = true;
         say(state, "The Grey King: “...Someone is cutting wood in the Verge. How ordinary. How loud.”");
@@ -509,9 +529,10 @@ function doStrike(state: SimState, player: Player): void {
   if (!quarry) return;
 
   const pack = player.pack;
-  const damage = pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE;
+  const damage = (pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE) + strikeBonus(player.skills);
   const killed = woundCreature(quarry, damage, state.tick, player.id);
-  bumpNoise(state, NOISE_PER_STRIKE, player);
+  bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
+  learn(state, player, "hunting", killed ? XP.kill : XP.strike);
 
   if (pack.spear > 0) {
     pack.spear--;
@@ -570,7 +591,8 @@ function doCook(state: SimState, player: Player): void {
   if (!player.atFire || pack.rawMeat < 1) return;
   pack.rawMeat--;
   pack.cookedMeat++;
-  bumpNoise(state, NOISE_PER_COOK, player);
+  bumpNoise(state, skilledNoise(NOISE_PER_COOK, player, "cooking"), player);
+  learn(state, player, "cooking", XP.cook);
   say(state, "Meat over the fire. The smell carries further than the light does.");
 }
 
@@ -578,7 +600,8 @@ function doMakeCloak(state: SimState, player: Player): void {
   const pack = player.pack;
   if (!player.atFire || pack.cloak > 0 || pack.hide < CLOAK_HIDE_COST) return;
   pack.hide -= CLOAK_HIDE_COST;
-  pack.cloak = CLOAK_DURABILITY;
+  pack.cloak = cloakDurability(player.skills);
+  learn(state, player, "tailoring", XP.stitch);
   say(state, "A hide cloak. The cold takes half as much now.");
 }
 
@@ -587,7 +610,7 @@ function doEat(state: SimState, player: Player): void {
   const pack = player.pack;
   if (pack.cookedMeat > 0) {
     pack.cookedMeat--;
-    player.needs.satiety = clamp(player.needs.satiety + 500, 0, NEED_MAX);
+    player.needs.satiety = clamp(player.needs.satiety + mealValue(player.skills), 0, NEED_MAX);
     player.needs.warmth = clamp(player.needs.warmth + 80, 0, NEED_MAX);
     return;
   }
@@ -653,6 +676,17 @@ function nearestCreature(state: SimState, player: Player, pick: (c: Creature) =>
     }
   }
   return best;
+}
+
+/** Practice, and a word when it shows. */
+function learn(state: SimState, player: Player, skill: Skill, xp: number): void {
+  if (!gain(player.skills, skill, xp)) return;
+  say(state, `Soul #${player.lineage}'s hands know the work better — ${skill} ${level(player.skills[skill])}.`);
+}
+
+/** Noise for an action, reduced by how well the soul does it. */
+function skilledNoise(base: number, player: Player, skill: Skill): number {
+  return Math.trunc((base * noiseScale(player.skills, skill)) / 100);
 }
 
 function bumpNoise(state: SimState, amount: number, source: Player): void {

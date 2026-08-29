@@ -15,6 +15,12 @@ export interface Obituary {
   wood: number;
   /** Optional: souls buried before there were beasts to kill have no count. */
   kills?: number;
+  /**
+   * What this character was best at, in words. The next soul inherits the
+   * story and none of the skill — reputation is the only thing §6.1 lets
+   * cross a death.
+   */
+  mastery?: string;
 }
 
 export function loadBarrowList(): Obituary[] {

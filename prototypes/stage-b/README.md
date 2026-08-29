@@ -88,6 +88,21 @@ is often registered as `text/plain`, and Chrome refuses a
   is worth little and makes you sick one bite in four; cooked meat is worth
   four times as much and warms you. Hides become a cloak. The fire is now
   load-bearing three ways — warmth, cooking, and being seen.
+- **Skill is earned by doing, and dies with you** (DESIGN §6.10). No perks,
+  no classes, no starting traits — every soul arrives at zero and can learn
+  anything, and the only difference between two players is which hours they
+  spent. Chopping teaches woodcraft, skinning teaches butchery. A practised
+  hand gets more wood off a tree, more meat off a carcass, more out of a
+  meal — and, importantly, **makes less noise doing it**, so competence and
+  safety are the same stat.
+
+  It all dies with the character. The Barrow-list keeps the title ("they
+  were a fair butcher") as reputation and hands the next soul none of the
+  skill. Which is where trade comes from: nobody barters firewood in the
+  first hour, because an hour of chopping gets anyone the same three logs.
+  Later, when a woodcutter's hour yields twice what yours does and your hour
+  is better spent skinning, handing each other things stops being a courtesy
+  and becomes arithmetic.
 - **Nothing you make is permanent**, which is the substrate the economy
   will stand on (DESIGN §6.3). A spear holds 12 strikes. A cloak wears
   through on the cold it keeps off you. A campfire burns fuel and goes out,
@@ -223,6 +238,12 @@ With two people, the only question that matters:
   unprompted, no currency, escrow or market UI will fix that — it means the
   professions aren't different enough from each other yet, and that is a
   content problem rather than an economy one.
+
+Fair warning on that one: in a session this short, both souls are near zero
+at everything, so an hour of chopping gets either of you the same three
+logs and there is no reason to trade *yet*. That is the design working, not
+failing — see §6.10. Testing it properly needs either a longer session or
+temporarily steeper skill effects.
 
 **Don't tune the attention numbers here.** Every constant governing how fast
 the Grey King's forces notice you — detection radius, noise decay,

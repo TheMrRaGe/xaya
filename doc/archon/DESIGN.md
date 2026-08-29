@@ -418,6 +418,51 @@ Three properties already in the design do most of the defending:
 What is left is ordinary operational work: trade logs we can unwind, terms
 that make coin a licence rather than property, and rate limits that cost a
 farm more than they cost a person.
+
+### 6.10 Skill is earned, and it dies with you
+
+**No perks, no classes, no starting traits.** Every soul arrives at zero and
+every soul can learn anything. What separates two players is only the hours
+they have each put in, and which hours they chose. A veteran holds no
+advantage a new player cannot earn the same way, which is what lets the game
+stay open to anyone at any point in a season.
+
+Skill is gained by doing the thing. Chopping teaches woodcraft, skinning
+teaches butchery, and there is no other route — no purchase, no gift, no
+inheritance.
+
+**Skill belongs to the character and dies with it.** That is §6.1's "zero
+material advantage carries forward" applied to the one thing that would
+otherwise become a wall between old players and new. The soul keeps the
+*title* — that it was once a master smith, three lives ago — as reputation,
+which is worth a great deal socially and nothing mechanically.
+
+Three things fall out of that, which is why this sits in the economy section
+rather than a combat one:
+
+1. **Trade becomes necessary rather than polite.** Nobody barters firewood
+   in the first hour, because an hour of chopping gets anyone the same three
+   logs — and that is correct, not a failure. Later, when a woodcutter's
+   hour yields twice what yours does and your hour is better spent skinning,
+   handing each other things stops being a courtesy and becomes arithmetic.
+   The economy is not designed in; it is what specialisation makes
+   inevitable.
+2. **Masters are scarce and perishable.** A master smith is a rare, mortal
+   resource whose work is precious precisely because they may not survive
+   the week. "The Verge's last master smith was killed last night" is an
+   economic event and a story at the same time, which is what the spectacle
+   runs on (§8, risk 1).
+3. **Nobody can master everything before they die.** Self-sufficiency stops
+   being a strategy, which is the entire point.
+
+The curve should be fast at the bottom and slow at the top: a fresh soul
+competent within minutes, so death never returns anyone to useless, and
+mastery far enough away that reaching it is something other players notice.
+
+And skill should be **quiet**. A practised hand takes the tree in fewer,
+better strokes, so competence and safety become the same stat — which points
+the whole skill system at §1's thesis instead of away from it.
+
 ---
 
 ## 7. Roadmap

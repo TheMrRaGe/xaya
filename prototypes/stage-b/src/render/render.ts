@@ -7,6 +7,7 @@ import { World, WORLD_W, WORLD_H, Tile } from "../sim/world.js";
 import { isNight, CROW_THRESHOLD } from "../sim/tick.js";
 import { Player, Lieutenant, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
+import { SKILLS, level } from "../sim/skills.js";
 import { Obituary } from "../persist/lineage.js";
 
 export const TILE_PX = 32;
@@ -242,17 +243,22 @@ export function drawHud(
     hudY + 60,
   );
 
+  // Skill is the only thing that separates two souls, so it gets a line.
+  const learned = SKILLS.map((sk) => `${sk.slice(0, 4)} ${level(p.skills[sk])}`).join("  ");
+  ctx.fillStyle = "#9ab08a";
+  ctx.fillText(learned, 10, hudY + 78);
+
   ctx.fillStyle = "#8a8a8a";
-  ctx.fillText("WASD move · E gather/butcher · SPACE strike · F build fire (5 wood) / feed it (1)", 10, hudY + 78);
+  ctx.fillText("WASD move · E gather/butcher · SPACE strike · F build fire (5 wood) / feed it (1)", 10, hudY + 96);
   ctx.fillText(
     `1 spear (3 wood) · 2 cook · 3 cloak · 4 eat · T offer: ${p.offer} · G give`,
     10,
-    hudY + 92,
+    hudY + 110,
   );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 114 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 132 + i * 15));
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: Obituary, barrowList: Obituary[]): void {
@@ -266,15 +272,20 @@ export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: num
   const kills = o.kills ?? 0;
   const beasts = kills === 1 ? "1 beast" : `${kills} beasts`;
   ctx.fillText(`Carried ${o.wood} wood. Took ${beasts}. Survived ${(o.tick / 10).toFixed(0)}s.`, w / 2, h / 2 - 14);
+  if (o.mastery) {
+    ctx.fillStyle = "#a89878";
+    ctx.fillText(`They were ${o.mastery}. The next soul starts at nothing.`, w / 2, h / 2 + 8);
+    ctx.fillStyle = "#e8e0c8";
+  }
   ctx.font = "13px monospace";
-  ctx.fillText("Press any key to begin again, as the next soul.", w / 2, h / 2 + 20);
+  ctx.fillText("Press any key to begin again, as the next soul.", w / 2, h / 2 + 36);
 
   ctx.font = "12px monospace";
   ctx.fillStyle = "#a89878";
-  ctx.fillText("— the Barrow-list —", w / 2, h / 2 + 50);
+  ctx.fillText("— the Barrow-list —", w / 2, h / 2 + 66);
   const recent = barrowList.slice(-6);
   recent.forEach((entry, i) => {
-    ctx.fillText(`#${entry.lineage}: ${entry.cause}`, w / 2, h / 2 + 68 + i * 14);
+    ctx.fillText(`#${entry.lineage}: ${entry.cause}`, w / 2, h / 2 + 84 + i * 14);
   });
   ctx.textAlign = "left";
 }
