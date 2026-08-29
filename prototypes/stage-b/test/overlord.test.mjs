@@ -4,7 +4,7 @@
 // never hears its own words back.
 //
 //     node test/overlord.test.mjs
-import { createOverlord } from "../overlord.mjs";
+import { createOverlord, tidy } from "../overlord.mjs";
 
 let failures = 0;
 const check = (name, cond, detail = "") => {
@@ -71,6 +71,20 @@ async function fresh() {
 {
   const { o } = await fresh();
   check("off by default, so it cannot spend anything", o.stats.enabled === false && o.stats.calls === 0);
+}
+
+// Small local models wrap, prefix, ramble and think out loud. None of that
+// should ever reach a player, and none of it means the answer was bad.
+{
+  check("a plain line survives untouched", tidy("The crows are yours now.") === "The crows are yours now.");
+  check("wrapping quotes come off", tidy('"The crows are yours now."') === "The crows are yours now.");
+  check("curly quotes come off too", tidy("“The crows are yours now.”") === "The crows are yours now.");
+  check("it stops announcing itself", tidy("Grey King: You built a light.") === "You built a light.");
+  check("thinking out loud is discarded", tidy("<think>who died?</think> Another one stops.") === "Another one stops.");
+  const rambled = tidy("One. Two. Three. Four.");
+  check("two sentences at the outside", rambled === "One. Two.", rambled);
+  check("and nothing runs on forever", tidy("x".repeat(400)).length <= 240);
+  check("an empty answer stays empty", tidy("") === "" && tidy(null) === "");
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

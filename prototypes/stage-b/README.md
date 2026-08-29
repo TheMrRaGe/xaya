@@ -36,13 +36,25 @@ you typed rather than a thing that happened.
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
-**The Grey King speaks for himself** if you set `OVERLORD=1` — the server
-then sends what happened to the Claude API and puts his answer in everyone's
-log. It needs your own `ANTHROPIC_API_KEY` (or `ant auth login`), costs real
-money, and is off by default. Without it the **Understudy** speaks: canned
-lines, chosen to match what happened, no network and no cost. That split is
-DESIGN §3.2's liveness guarantee in miniature — the world never goes quiet
-because inference was unavailable.
+**The Grey King speaks for himself** if you set `OVERLORD=1`. He talks to
+whatever model you point him at, and the default is one on your own machine:
+
+```
+ollama pull llama3.2:3b     # ~2GB, and plenty for one line of menace
+OVERLORD=1 npm start
+```
+
+Any OpenAI-compatible `/chat/completions` endpoint works — Ollama, LM
+Studio, llama.cpp's server, or a hosted free tier — via `OVERLORD_URL`,
+`OVERLORD_MODEL` and an optional `OVERLORD_KEY`. There is no SDK and no
+account: it is one `fetch` against a shape every local runner already
+speaks, so the voice costs nothing to run and is tied to no vendor.
+
+Without it the **Understudy** speaks: canned lines chosen to match what
+happened, no network and no cost. It also covers whenever the model is
+missing, slow, or answers with something unusable. That split is DESIGN
+§3.2's liveness guarantee in miniature — the world never goes quiet because
+inference was unavailable.
 
 `node serve.mjs` serves the files with no game attached, if that is ever
 useful.
