@@ -1,10 +1,11 @@
 /**
  * Stage B — "the smallest loop that can kill you" (plan §44).
  *
- * One zone (the Verge). Gather wood, drink, eat berries, build a fire.
- * Hunger, thirst and cold all tick. One Lieutenant hunts you, and hunting
- * you is louder the more you've built. Permadeath, with a Barrow-list that
- * remembers every soul that came before this one.
+ * One zone (the Verge). Gather wood, drink, eat, hunt, build a fire, cook
+ * what you killed, stitch what you skinned. Hunger, thirst and cold all
+ * tick. Deer run from you, boar run at you, and one Lieutenant hunts you —
+ * guided by the crows that gather over everything loud you do. Permadeath,
+ * with a Barrow-list that remembers every soul that came before this one.
  *
  * This is deliberately not the full game — see the Stage B cut list in the
  * plan. It exists to answer one question: does dying hurt, and do you
@@ -16,7 +17,7 @@ import { newSim, stepTick, TICK_HZ, Input, SimState } from "./sim/tick.js";
 import { newPlayer } from "./sim/entities.js";
 import { loadBarrowList, recordDeath, nextLineage, Obituary } from "./persist/lineage.js";
 
-const HUD_H = 110;
+const HUD_H = 140;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 canvas.width = WORLD_W * TILE_PX;
 canvas.height = WORLD_H * TILE_PX + HUD_H;
@@ -31,14 +32,22 @@ let state: SimState = newSim(WORLD_SEED, lineage, newPlayer(lineage));
 let lastDeath: Obituary | null = null;
 let barrowList = loadBarrowList();
 
+/**
+ * Presses are latched here and consumed by exactly one tick, so a verb
+ * fires once per keypress no matter what the frame rate is doing.
+ */
 const held = new Set<string>();
-let gatherRequested = false;
-let craftRequested = false;
+const pressed = new Set<string>();
+
+const VERB_KEYS = ["e", " ", "f", "1", "2", "3", "4"];
 
 window.addEventListener("keydown", (e) => {
-  held.add(e.key.toLowerCase());
-  if (e.key.toLowerCase() === "e") gatherRequested = true;
-  if (e.key.toLowerCase() === "f") craftRequested = true;
+  const key = e.key.toLowerCase();
+  held.add(key);
+  if (VERB_KEYS.includes(key)) {
+    pressed.add(key);
+    if (key === " ") e.preventDefault(); // space scrolls the page otherwise
+  }
   if (lastDeath) respawn();
 });
 window.addEventListener("keyup", (e) => held.delete(e.key.toLowerCase()));
@@ -47,6 +56,7 @@ function respawn(): void {
   lineage = nextLineage();
   state = newSim(WORLD_SEED, lineage, newPlayer(lineage));
   lastDeath = null;
+  pressed.clear();
 }
 
 function readInput(): Input {
@@ -57,11 +67,19 @@ function readInput(): Input {
   if (held.has("arrowup") || held.has("w")) dy = -1;
   else if (held.has("arrowdown") || held.has("s")) dy = 1;
 
-  const gather = gatherRequested;
-  const craft = craftRequested;
-  gatherRequested = false;
-  craftRequested = false;
-  return { dx, dy, gather, craft };
+  const input: Input = {
+    dx,
+    dy,
+    gather: pressed.has("e"),
+    strike: pressed.has(" "),
+    build: pressed.has("f"),
+    makeSpear: pressed.has("1"),
+    cook: pressed.has("2"),
+    makeCloak: pressed.has("3"),
+    eat: pressed.has("4"),
+  };
+  pressed.clear();
+  return input;
 }
 
 const TICK_MS = 1000 / TICK_HZ;
@@ -71,13 +89,21 @@ let lastFrame = performance.now();
 function frame(now: number): void {
   const delta = now - lastFrame;
   lastFrame = now;
-  accumulator += delta;
+  // A backgrounded tab hands back a huge delta on return; catching up on
+  // thirty seconds of ticks at once is how a soul dies in a loading screen.
+  accumulator = Math.min(accumulator + delta, TICK_MS * 10);
 
   if (!lastDeath) {
     while (accumulator >= TICK_MS) {
       const death = stepTick(state, readInput());
       if (death) {
-        lastDeath = { lineage: state.player.lineage, cause: death.cause, tick: death.tick, wood: death.wood };
+        lastDeath = {
+          lineage: state.player.lineage,
+          cause: death.cause,
+          tick: death.tick,
+          wood: death.wood,
+          kills: death.kills,
+        };
         barrowList = recordDeath(lastDeath);
       }
       accumulator -= TICK_MS;
@@ -85,7 +111,7 @@ function frame(now: number): void {
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawWorld(ctx, state.world);
+  drawWorld(ctx, state.world, state.tick);
   drawEntities(ctx, state);
   drawNight(ctx, WORLD_W * TILE_PX, WORLD_H * TILE_PX, state.tick);
   drawHud(ctx, state, WORLD_H * TILE_PX, canvas.width, HUD_H);

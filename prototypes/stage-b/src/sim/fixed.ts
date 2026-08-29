@@ -36,3 +36,22 @@ export function distSq(ax: number, ay: number, bx: number, by: number): number {
   const dy = ay - by;
   return dx * dx + dy * dy;
 }
+
+/**
+ * Integer square root (Newton's method). Only needed so movement can be
+ * normalised — without it, anything moving diagonally travels 1.41x its
+ * stated speed, which quietly made the Lieutenant faster than the player he
+ * is supposed to be slower than. Math.sqrt would be exact here too, but the
+ * rule in this file is no floats in the tick, and the rule is worth more
+ * than the six lines it costs to keep.
+ */
+export function isqrt(n: number): number {
+  if (n <= 0) return 0;
+  let x = n;
+  let y = Math.trunc((x + 1) / 2);
+  while (y < x) {
+    x = y;
+    y = Math.trunc((x + Math.trunc(n / x)) / 2);
+  }
+  return x;
+}

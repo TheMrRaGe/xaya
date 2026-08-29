@@ -17,8 +17,12 @@ export enum Tile {
   Water = 3,
   Bush = 4,
   BareBush = 5, // a picked-clean bush; regrows after RESPAWN_TICKS
-  Campfire = 6, // player-built
+  Campfire = 6, // player-built, and burns down
+  Ash = 7, // a fire that went out; grass takes it back
 }
+
+/** How long a burnt-out camp is still visible before the grass closes over it. */
+export const ASH_TICKS = 600;
 
 export function isSolid(t: Tile): boolean {
   return t === Tile.Tree || t === Tile.Water || t === Tile.Campfire;
@@ -33,6 +37,8 @@ export interface Resource {
 export class World {
   readonly tiles: Tile[];
   readonly resources: Map<number, Resource> = new Map();
+  /** Lit fires, by tile index, holding the ticks of fuel each has left. */
+  readonly fires: Map<number, number> = new Map();
 
   constructor(seed: number) {
     const rng = new Rng(seed);
@@ -83,6 +89,46 @@ export class World {
       return true;
     }
     return false;
+  }
+
+  lightFire(x: number, y: number, fuel: number): void {
+    this.set(x, y, Tile.Campfire);
+    this.fires.set(this.index(x, y), fuel);
+  }
+
+  /** Add fuel to a fire that is already lit. False if there isn't one there. */
+  feedFire(x: number, y: number, fuel: number): boolean {
+    const idx = this.index(x, y);
+    const left = this.fires.get(idx);
+    if (left === undefined) return false;
+    this.fires.set(idx, left + fuel);
+    return true;
+  }
+
+  fuelAt(x: number, y: number): number {
+    return this.fires.get(this.index(x, y)) ?? 0;
+  }
+
+  /**
+   * Burn every fire down by one tick. A fire nobody feeds goes out and
+   * leaves ash — which is the whole reason wood is a recurring need rather
+   * than a one-time purchase of five.
+   *
+   * Returns how many went out this tick.
+   */
+  tickFires(currentTick: number): number {
+    let wentOut = 0;
+    for (const [idx, fuel] of this.fires) {
+      if (fuel > 1) {
+        this.fires.set(idx, fuel - 1);
+        continue;
+      }
+      this.fires.delete(idx);
+      this.tiles[idx] = Tile.Ash;
+      this.resources.set(idx, { tile: Tile.Ash, regrowTo: Tile.Grass, readyAtTick: currentTick + ASH_TICKS });
+      wentOut++;
+    }
+    return wentOut;
   }
 
   tickRegrowth(currentTick: number): void {

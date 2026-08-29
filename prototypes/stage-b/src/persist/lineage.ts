@@ -13,6 +13,8 @@ export interface Obituary {
   cause: DeathCause;
   tick: number;
   wood: number;
+  /** Optional: souls buried before there were beasts to kill have no count. */
+  kills?: number;
 }
 
 export function loadBarrowList(): Obituary[] {
