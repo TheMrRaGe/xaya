@@ -1,0 +1,1064 @@
+# Stage B — The Verge
+
+> "Does dying hurt, and do you start again anyway? If you don't feel that
+> yourself, playing your own game, nobody else will." — the plan's Stage B
+> gate.
+
+A single-zone browser prototype. One Realm (the Verge), one Lieutenant,
+enough living things to make the zone worth walking into, and room for more
+than one soul to be standing in it.
+This is deliberately not the game — it's the smallest possible version of the
+loop the whole design is built on: survive, build, get seen, maybe die, and
+start again as the next soul.
+
+## Run it
+
+```
+npm install    # the TypeScript compiler, and ws for the server
+npm start      # compiles src/ to dist/ and opens the Verge on :8000
+```
+
+Then open `http://localhost:8000/`. **Open it in a second tab and there are
+two souls in the same world** — they can see each other, get hunted by the
+same Lieutenant, and hand each other things.
+
+For two people on two machines on the same network:
+
+```
+HOST=0.0.0.0 npm start
+```
+
+and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
+by default, because opening a game server to the network should be a thing
+you typed rather than a thing that happened.
+
+`npm test` runs the checks (380 of them across 5 suites, ~2s, no browser). `npm run build`
+and `npm run serve` are available separately, and `npm run watch` recompiles
+on save.
+
+**The Grey King speaks for himself** if you set `OVERLORD=1`. He talks to
+whatever model you point him at, and the default is one on your own machine:
+
+```
+ollama pull llama3.2:3b     # ~2GB, and plenty for one line of menace
+OVERLORD=1 npm start
+```
+
+Any OpenAI-compatible `/chat/completions` endpoint works — Ollama, LM
+Studio, llama.cpp's server, or a hosted free tier — via `OVERLORD_URL`,
+`OVERLORD_MODEL` and an optional `OVERLORD_KEY`. There is no SDK and no
+account: it is one `fetch` against a shape every local runner already
+speaks, so the voice costs nothing to run and is tied to no vendor.
+
+He is a **Storyteller**, not a commentator (DESIGN §3.5). Every half minute
+he is handed a menu of things he may legally do — send the Lieutenant
+walking, gather crows over an empty field, bring a cold snap, blight the
+ground, loose an angry boar, loose a pair of wolves, mark a soul as wanted,
+or do nothing — and he picks one and says why. The reason is the line you
+see, so narration is the visible half of a decision rather than decoration.
+
+What he may choose from depends on **pressure**: what the Verge has built.
+Goods carried, tools held, skills learned, fires lit, souls alive. The
+expensive incidents stay locked until the camp has earned them, and a death
+buys the survivors quiet for a while. That is §1's thesis at a longer
+timescale — noise is what your last minute cost you, pressure is what your
+whole camp costs you.
+
+Doing nothing is always on the menu and is the commonest single choice. A
+storyteller that acts every cycle is a slot machine.
+
+Without it the **Understudy** speaks: canned lines chosen to match what
+happened, no network and no cost. It also covers whenever the model is
+missing, slow, or answers with something unusable. That split is DESIGN
+§3.2's liveness guarantee in miniature — the world never goes quiet because
+inference was unavailable.
+
+`node serve.mjs` serves the files with no game attached, if that is ever
+useful.
+
+The static server is hand-rolled rather than `python -m http.server` for one
+reason: Python takes its MIME types from the Windows registry, where `.js`
+is often registered as `text/plain`, and Chrome refuses a
+`<script type="module">` served as `text/plain`. The symptom is a blank
+300×150 canvas on a black page with the game's own code never running.
+
+## Controls
+
+| key | verb |
+|---|---|
+| **WASD / arrows** | move |
+| **E** | gather — loot a dead soul's pack first if you're standing over one, then butcher a carcass, chop a tree, chip a rock, pick a bush, or drink from water |
+| **SPACE** | strike with whatever's actually equipped — a melee hand hits the nearest thing in reach, a drawn bow (two-handed) shoots the nearest thing within a bow's reach instead, close range included |
+| **F** | feed the fire you're standing at (1 wood), or build one where there isn't one (5 wood, on grass) |
+| **1** | sharpen a spear (3 wood) — 3 damage a hit instead of 1, for 12 hits |
+| **2** | cook one raw meat (must be at a fire) |
+| **3** | stitch a hide cloak (2 hide, at a fire) — cold takes half as much, until it wears through |
+| **4** | eat — cooked if you have it, raw if you're desperate |
+| **5** | knap a knife (1 stone, 1 wood) — more off every carcass, for 20 of them, and the only way to cut cord |
+| **6** | bind an axe (2 stone, 1 wood) — two more logs a tree *and a third less noise*, for 25 chops |
+| **7** | cut cord (1 hide → 2 cord) — needs a knife in hand |
+| **8** | make a snare (2 cord, 1 wood); press again to set the one you're carrying |
+| **9** | smother wood into charcoal (3 wood → 1 charcoal at nothing, 2 at mastery, at a fire) — a little pitch comes off the same burn |
+| **0** | smelt: ore + charcoal first (+1 bar at mastery), copper alone with no charcoal second, an old crown last — all at a fire |
+| **B** | forge a sword (2 bar, 1 wood, 1 cord), or a weaker copper one (2 copper bar, 1 wood, 1 cord) when there's no iron bar to hand |
+| **P** | fire a pot from clay (3 clay, at a fire) — a hot meal eaten with one in hand goes further |
+| **O** | stitch boots (2 hide, 1 cord) — softens a marsh's speed penalty, worn down by the step through one |
+| **V** | stitch gloves (2 hide, 1 cord) — quieter on Rock, Ore and Copper, worn down by the dig |
+| **L** | knot a fishing line (2 cord, 1 wood) — no fire needed, for 25 casts |
+| **C** | cast at the water's edge with a line in hand — one attempt per press, like every other verb here |
+| **T** | cycle what you're offering |
+| **G** | give one of it to the nearest other soul |
+| **H** | talk to whoever's nearest (a villager, the Teacher); talk again to leave — while a conversation is open, 1-9 pick a reply instead of crafting |
+| **K** | teach whoever's nearest a little of your best skill — free, and it never makes them your equal |
+| **R** | string a bow (3 wood, 2 cord, 1 pitch) — reach, not extra bite |
+| **N** | fletch two arrows (1 wood, 1 glue) — needs a knife in hand |
+| **U** | at the Bounty Board: post 5 crowns on the worst soul you know of (your own crowns), or, if you're notorious, on the best one (the dead stockpile's crowns instead) |
+| **Z** | cast a bolt at whatever's nearest — free, on a cooldown, and the loudest thing in the Verge |
+| **M** | cast a heal on yourself — same risk, its own cooldown |
+| **I** | cycle the main hand through whatever weapons you actually own — a bow claims the off hand too |
+| **J** | cycle the off hand the same way (one-handers only) — does nothing while a bow already owns both |
+| **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
+
+## HUD & UI redesign
+
+The HUD used to be a full-width monospace text block stacked below the
+viewport, almost as tall as the map itself — four full-width bars, three
+lines of pack contents, a kit line, a skills line, eight lines of recipe
+text, and two permanent narration lines. It is now a set of compact
+overlays drawn on top of the viewport, and the canvas is just the
+viewport again: `VIEW_H * TILE_PX` (512px), not that plus ~290px of
+reserved HUD strip.
+
+**Always on screen**, all overlays rather than a block:
+
+- **Vitals**, top-left — satiety, hydration, warmth and health as an
+  icon-and-bar cluster instead of four full-width text bars. Each stat is
+  shape-distinct as well as colour-distinct (circle, diamond, square,
+  triangle) on purpose — the redesign's own note that "bars now carry an
+  icon shape too" is worth keeping deliberately, so the cluster still
+  reads under red/green colour-blindness. This is one shape further than
+  the mockup itself used (it repeated diamond for hydration and health);
+  giving health its own triangle finishes what the note was asking for.
+- **Status chip**, under the vitals — soul, day/night, "at fire," an
+  unseen timer, and now a **standing badge** instead of a bracketed clause
+  buried in a sentence ("[marked, standing -40]" reads easy to miss
+  mid-line; a coloured pill next to your name doesn't).
+- **Noise gauge**, top-centre — its own readout, because it's the stat the
+  whole game is about, not one bar among five. Past ~80% of
+  `CROW_THRESHOLD` the screen edge pulses red, faster and stronger the
+  louder you get — "you are about to be seen" as a feeling, which teaches
+  the core mechanic faster than a bar changing colour ever did.
+- **Minimap**, top-right — unchanged in what it draws (terrain and known
+  souls only; never a creature or the Lieutenant, which would undo
+  net/snapshot.ts's fogging), now also marking every lit fire. Fires are
+  already global, unfogged data — a soul's own camp was never a secret —
+  so this makes that fact readable on a map nine times the original size
+  instead of adding a new one. It isn't *your* fire specifically (nothing
+  in the sim tags a fire with who built it), so it's every fire, honestly.
+- **Resource tray**, bottom-left — wood/stone/hide as small chips, then a
+  hotbar row of whatever tools are actually held, each with a wear bar
+  instead of a bare "spear 8" to parse. The full pack (all materials, not
+  just three) lives on the reference panel's Pack page.
+- **Offer chip**, above the tray — what you're currently offering to
+  trade, which used to be buried in the controls text. A nearby soul (and
+  you) can now see it without reading a sentence.
+- **Action bar**, bottom-centre — one or two keycap hints for whatever is
+  *actually usable right now* (feed or build a fire, eat, talk), computed
+  from live state rather than a fixed list. It is not the full verb set;
+  it's the two things worth doing this second.
+- **Tab hint**, bottom-right — how to reach the reference panel, and which
+  page it's showing once open.
+- **Narration toasts**, bottom-centre above the action bar — the Grey
+  King's lines and death notices used to share two permanent HUD lines,
+  silently overwritten by whatever came next. They're now a small stack of
+  toasts, one per new line since the last snapshot, each fading on its own
+  4.2s-hold-plus-1.4s-fade schedule — a fast second event no longer erases
+  the first one before it's been read.
+
+**Tab** opens a reference panel and cycles its four pages — **Crafting**
+(every built recipe as a card: name, key, cost, effect, greyed out if the
+ingredients or a duplicate tool block it), **Pack & Skills** (the full
+material grid plus all eight skills as level bars — "wood 0 hunt 0 butc
+0..." used to read as a debug line; a bar per skill reads as progress),
+**Barrow-list** (the settlement's dead, not just the last three shown on a
+death screen), and **Field notes** (the terrain legend, a bestiary table,
+and who's currently in the village). The panel is reference only — it
+never intercepts a key. Every key does exactly what it always did whether
+the panel is open or closed, which is different from how the dialogue box
+works (that one *does* take over the numbered keys, because a conversation
+is a real exchange, not a lookup) and is the reason Tab was safe to bind
+to something that changes every frame without ever risking an accidental
+craft.
+
+**Death screen and dialogue** were restyled to match — a centred card with
+stat chips (wood / beasts / seconds survived) and the Barrow-list inline
+for the former; a portrait swatch, the speaker's name in their own colour,
+and numbered replies as keycap rows for the latter — same information as
+before, laid out the way the rest of the redesign now does.
+
+**What this leaves out, from the same design pass, and why:**
+
+- **No mouse/click support.** The redesign's own notes ask for a menu "you
+  can also click/select." This client has never had a click handler —
+  adding one is a real new input modality, not a chrome change, so the Tab
+  panel is keyboard-reference-only for now: browsable, not clickable.
+- **No category tabs inside the Crafting page.** The mockup groups recipes
+  under Tools/Food/Gear/Fire & smithing/Fishing & traps; built recipes
+  currently fit in one ungrouped grid without needing a second layer of
+  tab-switching input, so that's what shipped. Worth revisiting once the
+  list is bigger than one screen.
+- **No trade ledger view.** The offer chip shipped; "recent hand-overs" as
+  a visible list didn't, because `Snapshot.trades` is currently just a
+  count (`trades: number`), not the records themselves — showing history
+  would mean widening what the wire actually sends, which is a real
+  decision, not a rendering one.
+- **Three panels from the design-baseline file were skipped outright: an
+  Unbowed encounter, Testimony/Witness, and Realm & Sigil progress.** None
+  of the systems behind them exist in Stage B — no Unbowed creatures, no
+  corroborated-testimony mechanic, no Sigils, no second Realm — and the
+  baseline file says as much about the last one itself ("nothing here is a
+  near-term build target"). Building interactive-looking UI for a system
+  that isn't there would be decoration wearing content's clothes, which is
+  exactly the failure mode this whole project has tried to avoid.
+
+## What's actually happening under the hood
+
+Section numbers below (§N) refer to `doc/world/PLAN.md`, the full design
+plan committed at the repo root's `doc/world/`.
+
+- **Fixed-point, seeded, no floats in the sim tick** (`src/sim/fixed.ts`,
+  `src/sim/rng.ts`) — per §43A / §49's "adopt the discipline, skip the
+  harness." The renderer (`src/render/`) is the only place a float appears.
+  This buys nothing today, on a single machine, in a single-player
+  prototype. It costs nothing to have done correctly from the first line
+  and is the expensive thing to retrofit if this ever needs to run on
+  more than one machine at once.
+- **The noise mechanic is the actual thesis, made mechanical.** Every
+  gather, craft, strike and cooking fire raises a `noise` scalar that decays
+  slowly. The Lieutenant's detection radius scales with current noise and is
+  larger at night. That's §1's "everything you build makes you easier to
+  see," playable rather than just written down.
+- **The crows are the tell.** Past a noise threshold, crows gather over
+  wherever you were last loud and drift after you — and a patrolling
+  Lieutenant walks toward the crows instead of wandering. So your own noise
+  is *visible*, to you and to him, and the counter-play falls out of it for
+  free: work in short bursts, or go quiet and let the flock thin, or be loud
+  somewhere on purpose and leave before he arrives.
+- **Five animals, and each one is a different question.** Prey flee from a
+  radius that grows with your noise — a camp that gathers hard all day is a
+  camp whose meat has walked to the far side of the map — but they do not
+  all have the same nerve, and that is most of what separates them:
+
+  | | | |
+  |---|---|---|
+  | **hare** | 1 meat, no hide | Faster than anything in the Verge and gone before you are in range. **You cannot catch one on foot.** It is why the snare exists. |
+  | **deer** | 2 meat, 1 hide | The ordinary hunt. Slightly slower than you, so a chase is winnable but not free. |
+  | **river-goat** | 4 meat, 2 hide | Slow, calm, hard to frighten, worth more than anything else you can take. The good hunt, and §44's "first livestock most souls ever keep". |
+  | **hedge-boar** | 3 meat, 2 hide | Ignores you until you swing at it, and it is *faster than you are*. |
+  | **wolf** | 2 meat, 2 hide | Comes looking for you. |
+
+  A boar is the one place in Stage B where greed, not bad luck, kills you:
+  you cannot outrun what you started, you can only outlast its temper
+  (~26s) or put a spear in it.
+
+  Wolves are the odd one out, and the newest thing in the Verge: they are
+  the only beast that comes looking for you rather than waiting to be
+  found. By day they graze like deer, harmless. After dark, the same noise
+  radius that grows the Lieutenant's reach also opens their nose — get
+  close enough while the sun is down and a pair starts hunting, unprompted,
+  no strike required. Wound one and fail to finish it and the grudge outlasts
+  a boar's by nearly a factor of two; leave one alone and it forgets you by
+  sunrise. That is the noise thesis applied a second time, aimed at your
+  hide instead of your dinner, and it is the first hazard in Stage B that
+  the clock itself turns on.
+- **A short refining chain**, which is §44's "a few professions worth of
+  actions" at its smallest: kill → butcher → cook at a fire → eat. Raw meat
+  is worth little and makes you sick one bite in four; cooked meat is worth
+  four times as much and warms you. Hides become a cloak. The fire is now
+  load-bearing three ways — warmth, cooking, and being seen.
+- **Stone was free forever; now it's free for a few swings.** A rock
+  outcrop used to never run out at all — you could stand at one and hold
+  E — and the thesis was that what it cost was *attention*, not scarcity:
+  hammering stone is the loudest single thing you can do in the Verge,
+  louder than building a fire. That held up for a solo prototype and broke
+  down the moment anything could just camp a tile forever, script or not,
+  and take the entire noise cost out of it by never needing a second one.
+  A Rock, Ore or Copper tile now has a real health bar (`VEIN_HEALTH` in
+  world.ts — 6/4/3 hits respectively, the rarer the find the fewer swings
+  it has left) and a depleted form (`DepletedRock`/`DepletedOre`/
+  `DepletedCopper`) once it gives out, regrowing on a real timer
+  (`VEIN_REGROW_TICKS`, ~3 minutes — longer than a tree's own 90s, since a
+  seam reasonably takes longer to "come back" than a sapling) exactly the
+  way a felled Tree already becomes a Stump. The one deliberate difference
+  from a Stump: a depleted vein stays solid — a mined face is still a wall
+  of rock, not an opening the way a felled tree leaves one. Every hit still
+  pays out, including the one that empties it; noise and skill still work
+  exactly as before. What changed is that a soul now has to move to a new
+  outcrop once one gives out, the same way a hunter already has to find a
+  new deer once one is down — attention was never wrong as the *primary*
+  cost, it just couldn't be the *only* one once a single tile could be
+  worked forever by something that never gets bored or heard as a threat.
+
+  Off that: a **knife** (more off every carcass, and the only way to cut
+  cord) and an **axe** — two more logs a tree *and a third less noise*,
+  which makes it the one tool that leaves you safer than owning no tool at
+  all. Same argument skill makes, bought with stone instead of hours.
+- **The sword chain is PLAN §15's worked example, compressed to one soul.**
+  The full version is eight professions and a Realm gate; the Verge is one
+  Realm and one pair of hands, so it collapses to ore + (wood smothered to
+  charcoal, at a fire) → bar (smelted at a fire) → bar + wood + cord →
+  sword. A vein of ore is rarer than a rock outcrop and louder to work than
+  anything else in the game — mining is meant to be the biggest single
+  noise a soul can make on purpose. What comes out the other end is the
+  first weapon in Stage B that is not a stopgap: double a spear's damage,
+  more than double its durability, and nothing else touches it — before a
+  smith's own skill adds more on top (below). It is also the first chain
+  that fails §15's "at least one Realm-gated input" half — there is no
+  second Realm yet to gate anything against, which is a scope limit worth
+  being honest about rather than a design claim.
+- **Fishing needs no fire, and shares its first ingredient with the tools
+  chain instead of starting one of its own.** Hide → cord (same cord the
+  snare uses) → cord + wood → a fishing line → cast at the water's edge.
+  Nothing about it touches butchering, cooking or a carcass at all — it is
+  the shortest food chain in the game, and the one a soul with nothing but
+  a knife and a shoreline can still lean on. Deliberately slower per attempt
+  than a snare (4 in 100 at nothing, rising to about 1 in 5 at mastery,
+  against the snare's 1-in-3-to-2-in-3): a snare is paid for by hours spent
+  *away* from it, a line by hours spent sitting right there holding it, and
+  the reward should track which currency was actually spent. §44 never
+  names a Fisher — see the cut-list note below — but §17 does, right
+  alongside Farmer and Hunter under the same hunger row.
+- **The snare is the only work that pays while you are somewhere else.**
+  Hide → cord (needs a knife) → snare → set it in the grass and walk away.
+  It takes hares and nothing bigger, it is nearly silent to set, and it
+  springs on its own whether or not anyone is watching. Every other way of
+  eating in this game requires you to be present and loud at the moment it
+  happens; a trapline is work you did *earlier*, quietly, and it is the
+  first thing in Stage B that rewards patience over nerve. The Grey King
+  has a line about that, and he does not enjoy it.
+
+  A snare remembers whose hands set it, so a catch teaches *that* soul's
+  trapping — one in three at nothing, better than two in three at mastery —
+  and nobody else's. It is not locked: whoever gets to a caught hare first
+  still butchers it, the same as any other carcass. It just means a soul who
+  never sets a line never gets better at reading one.
+- **Skill is earned by doing, and dies with you** (DESIGN §6.10). No perks,
+  no classes, no starting traits — every soul arrives at zero and can learn
+  anything, and the only difference between two players is which hours they
+  spent. Chopping teaches woodcraft, skinning teaches butchery, tending a
+  trapline teaches trapping, working a fire teaches smithing. A practised
+  hand gets more wood off a tree, more meat off a carcass, more out of a
+  meal — and, importantly, **makes less noise doing it**, so competence and
+  safety are the same stat. Trapping and smithing are the two exceptions:
+  a snare is already near-silent, so trapping buys a better catch instead of
+  a quieter one; a fire is already lit either way, so smithing buys more
+  charcoal per burn, more bar per smelt, and a harder-hitting blade instead.
+
+  **No skill ever gates an action — only its quality.** Every one of the
+  seven is attemptable from zero, which is what makes a soul who has put in
+  the hours across an entire chain able to supply it alone: nothing in this
+  design was ever "no profession can self-supply," only "no single action
+  or material shortcuts the chain, and mastering all of it takes more hours
+  than one soul usually has to spend." Smithing existing at all closes the
+  one place that was quietly false before it: the sword chain used to run
+  on bare pack checks, so self-supply there was free rather than earned —
+  the only chain in the game where practice bought nothing.
+
+  It all dies with the character. The Barrow-list keeps the title ("they
+  were a fair butcher") as reputation and hands the next soul none of the
+  skill. Which is where trade comes from: nobody barters firewood in the
+  first hour, because an hour of chopping gets anyone the same three logs.
+  Later, when a woodcutter's hour yields twice what yours does and your hour
+  is better spent skinning, handing each other things stops being a courtesy
+  and becomes arithmetic.
+- **Nothing you make is permanent**, which is the substrate the economy
+  will stand on (DESIGN §6.3). A spear holds 12 strikes. A cloak wears
+  through on the cold it keeps off you. A campfire burns fuel and goes out,
+  leaving ash the grass takes back — so wood is a recurring need rather than
+  a one-time purchase of five, and a night costs about ten logs to keep lit.
+  Raw meat rots on a timer; cooked meat keeps. Solo, this reads as pressure.
+  With a second player it reads as *demand* — the reason anyone would make a
+  spear for someone else, which is the thing Stage C has to test.
+- **The server is the only thing that decides what is true.** `server.mjs`
+  owns the sim and runs it at 10 Hz; a client sends which keys are down and
+  draws whatever it is told, and runs no sim of its own. Whole state goes
+  out every tick, so a client that joins late, lags or reconnects is correct
+  on the next tick with no reconciliation code at all. That split is DESIGN
+  §6.8's point: swap this authority for a chain and neither the renderer nor
+  `src/sim/` notices.
+- **The Verge is nine times its original size, and a camera now follows
+  you through it.** 72x48 tiles instead of 24x16 — three screens by three,
+  where a "screen" is the 24x16-tile window (`VIEW_W`/`VIEW_H` in
+  render.ts) the camera actually shows. The canvas itself never grows: it
+  is sized to the camera's window, not the map, so the page's layout is
+  done changing regardless of how much bigger the Verge gets from here.
+
+  This is what makes fog of war real rather than cosmetic: **the server
+  now sends every soul a personally fogged snapshot** (net/snapshot.ts) —
+  another player, the Lieutenant, and every creature are cut out of *your*
+  copy of the world once they are more than `VISIBILITY_RADIUS` (16 tiles,
+  comfortably past the camera's far edge) from your own soul. A soul across
+  the map cannot be found by opening the browser's network tab any more
+  than by looking at the screen, because the data was never sent. Terrain
+  and fires stay global — nothing here hides *where things are built*, only
+  *who is currently standing where* — and so does `noise`/the crows'
+  position, on purpose: the noise thesis (§1) is about being *heard*, which
+  travels differently than being *seen*, and a single shared flock has no
+  notion of "visible to whom" to filter against in the first place.
+
+  Bandwidth grew with the map (tiles are ~9x the JSON, ~225 KB/s per player
+  now instead of ~25 KB/s) but the creature/player payload actually shrank
+  for a typical viewer, since most of a much bigger Verge is now nobody's
+  concern. A small terrain-only minimap sits in the corner of the screen so
+  a soul can still tell north from south — it never marks a creature or the
+  Lieutenant, because that would put the very thing fog just hid back on
+  screen through a different door.
+
+  Whether one Lieutenant is still a credible threat patrolling nine times
+  the ground alone got a first answer, not a final one — see the next
+  bullet. He still isn't *reinforced*; §44 forbids that.
+- **His patrol got smarter, not more numerous.** §44 keeps "one Lieutenant,
+  no Captain, no Warden, no Muster" even at nine times the map, so the only
+  lever left is how well the one you have covers it. Patrol speed rose from
+  60% to 75% of his hunting speed — still well under a soul's own 300, so
+  outrunning a *patrol* stays exactly as easy as before; only staying
+  unnoticed for longer got harder. More importantly, a fresh patrol waypoint
+  is now drawn near wherever the Verge was last loud about 60% of the time,
+  jittered by up to ten tiles, instead of landing anywhere on the map with
+  equal odds — the same global noise position the crows already answer to
+  (§1), not a new way for him to know where you are, just a reason for him
+  to stop touring empty corners. Whether that is *enough* compensation for
+  9x the area is a playtest question, tracked open in `doc/world/CONTENT.md`.
+- **Three more tiles, and terrain finally does something.** Grass, trees,
+  water, stone and ore all looked and behaved the same everywhere on the
+  map, which stopped being a footnote the moment the map grew to nine
+  screens. **Marsh** and **Road** are the two ends of one rule — terrain
+  speed, read the same way by a soul, the Lieutenant and every beast, so a
+  marsh bogs down a fleeing deer exactly as it would its pursuer, and a
+  road speeds up whichever of them thought to use one. Marsh only ever
+  forms at a river's edge (a second pass over the map, checking what the
+  first pass already decided was water, not another independent roll);
+  moving through one is louder, standing still in one is not. A road is
+  drawn as a wandering line between two map edges rather than scattered
+  tile by tile — the one terrain feature that had to actually read as a
+  path to mean anything. **Ruin** is the odd one out: never depletes at
+  all (unlike Rock and Ore now — a ruin is rubble already, not a vein with
+  anything left to work out), and usually pays out nothing but more rubble
+  and rarely an old crown (PLAN §17A) — the first time that item exists
+  anywhere as more than a name. It has exactly one use: melt it at a fire (key **0**, the same key
+  smelting already used) when there's no ore and charcoal on hand, and it
+  becomes a bar — PLAN §17A's own line about "smiths who need the metal more
+  than the history," made literal. No smithing is learned doing it; running
+  a crown through a fire isn't a real smelt. Still nothing to spend one on
+  otherwise, no prestige, no market — that needs an economy this prototype
+  doesn't have.
+- **The Verge holds more than one soul.** The tick takes one `Input` per
+  player and returns every death that happened in it — the same shape a
+  server or a chain would hand it, so nothing above `src/sim/` needs to know
+  which one is driving (DESIGN §6.8). The Lieutenant hunts whichever soul is
+  nearest, which makes standing near someone else a risk and a shield at
+  once. A boar holds its grudge against whoever swung first.
+- **SPACE can now hit another soul, not only a beast.** Whichever is nearer
+  gets struck — same verb, same weapon-priority rules, same durability wear.
+  A soul still beneath the Grey King's notice (fresh spawn grace) cannot be
+  targeted, and a death this way gets its own honest cause: "killed by
+  another soul," not folded into any of the others. This is the one piece
+  of work in this whole prototype that jumps its own gate on purpose — see
+  the cut-list note below for what did and did not come with it.
+- **And now it costs something: standing** (never "reputation score" out
+  loud — PLAN §2A). A kill marks the killer the same tick — the same
+  mechanism the Overlord already uses to single someone out, now also
+  triggered by what a player does, not only by his choice — and drops their
+  standing by 40. Three kills or so (past -100) and the arithmetic flips:
+  he stops hunting them, by mark *or* by proximity, at all. Not mercy — the
+  opposite. PLAN §29 has notorious player-killers taking rank in his Host
+  outright; a soul that far gone reads to a Lieutenant as already his, so he
+  stops looking. Standing lives on the character, not an account — Stage B
+  has no login layer for it to survive a death on — so it resets exactly
+  like a skill does: die, and the next soul starts clean, same as everything
+  else in the pack. Neither bounty payouts nor plunder off a body came with
+  this — see the cut-list note for the rest of what didn't ship.
+- **And one way back: Commons standing.** PLAN §3's "kindness needs teeth"
+  names six acts that build it — stabilising a stranger, sheltering someone,
+  feeding the starving, teaching for free, paying another's mark, purifying
+  land you do not own. Five need systems Stage B doesn't have (Mortal Wound,
+  shelter, teaching, currency, corruption). The sixth already had a verb:
+  **G**, when the recipient is genuinely hungry (satiety under 300), raises
+  the giver's standing by 15 — a third of what one kill costs, so climbing
+  back out is deliberately the slower road. Giving food to someone who
+  isn't hungry, or giving anything that isn't food, earns nothing; this
+  isn't a courtesy discount, it has to answer a real need. PLAN §3 warns
+  this exact mechanic must not be farmable by alt-pairs, and nothing here
+  stops two cooperating players trading scraps back and forth for standing
+  — left open on purpose rather than guarded by machinery nobody has asked
+  for yet.
+- **Giving, and a ledger.** **T** picks what you're offering, **G** hands one
+  to the soul beside you. Giving is one-sided on purpose: two people who
+  each want what the other has will trade by giving twice, and that is
+  enough to answer Stage C's only question — *do they?* Escrow and a
+  currency are for when the other soul is a stranger, which is a later
+  problem. Every hand-over is appended to `state.trades` from the very first
+  one, because DESIGN §6.8 says trades have to be authoritative, logged and
+  replayable if cash-out is ever to be possible, and that is free now and
+  impossible to retrofit.
+- **Fleeing works.** Contact damage only applies while you're standing in
+  the Lieutenant's contact radius; break away and it stops. He also loses
+  interest if you get far enough away, with hysteresis so he doesn't flicker
+  at the boundary. This is §21's "fleeing must work" and §25's Mortal Wound,
+  simplified for a solo prototype with no rescue mechanic yet.
+- **Permadeath with a real, shared Barrow-list.** Death logs an obituary
+  (cause, ticks survived, wood carried, beasts taken, what they were best
+  at) to `data/barrow.json` on the server and increments a lineage counter —
+  both survive a restart. Every soul's death goes to every connected client,
+  not just their own, so the death screen is a board the settlement keeps
+  rather than one browser's private diary. `data/` is gitignored: it's save
+  data, not source.
+- **Offline is safe when camped, exposed in the field** — one of the
+  earliest calls in the plan's own "Decisions locked" table, and until now
+  the prototype didn't honour either half of it: closing the tab, anywhere,
+  quietly erased the soul with no death, no cause, no Barrow-list entry at
+  all. Now `server.mjs`'s socket-close handler checks the one thing Stage B
+  has that stands for a camp — `atFire`, the same flag warmth, cooking and
+  being seen already answer to — before deciding what disconnecting means.
+  Standing at a lit fire: safe, exactly as before, no obituary, because
+  nothing happened. Anywhere else: the sim's own health sweep turns it into
+  a real death on the very next tick — cause `"never made it home"`, a real
+  Barrow-list entry, the Grey King none the wiser it wasn't a normal one.
+  Deliberately instant rather than a lingering unpiloted body left standing
+  to actually be hunted down: Stage B has no accounts, so nobody can ever
+  reconnect to the same soul regardless, and a body nobody will ever answer
+  for again has nothing honest left to do in the meantime.
+- **A bow, and Stage B's first ranged weapon.** Two new verbs close two of
+  PLAN §7.2's named-but-unbuilt professions at once, each spending a
+  byproduct that had nowhere to go: **R** strings a bow (wood, cordage and
+  the pitch that seals its string-wraps — a **Bowyer**'s work), **N**
+  fletches a batch of two arrows (wood and the glue that binds feather to
+  shaft — a **Fletcher**'s). SPACE doesn't change: it still hits whatever's
+  nearest in melee reach first, and only reaches for a strung, loaded bow
+  when *nothing at all* is that close — a bow is the thing you fall back
+  on, not a first choice, so anything already in arm's length still meets
+  whatever's in the other hand exactly as before. What it buys is reach
+  (five tiles past melee, `BOW_RADIUS`), not extra bite: its 2 damage sits
+  under even a bare spear's 3. No ninth skill either — a shot that lands
+  still trains `hunting`, the same as any other strike; a bow is one more
+  hunting weapon, not a new trade to master. Arrows are the one thing
+  spent by combat that's actually tradeable (`arrow` joined `Tradeable`,
+  unlike every wear-counter tool before it), so a Fletcher can resupply a
+  soul who never fletched one — the same shape a Miner's ore already has,
+  and a Smith's sword never did.
+- **Killing another soul now leaves something behind.** PLAN §8.5's own
+  line about an officer's death — "the plunder is on the floor" — made
+  true of a player's for the first time. Everything the loser carried
+  spills as a lootable pile where they fell (**E** loots it first, ahead
+  of a carcass, if you're standing over one), except crowns: those are cut
+  on the spot rather than dropped, a 20% share straight into the killer's
+  own pack and the rest banked rather than lost — his due, the same "he
+  takes a cut before the rest reaches the Hoard" shape §30A already gives
+  his officers (see the next bullet for where that remainder actually
+  goes). A pile is fogged like a creature or a villager (personal, not a
+  landmark) and rots after about three unclaimed minutes, the same way ash
+  takes a dead fire back. Looting sums whatever actually stacks (wood,
+  arrows, cordage, the lot) and takes whichever of a wear-counter tool is
+  better rather than adding two "one bow"s into a number that means
+  nothing — you don't end up with two swords, you end up with the sharper
+  one. This still isn't a mark's full weight (§28's five ways to answer
+  one, and any bounty payout for a mark, remain entirely unbuilt) — it
+  answers "what happens to the body," not "does the outlawry economy
+  work."
+- **The Bounty Board, and a first answer for where the King's cut actually
+  goes.** The top-level "Decisions locked" table's own PvP line — "his coin
+  funds the bandits who do it" — used to be aspirational; the crowns his
+  cut takes off every kill now land in a real `deadStockpile`, and the
+  board (**U**, a fixed landmark near the village) is the one thing that
+  spends it. No Sheriff NPC and no player-held role: a board is the
+  smaller of the two things asked for, and everything a Sheriff would do
+  by title, the board already does by function. It also has no target
+  picker, on purpose — every other verb here resolves "who" by nearest;
+  this one resolves it by *worst*, which needed no new input at all,
+  because standing already sorts everyone. A lawful soul (standing above
+  `NOTORIOUS_STANDING`) spends their own crowns and it always lands on the
+  worst other soul currently known; a notorious one spends the dead
+  stockpile instead and it always lands on the *best* one — the two poles
+  standing already gives, aimed at each other. Repeat presses stack onto
+  the same bounty rather than starting a second one, so "goes higher with
+  each infraction" is just what happens when more than one soul agrees
+  someone's earned it. Collected in full by whoever actually lands the
+  kill (on top of whatever fell out of the pack itself), or forfeited back
+  to the stockpile if the target dies some other way first — no escrow
+  ledger beyond the post itself, and no refund to whoever posted it,
+  matching the "we build the tools for verification and record, not
+  protection from bad judgement" line §12 already commits to.
+- **Magic, for every soul, from the first tick.** PLAN §9/§20 was read
+  literally for a while — "all of it is in one man" taken to mean nobody
+  else can work any at all — and that was worded too literally: the plan
+  itself says "there are still threads in the world... in people born with
+  a knack," a hedge-witch closing a wound was always meant to be *possible*,
+  just dangerous. §17/§22's "no classes, no starting traits" made the
+  Stage B call: that knack is universal, not a trait some souls roll and
+  others don't, the same simplification every other verb here already
+  makes. **Z** casts a bolt (doStrike's own melee-then-bow targeting,
+  reused at range — a beast, a soul or an NPC, whichever is nearest);
+  **M** heals yourself. No reagent, no crafted focus, no fire — the price
+  of a cast was never a recipe, it's the risk, and that risk is real: a
+  landed cast is the single loudest thing in the Verge (past even a vein,
+  the previous record-holder), and it carries a genuine chance — not a
+  certainty, or no hedge-witch would ever risk a second one — of a mark
+  landing the same tick, `applyOutlawry`'s own mechanism at a third of a
+  kill's cost. Two independent consequences on purpose: noise brings the
+  Lieutenant *eventually*; a mark brings him, or the road's opinion of
+  you, *immediately*. Nothing about the Given, the bright trace a
+  frequent worker leaves, or a real Working exists yet — this is the
+  smallest slice that makes "illegal, not absent" playable rather than
+  just written down.
+- **The Lieutenant finally routes around what he can't walk through, notices
+  more, and opens every hunt with a couple of seconds you can actually use.**
+  He used to just `stepToward` whoever he was after and slide along
+  whatever that walked him into — a lake or a decent-sized wood could stall
+  him forever, since a straight line with no horizontal component at all
+  gives sliding nothing to slide *along*. He now plans a real route
+  (`findPath`, a plain breadth-first search over the tile grid — every edge
+  costs the same here, so A* would buy nothing a queue doesn't already give
+  for free) whenever he's actively hunting, recomputed roughly every five
+  seconds rather than every tick. Measured directly against a worst case no
+  real chase can produce — one player, the full 108-creature roster, him
+  permanently hunting a target that teleports across the map *every single
+  tick*, forcing a full replan every tick: **38.00 µs/tick, against a 37.23
+  µs/tick patrol baseline.** The one place "no allocation in the hot path"
+  isn't quite true any more — `findPath` allocates its visited/parent
+  buffers each call — but it isn't hot in the sense that matters, at maybe
+  once every five seconds during an actual chase.
+
+  That fix is what let his reach grow without also making him unbeatable:
+  `BASE_DETECTION_RADIUS` and `NOISE_DETECTION_SCALE` are both up (11
+  tiles now at max noise by night, was 9), because a lake can no longer
+  just stall him forever once he's actually committed. The counterweight
+  is a real one, not a text warning alone: a fresh hunt opens at
+  `LIEUTENANT_ALERT_SPEED` (80% of full pace) for about two seconds before
+  ramping up, and it's always narrated the moment it happens — "a
+  Lieutenant has picked up Soul #N's trail" — not just the very first
+  sighting the game ever produces, which is all the old code told you.
+  Fixing the pathing surfaced a real bug in the process: the old
+  "lose interest past `LOSE_INTEREST_RADIUS`" check judged by the straight
+  line to the target, which a wide detour legitimately grows even while
+  he's still closing the only distance that matters — so a hunt with a
+  cached, still-valid route no longer gives up on distance alone; only a
+  dead target, or no route and no straight line short enough to suggest
+  one, ends a hunt now.
+- **Scouts — the Reaver tier's first actual member, not a second
+  Lieutenant.** CONTENT.md §2.4 names Reavers as "many, pure code, patrol,
+  harass" below the Lieutenant, and until now none existed; §44's own cut
+  keeps "one Lieutenant, no Captain, no Warden, no Muster," which a Scout
+  doesn't touch — he doesn't fight, doesn't hold ground, and killing him
+  costs no standing at all, because he's the King's own agent, not an
+  "expelled from normal towns" case. The whole thing is one sentence: he
+  comes to investigate, and either you silence him or he reports. A new
+  Overlord action, `send_scout` — cheaper and more frequent than committing
+  the Lieutenant himself (`director.ts`'s pressure gate is 10, against the
+  Lieutenant's 60) — drops one a real distance from wherever the Verge has
+  been busy, walking in slow and cautious (**approach**). The instant a
+  living, un-graced soul is within `SCOUT_SPOT_RADIUS` (4 tiles) he flips
+  to **fleeing** that specific soul at 290 units/tick — just under a soul's
+  own 300, so melee alone is a real gamble once he's running and a bow or
+  a bolt is the reliable answer. Ten health, gone in a hit or two: killing
+  him before he survives `SCOUT_REPORT_TICKS` (~5s) buys real time and
+  ends the encounter with nothing else happening. Let him get clear and he
+  reports — `Player.scoutReports` ticks up for that soul specifically, and
+  the third report against the same soul (`SCOUT_LOCATE_THRESHOLD`, then
+  the counter resets) lands real noise at their current position
+  (`SCOUT_LOCATE_NOISE`, comfortably past `CROW_THRESHOLD`) — the exact
+  same crow/patrol-bias machinery a struggle or a working already feeds,
+  not a new information channel invented just for this. "Killing scouts
+  buys you time; enough of them get away and he knows roughly where you
+  are" is the whole ask, built on wiring that already existed everywhere
+  except the Scout himself.
+- **Hands, Skyrim-style — SPACE no longer auto-picks your best weapon.**
+  Every weapon used to be a flat priority order (a sword over a copper
+  sword over a spear over a fist); owning a better one silently made a
+  worse one irrelevant, and there was no way to actually choose. `Player`
+  now carries a `mainHand` and an `offHand` (entities.ts's new `HandItem`
+  — `"none" | "spear" | "sword" | "copperSword" | "bow"`), cycled with
+  **I** and **J**, and `doStrike` reads them instead of scanning the pack
+  for the best thing you own. A bow is properly two-handed: equipping it
+  always empties the off hand, and — since there's no separate melee
+  weapon left to prefer once it does — a drawn bow now fires at *any*
+  range, point-blank included, where the old auto-pick always chose
+  melee first and only fell back to a bow when nothing was already close.
+  Two one-handers, one in each hand, is a real dual-wield: the swing
+  lands the main hand's full damage plus half the off hand's, and spends
+  both. Scoped to the four combat weapons only, on purpose — knife, axe,
+  gloves, boots, a fishing line and a pot stay exactly what they already
+  were, pack counters read automatically wherever they mattered, because
+  turning every tool into hand-equipment would have been a much bigger
+  change than "let me choose my weapons." A hand labelled with a weapon
+  that's since broken (or was never forged to begin with) simply swings
+  like a bare fist until that weapon exists again — no separate re-equip
+  step once it does, since the label was never lying, just temporarily
+  empty. One piece of the old convenience survives on purpose: crafting a
+  weapon into an empty main hand equips it there automatically, so a
+  fresh soul isn't fighting barehanded by default just because equipping
+  is a real choice now; it never overrides a hand that already holds
+  something, which is what the cycle keys are for.
+- **The Verge stopped being a grid of dice rolls.** Every tile used to get
+  its own independent `rng.nextInt(100)` — trees, water and stone all fell
+  as an even sprinkle, which never read as a valley. Generation is now a
+  sequence of deterministic passes that key off each other: a river walked
+  edge to edge first (two passes, so it reads as a real river and not
+  always a short stream), woodland stands and mineral outcrops and meadows
+  grown outward from seeded clusters, hedgerows walked as short boundary
+  lines, then the riverbank, road and ruin passes exactly as before. Same
+  seed, same map, still only integers and the existing `Rng` — no noise
+  library, no new dependency, just one clustering primitive (`growBlob`)
+  reused by every "clump of terrain" pass instead of three bespoke ones.
+- **Four new tiles, two of them closing a gap PLAN §3.1 left open since day
+  one.** The Verge's own material row names "soil, timber, clay, copper" —
+  clay and copper never had anywhere to come from until now. **Clay**
+  forms at the same riverbank that grows marsh (common and quiet, the way
+  §3.1 treats it as an everyday material, not a vein). **Copper** is the
+  rarest outcome of the same mineral clusters that produce Rock and Ore —
+  §3.1 names copper, not iron, as the Verge's own metal, so this is a
+  second metal alongside the existing chain rather than a replacement for
+  it; nothing spends either material yet (see the gap list below).
+  **Meadow** is a wildflower patch, foraged like a bush for a smaller
+  satiety gain, never stripped bare — it's waiting on Beekeeper, still
+  just a name in PLAN §17's profession list. **Thicket** is a woodland
+  stand's dense core rather than a new biome: more wood per felling than a
+  lone tree, louder to take, and it grows back into itself, not into a
+  lone tree.
+- **Clay and copper stopped being dead ends.** Both existed as diggable
+  tiles and pack counters with nowhere to go; this is where they go.
+  **Pottery:** clay, fired at a hearth, into a pot (key **P**) — no bonus
+  to what a meal is made of, only to how far it goes, so it is spent one
+  charge per hot meal actually *eaten* rather than per meal cooked. That
+  distinction isn't pedantry: `cookedMeat` is one flat counter with no way
+  to remember which portion of it ever went near a pot, so "a working pot
+  in your pack right now" is the only honest rule available, and it's the
+  one built. **Copper:** a second, shorter metal line, not a second copy
+  of the first. Key **0** now smelts copper alone, with no charcoal, if
+  there's no ore and charcoal together — a real smelt, earning real
+  smithing, just a shorter one, which is most of why PLAN §3.1 naming
+  copper (not iron) as the Verge's own metal reads as "reachable earlier"
+  rather than merely rarer. Key **B** forges a copper bar into a copper
+  sword the same way it forges an iron one, when there's no iron bar to
+  hand — 4 damage and 18 strikes against the real sword's 6 and 30, no
+  smithing bonus of its own, sitting between the spear and the sword in a
+  fight and in everything else. Priority, both at the fire and at the
+  forge, is ore-and-charcoal first, copper second, an old crown last — a
+  found relic is still the fallback of last resort, not the second choice.
+  Carrying both swords, the real one is always the one that swings.
+- **The cloak got two siblings, and two fires stopped wasting what they
+  cut.** **Boots** (key **O**, 2 hide 1 cord, no fire needed) soften a
+  marsh's speed penalty without touching `terrainSpeedPct` itself — the
+  bonus is a player-only modifier layered on top of the one rule every
+  mover obeys, so a Lieutenant crossing the same marsh still gets the bare
+  55%. They wear one charge per step actually taken through a marsh, the
+  same shape a cloak already wears by the cold it stops rather than by the
+  clock. **Gloves** (key **V**, same recipe) make Rock, Ore and Copper
+  quieter to work — the same trade an axe already makes on a chop, aimed
+  at the loudest tile in the Verge instead of the quietest — and wear one
+  charge per dig. Both are the hide/cordage leatherworking line's first
+  products beyond the one cloak. Separately: butchering a carcass now
+  always pays a little **glue** alongside the meat and hide, and smothering
+  a fire down to charcoal now always pays a little **pitch** alongside the
+  char — the same work, not a new step to ask for either, closing PLAN
+  §15's "a graph with no waste is a graph where nothing is a bargain" a
+  little further. Neither had anywhere to be spent yet at the time — see
+  below for where that stopped being true.
+- **The Verge has a village now, and someone in it will actually talk to
+  you.** PLAN §1A specs the opening this game never built: wash up with
+  nothing, get taken in, get watched for a season. Three houses (a
+  landmark, not a building system) stand where §1A's custom actually
+  happens, and four NPCs live around them — the Teacher and three named
+  villagers, wandering a bounded patch of ground on plain code, no model
+  call anywhere near them (§27's Intelligence Tiers reserve that for
+  Captains and Wardens; even a Lieutenant only gets "light template").
+  Press **H** near whoever's closest to start talking; while a
+  conversation is open, the same **1-9** keys that craft everything else
+  pick a reply instead — one more context-sensitive verb, the same shape
+  E/gather already is, rather than a second row of keys to memorize. The
+  Teacher's tree is the actual tutorial §1A calls for, and it teaches
+  nothing mechanically: no free skill, no free XP, because skills.ts is
+  explicit that every soul learns only by doing, and a conversation that
+  quietly handed out a shortcut would contradict the one file most
+  responsible for saying so — what it hands over is in-fiction
+  instructions for keys that already work. A villager's tree instead
+  answers the "expelled from normal towns" half of the standing design, in
+  the one place this prototype has anything resembling a town: which
+  greeting you get is chosen once, when the conversation opens, by how the
+  road speaks of you — ordinary, wary, or, past the same notorious
+  threshold that already turns the Lieutenant away, refused outright
+  before a word is exchanged. Conversation content never crosses the
+  network — only the current node's id does (two small fields on `Player`)
+  — the client looks the actual text up from the same static tree
+  (`src/sim/dialogue.ts`) the sim used to decide what a reply does, so
+  there's no separate channel that could ever say something the sim
+  didn't mean.
+- **And now a villager can be struck and killed.** The same SPACE that
+  hits a beast or another soul, whichever of the three is actually
+  nearest. It costs the killer 60 standing — half again what killing a
+  player costs — and no `hunting` skill XP at all, on purpose: a real hunt
+  teaches something, and killing someone who couldn't fight back doesn't,
+  so it shouldn't pretend to. This is the "expelled from normal towns"
+  half of the standing design finally landing somewhere real, rather than
+  only as a colder greeting in a conversation. NPCs rot and respawn the
+  same way a carcass does, just slower — a bad decision costs the village
+  someone for a while, not forever.
+- **A living master can now teach a living student** — PLAN §7.3/§25's
+  apprentice bond, crossed early and narrowly the same way PvP was (see
+  the cut-list note below for how that call gets made): §44's Stage B cut
+  lists "the Teacher/apprentice bond" under Stage C, but nothing about
+  building it contradicts anything Stage B has already shipped, the way
+  a shortcut-XP tutorial would have. Press **K** near another soul and
+  they gain XP in *your* single best skill (`skills.bestSkill` — the
+  same pick the Barrow-list's `mastery()` already made, reused rather
+  than adding a second selector next to `offer`'s **T** key) — but
+  `skills.teachingCeiling` stops the gain one level short of your own:
+  a master can raise a green student to "an expert," never to "a
+  master." That ceiling is the whole point, not a limitation bolted on
+  afterward — the top rank has to stay something only doing it yourself
+  can earn, or the "skill is earned by doing, and dies with you" rule
+  three bullets up would have a hole in it. Teaching is free, the same
+  way giving is: it costs the teacher nothing but the tick spent standing
+  there, and it doubles as the second of PLAN §3's six Commons-standing
+  acts Stage B can now perform (feeding was the first) — +15 standing per
+  lesson, the same ledger a kill spends, for exactly as long as the
+  student has room left under the ceiling. **The one place this doesn't
+  touch:** a dead soul's *own* next life. PLAN §25 also describes a
+  soulbound soul keeping a degraded fraction of its own skill through
+  death ("a new body relearns the hands"); that is a different mechanic
+  from this one and it did not ship — `skills.ts`'s own header still says
+  flatly that skill "dies with the character," and this feature was built
+  to be the thing that makes that claim *interesting* rather than the
+  thing that undoes it: a master's practice can now outlive their death,
+  but only in whoever they actually taught while they were alive, never
+  in their own next body. The Teacher NPC herself is untouched by any of
+  this — she still teaches words, never XP, per the reasoning above her
+  in this list. No apprentice *yield* came with it either (PLAN §18's paid
+  economy, a Teacher earning an ongoing cut of a student's early work) —
+  that needs a currency Stage B doesn't have, so what shipped is free
+  instruction, not a wage.
+
+### He used to camp the spawn
+
+Reported from actual play, and worth writing down because no single line of
+it was wrong — it was three correct behaviours multiplying:
+
+1. The crows gather over wherever you were last loud. After a fight, that's
+   your corpse.
+2. A patrolling Lieutenant walks toward the crows. So he stayed.
+3. Every new soul arrived at the same fixed tile, right where you'd been
+   working, with no grace period.
+
+So he stood on the spot and killed each soul as it appeared. That isn't
+difficulty, it's a locked door. Now: a kill he made satisfies him for 40
+seconds, in which he ignores both souls and crows and walks away; a new soul
+arrives at least 8 tiles from him and clear of the birds; and for 12 seconds
+it is beneath his notice, which the HUD says out loud so you don't spend it
+running from nothing. He is exactly as lethal once he sees you.
+
+### Three more things that were quietly broken
+
+Worth recording, because two of them had been silently cancelling the
+design's own central tension:
+
+1. **Warmth never drained.** The "am I near a fire?" check compared the
+   player against the corner of their own tile, which is always inside the
+   fire radius — so cold could never kill anyone and the campfire, the one
+   object that trades safety for visibility, was decoration. It now scans
+   for an actual campfire tile in range.
+2. **The Lieutenant was faster than the player on diagonals.** Neither
+   diagonal move was normalised, so anything moving on both axes travelled
+   1.41× its stated speed. At 260 vs. the player's 300 he was meant to be
+   slower — on a diagonal approach he was effectively 368. §21 says fleeing
+   must work; it didn't, in the direction people actually run.
+3. **Everything stopped dead on trees.** A move blocked on either axis was
+   rejected outright rather than sliding, so the hunter snagged on corners
+   and so did you. `src/sim/move.ts` now slides.
+
+## The Stage B cut, and what's deliberately *not* here
+
+Per the plan's own named cut list (§44), checked off:
+
+| In scope | Built |
+|---|---|
+| The Verge, nothing else | ✅ one zone, no Realm gating |
+| A few professions worth of actions | ✅ gather, chip, mine, salvage a ruin, hunt, fish, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar, fishing line) |
+| Three creatures | ✅ and then some — hare, deer, river-goat, hedge-boar, wolf, and the crows. §44 asked for three; the extras came after the gate passed, and each one answers a different question rather than padding a bestiary |
+| Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
+| One Lieutenant, no Muster | ✅ — patched to patrol smarter as the map grew, and given the Reaver tier's first member (a Scout), not a second Lieutenant |
+| Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
+
+§44 names ten professions in scope (Farmer, Hunter, Miner, Logger,
+Charcoaler, Smelter, Blacksmith, Leatherworker, Tanner, Herbalist) and
+Trapper and Fisher are not on that list — built anyway, because both answer
+the exact test §44 used to pick the other ten ("what feeds a person day to
+day"), and §17 names both explicitly under the same hunger row as Farmer and
+Hunter. Nothing on the list is contradicted; two more of §17's food
+professions exist than §44 got around to naming.
+
+Fletcher and Bowyer are not on that list either, and their justification is
+narrower still: PLAN §15 named the "bone → glue → fletching" chain itself,
+as the model for what a byproduct is *for*, before either byproduct existed
+in code. Building glue and pitch without ever giving them a chain to spend
+in would have been the actual scope violation — decoration wearing a
+material's clothes, the same failure mode the HUD redesign's own cut list
+warns against elsewhere in this document. The bow and its arrows are that
+debt being paid, not a new profession invented from nothing.
+
+**A second line was crossed the same deliberate way: the Teacher/apprentice
+bond.** §44's own Stage C list names it explicitly, alongside marks, corpse
+bounties and player trade — but unlike PvP, this crossing didn't have to
+push against anything Stage B had already decided; it only had to avoid
+contradicting it. What shipped (**K**, above) is real, bounded skill transfer
+between two live souls, capped so a lesson can never make a student the
+teacher's equal — the top rank is still something only doing it yourself can
+earn, so "skill is earned by doing, and dies with you" reads exactly as true
+after this as before it. What did **not** ship is the other half of §25's
+description (a soul keeping degraded mastery through its *own* death) and
+all of §18's paid apprentice economy (a Teacher earning an ongoing yield off
+a student's early work) — both need pieces Stage B either explicitly
+rejected (skill carrying across a death) or doesn't have yet (a currency).
+
+**One line was crossed outright, not stretched: PvP.** §44 names it, along
+with marks and bounties, as Stage C — "does cooperation beat predation with
+real people" is a question a solo/duo prototype cannot answer either way, so
+it stayed a gap for several rounds of work on purpose. It was raised as a
+gate worth confirming rather than crossing on momentum, and the call to
+cross it now — ahead of Stage C, on the grounds that §44 is a previous
+agent's cut list rather than a standing rule from whoever is actually
+directing this project — was made explicitly. It shipped in three passes:
+SPACE striking another soul at all, with its own honest death cause; a real
+cost for doing it — a kill marks the killer and drops their standing, and
+enough kills makes the Lieutenant stop hunting them altogether; and one way
+back — feeding a genuinely hungry soul builds Commons standing (see the two
+bullets above). A fourth pass, later, added plunder: a soul-on-soul kill now
+drops the loser's pack as a lootable pile (crowns split instead — a killer's
+cut now, the King's share banked rather than lost, §30A's shape), and a
+fifth gave that banked share somewhere to go: the Bounty Board. No bounty
+payout *for a mark* and no murder-guild economy came with any of these
+passes — that is still exactly as unbuilt as it was, and is a bigger
+question than whether killing costs you something and can be climbed back
+from.
+
+**A third line crossed the same way, later still: a fourth Reaver-tier
+unit, the Scout** (see its own bullet above). §44 keeps "one Lieutenant, no
+Captain, no Warden, no Muster" — a Scout doesn't touch any of that: he
+doesn't fight, doesn't hold ground, and isn't a second Lieutenant, just the
+Reaver tier's first actual member, sent by a new cheap Overlord action
+rather than added to any fixed roster.
+
+Explicitly **out**, same as the plan says otherwise: land, guilds, ecology
+population math, the Shards, the bounty/plunder half of the outlawry
+economy PvP was meant to prove or disprove, and everything about magic
+beyond the two spells above (the Given, the bright trace a frequent worker
+leaves, a real Working). The creatures are a fixed
+roster that respawns on a timer somewhere you aren't — deliberately *not*
+a population model, because that is the fun thing to write that later
+turns out to be why a tick costs 40ms.
+
+## Cost per tick
+
+The whole sim, worst case — moving, gathering and striking every single
+tick with the full creature roster alive — measured on this machine:
+
+```
+35.21 µs/tick  ≈  0.035% of one core at 10 Hz
+```
+
+That is the budget to protect. Everything in `src/sim/` is integer math
+with no allocation in the hot path, which is why it runs on anything. If a
+feature can't be done in that shape, it's a feature for a tier that isn't
+the tick. (Rendering is a separate budget now that the map has outgrown the
+screen — see the camera above — but drawing is O(the 24x16 viewport), not
+O(the map), so it did not get more expensive when the Verge did.)
+
+It was 2.55 µs at six animals and nine verbs, 5.05 µs at twelve animals and
+thirteen verbs, 30.99 µs once the Verge grew nine times bigger and the
+roster scaled with it to 108, and 35.21 µs now that every mover reads the
+ground under it once a tick (terrain speed — marsh, road). Not re-measured
+for the clustered worldgen and the four new tiles: that work is entirely in
+`World`'s constructor, which runs once at startup, not per tick, and the
+new tiles add a handful of mutually-exclusive branches to `isSolid` and
+`doGather` — the same shape of cost the existing fourteen tiles already
+had, not a new order of it. The honest and boring answer is still unchanged:
+**the cost is linear in creatures**,
+because every one of them is stepped every tick, and each new mechanic
+that touches every mover or every creature adds a little more of the same
+linear cost rather than a new order of growth. That is fine at 108 and it
+would be fine at ten times that. It is *not* fine at the point someone
+adds a population model, which is exactly why §44 cut one — the roster is
+fixed and respawns on a timer, and a tick that costs milliseconds is what
+happens if that ever stops being true.
+
+**One honest exception to "no allocation in the hot path": `findPath`
+does allocate** — a `Uint8Array`/`Int32Array` sized to the whole map for
+its visited/parent buffers, each time it runs. It is not in the hot path
+in the sense that matters, though: it runs only while the Lieutenant is
+actively hunting, and only when his cached route is missing, stale, or
+the target has drifted well past the end of it (`PATH_RECOMPUTE_TICKS`,
+`PATH_STALE_RADIUS`) — roughly once every five seconds during a chase,
+not once a tick. Measured directly (`stepTick` in a loop, one player, the
+full 108-creature roster, the Lieutenant permanently hunting a target
+that teleports across the map *every single tick* — forcing a full
+replan every tick, an adversarial case no real chase can produce since a
+soul can't cross the map in 100ms): **38.00 µs/tick, against a 37.23
+µs/tick baseline with the same setup patrolling instead.** The
+difference a full BFS replan makes, forced every tick, is within noise
+of measuring the same sim twice.
+
+## What to actually test
+
+Play until you die at least twice. Then ask, honestly:
+
+- Did the death feel earned, or did it feel like bad luck?
+- Did you want to start again immediately, or did you close the tab?
+- Did building the fire feel like a real decision (warmth and hot food vs.
+  being found), or was it free?
+- Did you *see* the crows arrive and change what you were doing? That's the
+  one that tells you whether the noise thesis reads as a mechanic or just as
+  a number in the HUD.
+- Did you ever pick a fight with a boar on purpose? Did you regret it?
+- Did you build a trapline, or did you forget the snare existed? If it never
+  occurred to you to set one and walk away, the game has not managed to
+  teach that patience is a strategy — and that is the one new idea here.
+- Was chipping stone a decision or a chore? It's meant to be the loudest
+  thing you can do, so "I want an axe but not *here*, and not now" is the
+  thought it should produce. If you just stood at a rock and held E, the
+  noise cost is too low.
+- Did a wolf ever find you before you found it — and did you notice it was
+  night that did it, or did it just feel like bad luck?
+- When the fire burned low, did going for wood feel like a chore or like a
+  risk? If it's a chore, the wood cost is too high or the danger too low —
+  that number is the difference between a treadmill and a livelihood.
+
+With two people, the only question that matters:
+
+- **Did you trade because you wanted to, or because I asked you to?** If
+  two souls with different luck don't start handing each other things
+  unprompted, no currency, escrow or market UI will fix that — it means the
+  professions aren't different enough from each other yet, and that is a
+  content problem rather than an economy one.
+
+Fair warning on that one: in a session this short, both souls are near zero
+at everything, so an hour of chopping gets either of you the same three
+logs and there is no reason to trade *yet*. That is the design working, not
+failing — see §6.10. Testing it properly needs either a longer session or
+temporarily steeper skill effects.
+
+**Don't tune the attention numbers here.** Every constant governing how fast
+the Grey King's forces notice you — detection radius, noise decay,
+`KILL_REST_TICKS`, `RESPAWN_GRACE_TICKS`, `SPAWN_CLEAR_TILES`, the wolves'
+own `WOLF_DETECT_BASE` and `WOLF_ANGER_TICKS` — is squeezed into a Verge a
+soul still crosses corner to corner in well under a minute (24 seconds, at
+72 tiles across and 3 tiles/sec — up from eight seconds when the map was a
+third the size, still nothing like a real Realm's scale). The real Realms
+are much larger still, and drawing real attention is meant to take far
+longer: hours of visible activity, not ninety seconds of chopping. These
+values exist so a playtest fits in a coffee break, and every one of them is
+throwaway. Judge the *shape* of the mechanic — noise accrues, birds show it,
+something comes — and ignore the magnitudes.
+
+That's the whole gate. Tuning numbers (drain rates, detection radius,
+Lieutenant speed, how hard a boar hits) are all placeholders at the top of
+`src/sim/tick.ts` and `src/sim/creatures.ts` — deliberately loud constants,
+meant to be changed based on what playing it actually feels like, not on a
+formula.

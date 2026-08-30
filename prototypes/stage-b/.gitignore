@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# Save data: every soul this Verge has buried. Runtime state, not source.
+data/
