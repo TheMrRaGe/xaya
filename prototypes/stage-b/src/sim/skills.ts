@@ -17,14 +17,22 @@
  * what gives their work value.
  */
 
-export type Skill = "woodcraft" | "hunting" | "butchery" | "cooking" | "tailoring" | "trapping";
+export type Skill = "woodcraft" | "hunting" | "butchery" | "cooking" | "tailoring" | "trapping" | "smithing";
 
-export const SKILLS: readonly Skill[] = ["woodcraft", "hunting", "butchery", "cooking", "tailoring", "trapping"];
+export const SKILLS: readonly Skill[] = [
+  "woodcraft",
+  "hunting",
+  "butchery",
+  "cooking",
+  "tailoring",
+  "trapping",
+  "smithing",
+];
 
 export type Skills = Record<Skill, number>; // experience, not level
 
 export function newSkills(): Skills {
-  return { woodcraft: 0, hunting: 0, butchery: 0, cooking: 0, tailoring: 0, trapping: 0 };
+  return { woodcraft: 0, hunting: 0, butchery: 0, cooking: 0, tailoring: 0, trapping: 0, smithing: 0 };
 }
 
 /** Experience for one use of each verb. */
@@ -37,6 +45,9 @@ export const XP = {
   stitch: 40,
   snare: 8, // coiling and setting one
   trap: 25, // a catch, earned while you were somewhere else entirely
+  char: 8, // smothering a fire down to charcoal
+  smelt: 15, // running ore
+  forge: 40, // a sword — the chain's whole payoff
 } as const;
 
 export const MAX_LEVEL = 9;
@@ -108,6 +119,35 @@ export function trapChance(skills: Skills): readonly [number, number] {
   return [33 + level(skills.trapping) * 4, 100];
 }
 
+/**
+ * The sword chain, unlike every other one in this file, used to run on bare
+ * pack checks — no skill made it faster, safer or better, which quietly
+ * broke the principle every other skill here already proves: a chain should
+ * not lock a soul out for lacking a skill, but it should reward one for
+ * having it. Self-supply was already *possible* (one soul can do every step
+ * alone); it was not yet *earned*. Smithing closes that gap.
+ *
+ * Mining itself stays exempt on purpose — a vein is loud no matter how good
+ * you are at working one, the same deal stone already makes (§ NOISE_PER_ORE
+ * in tick.ts). Smithing only pays out at the fire, on what you do with what
+ * you dug up.
+ */
+
+/** Charcoal off one burn: 1 at nothing, 2 at mastery — less of the wood wasted as heat. */
+export function charcoalYield(skills: Skills): number {
+  return 1 + Math.trunc(level(skills.smithing) / 5);
+}
+
+/** Extra bar off one smelt: 0 at nothing, 2 at mastery. */
+export function smeltBonus(skills: Skills): number {
+  return Math.trunc(level(skills.smithing) / 4);
+}
+
+/** Extra damage a self-forged sword carries, on top of its base bite: 0 at nothing, 3 at mastery. */
+export function swordBonus(skills: Skills): number {
+  return Math.trunc(level(skills.smithing) / 3);
+}
+
 const TITLES: Record<Skill, string> = {
   woodcraft: "woodcutter",
   hunting: "hunter",
@@ -115,6 +155,7 @@ const TITLES: Record<Skill, string> = {
   cooking: "cook",
   tailoring: "tailor",
   trapping: "trapper",
+  smithing: "smith",
 };
 
 const RANKS = ["", "a poor", "a passable", "a fair", "a good", "a skilled", "a fine", "an expert", "a master", "a master"];

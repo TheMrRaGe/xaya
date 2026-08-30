@@ -10,7 +10,7 @@ import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT } from
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
-import { level, mastery, trapChance } from "../dist/sim/skills.js";
+import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
 
 
@@ -634,6 +634,61 @@ function check(name, cond, detail = "") {
   stepTick(s, [I({ strike: true })]);
   check("the sword strikes first, not the spear", p.pack.sword === 29 && p.pack.spear === 12, `sword=${p.pack.sword} spear=${p.pack.spear}`);
   check("a hedge-boar takes real damage from it", boar.health <= STATS["hedge-boar"].health - 6, `hp=${boar.health}`);
+}
+
+// --- 24. smithing: self-supply was always possible, now it is earned ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Grass);
+  p.pack.wood = 40;
+  stepTick(s, [I({ build: true })]);
+  stepTick(s, IDLE);
+
+  stepTick(s, [I({ makeCharcoal: true })]);
+  const afterCharcoal = p.skills.smithing;
+  check("charcoal-burning teaches smithing", afterCharcoal > 0, `xp=${afterCharcoal}`);
+  check("and a green smith gets the base yield", p.pack.charcoal === 1, `charcoal=${p.pack.charcoal}`);
+
+  p.pack.ore = 2;
+  stepTick(s, [I({ smelt: true })]);
+  check("smelting teaches more smithing on top", p.skills.smithing > afterCharcoal, `${afterCharcoal} -> ${p.skills.smithing}`);
+  check("a green smith gets one bar for one smelt", p.pack.bar === 1, `bar=${p.pack.bar}`);
+
+  // Now compare a green hand against a mastered one, formula to formula —
+  // the same way trapChance was checked directly rather than ground out.
+  check("a green smith wastes the most wood on charcoal", charcoalYield({ smithing: 0 }) === 1);
+  check("a mastered smith gets twice the charcoal off the same burn", charcoalYield({ smithing: 10000 }) === 2);
+  check("a green smith gets no extra bar", smeltBonus({ smithing: 0 }) === 0);
+  check("a mastered smith gets more bar from the same ore", smeltBonus({ smithing: 10000 }) >= 2);
+  check("a green smith's blade is the base bite, nothing more", swordBonus({ smithing: 0 }) === 0);
+  check("a mastered smith's own blade hits harder than one merely carried", swordBonus({ smithing: 10000 }) >= 3);
+
+  // Forging itself teaches smithing too.
+  p.pack.bar = 2;
+  p.pack.wood = 1;
+  p.pack.cordage = 1;
+  const beforeForge = p.skills.smithing;
+  stepTick(s, [I({ makeSword: true })]);
+  check("forging a sword teaches smithing", p.skills.smithing > beforeForge, `${beforeForge} -> ${p.skills.smithing}`);
+
+  // A mastered smith's own sword hits harder in an actual fight, not just
+  // in the formula — the same soul, the same blade, only the skill differs.
+  const master = fresh();
+  const mp = master.players[0];
+  mp.pack.sword = 30;
+  mp.skills.smithing = 10000;
+  const boar2 = master.creatures.find((c) => c.kind === "hedge-boar");
+  mp.x = boar2.x;
+  mp.y = boar2.y;
+  stepTick(master, [I({ strike: true })]);
+  check(
+    "a mastered smith's blade does more damage than a green one's",
+    STATS["hedge-boar"].health - boar2.health > 6,
+    `damage=${STATS["hedge-boar"].health - boar2.health}`,
+  );
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

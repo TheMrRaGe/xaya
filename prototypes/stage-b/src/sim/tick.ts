@@ -38,6 +38,9 @@ import {
   butcherBonus,
   mealValue,
   cloakDurability,
+  charcoalYield,
+  smeltBonus,
+  swordBonus,
 } from "./skills.js";
 import {
   Creature,
@@ -135,8 +138,7 @@ const NOISE_PER_ORE = 320; // and a vein is worse — this is the loudest work t
  * wood as heat, and that waste is what makes this chain expensive rather
  * than merely long.
  */
-const CHARCOAL_WOOD_COST = 3;
-const CHARCOAL_YIELD = 1;
+const CHARCOAL_WOOD_COST = 3; // base yield is 1; charcoalYield(skills) in skills.ts is what a smith improves on
 
 const SMELT_ORE_COST = 2;
 const SMELT_CHARCOAL_COST = 1;
@@ -700,8 +702,11 @@ function doStrike(state: SimState, player: Player): void {
   const pack = player.pack;
   // The best weapon in hand wins: a sword over a spear over a fist. Nothing
   // is ever discarded to make room, so carrying both just means the spear
-  // is the one you fall back on when the sword finally gives out.
-  const damage = (pack.sword > 0 ? SWORD_DAMAGE : pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE) + strikeBonus(player.skills);
+  // is the one you fall back on when the sword finally gives out. A sword
+  // you smelted and forged yourself hits harder than one merely carried —
+  // the same soul's smithing, not just their hunting, is in the blow.
+  const weapon = pack.sword > 0 ? SWORD_DAMAGE + swordBonus(player.skills) : pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE;
+  const damage = weapon + strikeBonus(player.skills);
   const killed = woundCreature(quarry, damage, state.tick, player.id);
   bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
   learn(state, player, "hunting", killed ? XP.kill : XP.strike);
@@ -863,8 +868,9 @@ function doMakeCharcoal(state: SimState, player: Player): void {
   const pack = player.pack;
   if (!player.atFire || pack.wood < CHARCOAL_WOOD_COST) return;
   pack.wood -= CHARCOAL_WOOD_COST;
-  pack.charcoal += CHARCOAL_YIELD;
+  pack.charcoal += charcoalYield(player.skills);
   bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 6), player); // banking a fire down is quiet work
+  learn(state, player, "smithing", XP.char);
   say(state, "Wood smothered down under ash. What is left burns far hotter than the log did.");
 }
 
@@ -874,8 +880,9 @@ function doSmelt(state: SimState, player: Player): void {
   if (!player.atFire || pack.ore < SMELT_ORE_COST || pack.charcoal < SMELT_CHARCOAL_COST) return;
   pack.ore -= SMELT_ORE_COST;
   pack.charcoal -= SMELT_CHARCOAL_COST;
-  pack.bar += BAR_YIELD;
+  pack.bar += BAR_YIELD + smeltBonus(player.skills);
   bumpNoise(state, NOISE_PER_CRAFT, player); // a fire hot enough to run ore is not a quiet fire
+  learn(state, player, "smithing", XP.smelt);
   say(state, "Ore goes soft, then runs. A bar, dull and heavy, where stone used to be.");
 }
 
@@ -888,6 +895,7 @@ function doMakeSword(state: SimState, player: Player): void {
   pack.cordage -= SWORD_CORDAGE_COST;
   pack.sword = SWORD_DURABILITY;
   bumpNoise(state, NOISE_PER_CRAFT, player);
+  learn(state, player, "smithing", XP.forge);
   say(state, "A blade, hafted and bound. Everything else you have made was a stopgap until this.");
   if (!state.flags.firstSword) {
     state.flags.firstSword = true;

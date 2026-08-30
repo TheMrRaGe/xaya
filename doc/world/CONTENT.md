@@ -348,12 +348,13 @@ maintenance is the war.
 
 - **Tools** — spear `[built, 12 strikes]`, knife `[built, 20 butcherings]`, axe
   `[built, 25 chops]`, snare `[built]`, **sword** `[built, 30 strikes, double the
-  spear's bite]`; pick, needle, fishing line, hammer, saw, loom, quern all
-  `[named]`. The built ones each buy a different thing: the knife buys *yield*
-  (more off a carcass, and the only way to cut cord), the axe buys yield **and
-  quiet**, the snare buys *absence* — the only work that pays out while you are
-  somewhere else — and the sword buys nothing but raw damage, because it is the
-  end of a chain rather than a shortcut through one (§6).
+  spear's base bite and sharper still in a smith's own hand]`; pick, needle,
+  fishing line, hammer, saw, loom, quern all `[named]`. The built ones each buy
+  a different thing: the knife buys *yield* (more off a carcass, and the only
+  way to cut cord), the axe buys yield **and quiet**, the snare buys *absence*
+  — the only work that pays out while you are somewhere else — and the sword
+  buys raw damage, the end of a chain rather than a shortcut through one (§6),
+  with the smith's own skill adding more on top of whoever merely swings it.
 - **Wearables** — hide cloak `[built, wears through on the cold it stops]`,
   boots, gloves, hats, mail and plate at the Kiln tier and above `[named]`.
 - **Placed and built** — campfire `[built, burns fuel and leaves ash]`, set snare
@@ -421,16 +422,20 @@ All three are the first appearance of §15's generative rule in the prototype:
 a snare needs cordage *and* wood, cordage needs hide *and* a knife already in
 hand, hide only comes off an animal someone hunted, and a sword needs a vein,
 a fire kept long enough to burn wood down twice over, *and* the cord the
-tools chain already produces. Nothing in any of them can be self-supplied
-from a single activity, which is the property that makes trade arithmetic
-rather than courtesy. Plus wood → spear, hide → cloak, wood → fire.
+tools chain already produces. **No single action or material substitutes for
+the chain** — that is the property that eventually makes trade arithmetic
+rather than courtesy, once two souls' hours stop yielding the same output
+(§7.4). It is not the same claim as "no soul can do the whole chain alone,"
+which was never the rule — see §7.4's note on what a skill actually gates.
+Plus wood → spear, hide → cloak, wood → fire.
 
 **Where the built sword chain falls short of §15's rule:** the full version
 gates real steel behind Realm-gated coal and spreads the work across eight
-professions (above); Stage B has one Realm and one soul doing every step, so
-what is built proves the *no-self-supply* half of the rule and not yet the
-*Realm-gated input* half — there is nothing else to gate it against until a
-second Realm exists.
+professions (above); Stage B has one Realm, so there is nothing yet to gate
+an input against. What §15 calls interdependence, at this scale, comes from
+skill taking time to earn (§7.4) rather than from a Realm wall — the two
+pressures the full design layers together are, for now, running on only one
+of them.
 
 ---
 
@@ -503,12 +508,21 @@ A master Smith who has never left the Moorfen is not a bad Smith — they are th
 best Smith the world currently has access to. Nobody's work is obsolete; it is
 *ceilinged*, and the ceiling only moves when the whole world moves it together.
 
-**In code today** `[built]`: six skills — woodcraft, hunting, butchery, cooking,
-tailoring, trapping — earned by doing, dying with the character, and **quiet**: a
-practised hand makes less noise, so competence and safety are the same stat.
-Trapping is the odd one: it earns nothing from noise (a snare is nearly silent
-either way) and instead raises the catch chance of whatever a soul's snares
-spring — the only skill that pays out while its owner is somewhere else.
+**In code today** `[built]`: seven skills — woodcraft, hunting, butchery, cooking,
+tailoring, trapping, smithing — earned by doing, dying with the character, and
+**quiet**: a practised hand makes less noise, so competence and safety are the
+same stat. Trapping and smithing are the two exceptions, and each earns
+something noise never could: trapping raises the catch chance of whatever a
+soul's snares spring (the only skill that pays out while its owner is
+somewhere else); smithing raises how much charcoal a burn yields, how much
+bar a smelt yields, and how hard a self-forged sword hits.
+
+None of the seven ever *gates* an action — every one of them is attemptable
+at zero, the way §17/§22's "no classes, no starting traits" already promises.
+What skill buys is always *quality*, never *access*: this is also why a
+skilled generalist really can supply an entire chain alone (§6), and why
+that was true before smithing existed and stayed true after — smithing only
+made doing so worth having practised.
 
 **Stage B's cut list** `[plan §44]` names ten professions in scope: Farmer,
 Hunter, Miner, Logger, Charcoaler, Smelter, Blacksmith, Leatherworker, Tanner,
@@ -993,12 +1007,21 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   oversight to close casually: §44's Stage B cut is explicit that PvP, marks
   and bounties are Stage C ("does cooperation beat predation with real
   people"), not a Stage B task — this one stays a gap until that gate opens.
-- **The sword chain compresses eight professions into zero new skills.**
-  Ore, charcoal, smelting and forging all run on bare pack checks with no
-  Miner/Smelter/Blacksmith skill behind any of them, unlike every other
-  craft that touches a named skill somewhere in its chain. Deliberate for
-  now — Stage B's roster is already six skills for one soul to carry — but
-  the first candidate if smithing ever earns its own line.
+- ~~**The sword chain compresses eight professions into zero new skills.**~~
+  — closed: **smithing** is the seventh skill, covering charcoal-burning,
+  smelting and forging. It settles a point worth stating plainly, because it
+  is easy to misread §15's "no profession can self-supply" as a hard rule:
+  **the rule was never that a soul can't do a whole chain alone — every
+  skill here already lets a generalist attempt anything from zero.** What a
+  skill buys is never *access*, only *how well* — more per action, less
+  noise, a better catch, and now more charcoal per burn, more bar per
+  smelt, a harder-hitting blade. Self-supply was already mechanically
+  possible before smithing existed; it was not yet *earned*, which made it
+  the one chain in the prototype where mastery bought nothing. Interdependence
+  in the full design comes from *time* — nobody masters all sixty-odd
+  professions in one lifetime — and from Realm-gating, not from a lock on
+  what an unskilled soul is permitted to try. Mining itself stays exempt:
+  a vein is loud no matter how good you are at working one, same as stone.
 
 ---
 
