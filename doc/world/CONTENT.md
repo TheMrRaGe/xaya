@@ -259,6 +259,17 @@ the Lieutenant's detection radius and opens the wolves' noses.
 
 ### 3.4 Tiles in code `[built]`
 
+Eighteen now, and — as of this pass — placed by geography rather than
+independent dice roll. Worldgen used to give every tile its own unrelated
+`rng.nextInt(100)`, which reads as salt-and-pepper; it is now a sequence of
+deterministic passes, each keying off what an earlier one decided: a river
+walked edge to edge first, woodland stands and mineral outcrops and
+meadows grown outward from seeded clusters (`growBlob` in world.ts, one
+primitive reused by all three), hedgerows walked as short boundary lines,
+then the riverbank, road and ruin passes exactly as before. Same seed,
+same map, still nothing but integers and the existing `Rng` — no noise
+library, no new dependency.
+
 Grass · Tree · Stump (harvested, regrows) · Water · Bush · BareBush (picked,
 regrows) · Campfire (player-built, burns down) · Ash (a fire that went out;
 grass takes it back) · **Rock** (chip stone off it forever; it never depletes) ·
@@ -269,12 +280,23 @@ Rock — never depletes — but rarer, and the loudest tile in the Verge to work
 do) · **Road** (§8's "nobody bothered to destroy them" — the mirror of a
 marsh, faster to cross than grass, and the reason a nine-times-bigger Verge is
 still walkable) · **Ruin** (a collapsed room, never depleting like Rock and
-Ore, that usually pays out nothing at all and rarely an old crown, §17A).
+Ore, that usually pays out nothing at all and rarely an old crown, §17A) ·
+**Clay** (open ground at the same riverbank that grows marsh — §3.1 names
+it beside timber as an everyday Verge material, so unlike Rock/Ore it is
+common and quiet, not rare and loud) · **Copper** (the rarest outcome of
+the same mineral clusters that produce Rock and Ore — §3.1 names copper,
+not iron, as the Verge's own metal; a chain for it is future work, §15's
+gap list) · **Meadow** (a wildflower patch, foraged for a satiety gain
+like a bush and never stripped bare — feeds Beekeeper, §7.2's
+named-but-unbuilt profession, whenever that is built) · **Thicket** (a
+woodland stand's dense core rather than a separate biome: more wood per
+felling than a lone Tree, louder to take, regrows into itself).
 
 Terrain speed is one rule, read the same way by a soul, the Lieutenant and
 every beast: a marsh bogs down a fleeing deer exactly as it would bog down
 whoever is chasing it, and a road speeds up whichever of them thought to use
-one first.
+one first. Clay and Meadow are open ground under that rule, at plain speed;
+Copper and Thicket are solid, the same as Ore and Tree.
 
 ### 3.5 Terrain the world implies but code lacks
 
@@ -282,10 +304,16 @@ one first.
 ~~Marsh, road, ruin~~ — closed (§3.4): all three generated deterministically
 rather than scattered independently — marsh only ever appears at a water
 tile's edge, a road is walked as a line between two map edges rather than
-placed tile by tile, and a ruin is a single rare room. Snow, sand, tidal
-flat, cave mouth remain `[named]` at best — each belongs to a Realm that
-isn't the Verge (Rimeholt, the Sunken Reach), so building them here would be
-borrowing another Realm's terrain rather than filling in this one's.
+placed tile by tile, and a ruin is a single rare room.
+~~Independent per-tile placement~~ — closed: replaced by the clustered,
+river-first generation described in §3.4, so forests read as stands and
+water reads as a river rather than scattered ponds.
+~~Clay and copper, named in §3.1's material table with nothing to gather
+them from~~ — closed: both now have a source tile (§3.4). Snow, sand,
+tidal flat, cave mouth remain `[named]` at best — each belongs to a Realm
+that isn't the Verge (Rimeholt, the Sunken Reach), so building them here
+would be borrowing another Realm's terrain rather than filling in this
+one's.
 
 **Terraforming** `[plan §22]` — dig, raise, flatten, tunnel, reshape, and it
 persists. In a world that never resets, the strongest "we were here" mechanic
@@ -325,8 +353,13 @@ carried water in the Kiln; in Rimeholt, anything fat — rendered tallow eaten
 plain, without embarrassment, because the cold takes what it wants.
 
 **In code today:** wood, **stone**, **cordage**, raw meat, cooked meat, hide,
-**ore, charcoal, bar, fish** `[built]` — plus water and berries consumed
-straight off the tile rather than carried.
+**ore, charcoal, bar, fish, clay, copper** `[built]` — plus water and
+berries consumed straight off the tile rather than carried. Clay and
+copper close the last two names in §3.1's Verge material row ("soil,
+timber, clay, copper") that had no source at all before this pass; neither
+has a chain to spend it in yet (§15's gap list) — gatherable and storable
+a commit ahead of having somewhere to go, the same order ore/bar/sword
+shipped in.
 
 Stone is worth calling out because it inverts how every other material here
 behaves. A tree runs out and regrows on a timer; a rock outcrop never runs out
@@ -1085,13 +1118,26 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   a felled deer already works (first to arrive butchers it, not the striker),
   not an oversight. Whether a stranger's theft of a *catch* should ever be
   distinguished from a stranger's theft of a *kill* is still open.
-- ~~**Terrain beyond the eleven tiles**~~ — closed: marsh, road and ruin
-  bring it to fourteen (§3.4), each with a reason to exist rather than
-  decoration — marsh and road are the two ends of one rule (terrain speed,
-  read the same by every mover), and a ruin is the first place a crown can
-  be found at all. What is still open: snow, sand, a tidal flat and a cave
-  mouth all belong to Realms that are not the Verge, so they stay `[named]`
-  on purpose rather than being built somewhere they don't fit.
+- ~~**Terrain beyond the eleven tiles**~~ — closed: marsh, road, ruin, clay,
+  copper, meadow and thicket bring it to eighteen (§3.4), each with a
+  reason to exist rather than decoration — marsh and road are the two ends
+  of one rule (terrain speed, read the same by every mover), a ruin is the
+  first place a crown can be found at all, and clay/copper close the last
+  two Verge materials §3.1 named with nothing to gather them from. What is
+  still open: snow, sand, a tidal flat and a cave mouth all belong to
+  Realms that are not the Verge, so they stay `[named]` on purpose rather
+  than being built somewhere they don't fit.
+- ~~**Independent per-tile worldgen**~~ — closed: placement is now a
+  sequence of deterministic passes keyed off a river placed first, rather
+  than every tile rolling independently (§3.4) — the map reads as a valley
+  instead of a grid of dice rolls.
+- **Clay and copper have no chain.** Both are gatherable and storable
+  (§4/§3.4) with nothing yet to make from them — pottery for clay, a
+  second and cheaper metal line for copper, per §3.1's Verge material row.
+  The next pass in this arc (doc/world/CONTENT.md's own worldgen
+  follow-on) is exactly this.
+- **Meadow has no Beekeeper.** The tile exists and forages like a bush;
+  §7.2's Beekeeper profession, and anything resembling honey, is unbuilt.
 - ~~**Killed-by-another-soul** is absent from the death causes~~ — closed,
   deliberately and out of sequence: §44's Stage B cut names PvP, marks and
   bounties as Stage C ("does cooperation beat predation with real people"),

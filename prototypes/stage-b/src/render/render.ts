@@ -76,6 +76,10 @@ const COLORS: Record<Tile, string> = {
   [Tile.Marsh]: "#3a4a38",
   [Tile.Road]: "#8a7a5e",
   [Tile.Ruin]: "#5c5852",
+  [Tile.Clay]: "#9c6b42",
+  [Tile.Copper]: "#5a5248", // same rock-dark base as Ore; the flecks below tell them apart
+  [Tile.Meadow]: "#5a7a3a",
+  [Tile.Thicket]: "#16290f", // darker than Tree — a stand's core, not its fringe
 };
 
 /** Fuel at which a fire is drawn as embers rather than a blaze. */
@@ -123,6 +127,51 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
         ctx.fill();
         ctx.beginPath();
         ctx.arc(px + TILE_PX * 0.62, py + TILE_PX * 0.6, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (t === Tile.Copper) {
+        // Verdigris-green flecks instead of ore-gold — the same "check every
+        // stone" logic as Ore, told apart at a glance once you're close.
+        ctx.fillStyle = "#4a9a7a";
+        ctx.beginPath();
+        ctx.arc(px + TILE_PX * 0.42, py + TILE_PX * 0.42, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + TILE_PX * 0.6, py + TILE_PX * 0.58, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (t === Tile.Clay) {
+        // A darker smear of worked mud, so it doesn't read as plain dirt.
+        ctx.fillStyle = "#7a5334";
+        ctx.beginPath();
+        ctx.ellipse(px + TILE_PX * 0.5, py + TILE_PX * 0.55, 9, 5, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (t === Tile.Meadow) {
+        // A few flowers — cheap, and the whole reason a meadow reads as
+        // something rather than paler grass.
+        const petals = ["#e8d84a", "#d888c8", "#e0e0e0"];
+        for (let i = 0; i < 3; i++) {
+          const fx = px + TILE_PX * (0.25 + i * 0.28);
+          const fy = py + TILE_PX * (0.35 + ((i * 37) % 3) * 0.15);
+          ctx.fillStyle = petals[i % petals.length]!;
+          ctx.beginPath();
+          ctx.arc(fx, fy, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      if (t === Tile.Thicket) {
+        // Denser foliage marks than a plain Tree tile — reads as "more wood,
+        // more noise" before a player ever swings at it.
+        ctx.fillStyle = "#0e1c09";
+        ctx.beginPath();
+        ctx.arc(px + TILE_PX * 0.3, py + TILE_PX * 0.3, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + TILE_PX * 0.65, py + TILE_PX * 0.5, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + TILE_PX * 0.42, py + TILE_PX * 0.72, 5, 0, Math.PI * 2);
         ctx.fill();
       }
       if (t === Tile.Marsh) {
@@ -460,7 +509,12 @@ export function drawHud(
   // a line.
   ctx.fillText(
     `ore ${pack.ore}  charcoal ${pack.charcoal}  bar ${pack.bar}  fish ${pack.fish}` +
-      (pack.crowns > 0 ? `  crowns ${pack.crowns}` : ""),
+      (pack.crowns > 0 ? `  crowns ${pack.crowns}` : "") +
+      // Clay and copper have no chain yet (doc/world/CONTENT.md's worldgen
+      // follow-on) — shown only once carried, same as crowns, so an empty
+      // pack doesn't advertise materials nothing can be done with yet.
+      (pack.clay > 0 ? `  clay ${pack.clay}` : "") +
+      (pack.copper > 0 ? `  copper ${pack.copper}` : ""),
     10,
     hudY + 76,
   );

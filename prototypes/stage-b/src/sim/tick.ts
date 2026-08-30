@@ -148,6 +148,20 @@ const SNARE_WOOD_COST = 1;
 
 const NOISE_PER_CHIP = 260; // hammering stone is the loudest work in the Verge
 const NOISE_PER_ORE = 320; // and a vein is worse — this is the loudest work there is
+/**
+ * Copper is the rarer find (world.ts's mineral clusters), but it is a
+ * softer seam than a true ore vein and it shows on the surface more often
+ * — working one is louder than a rock outcrop but not the shout a vein is.
+ */
+const NOISE_PER_COPPER = 290;
+/** Clay is soil, not a vein (§3.1) — as quiet as picking a bush clean. */
+const NOISE_PER_CLAY = 40;
+/** A wildflower meadow costs nothing to be heard at — quieter even than clay. */
+const NOISE_PER_MEADOW = 20;
+const MEADOW_SATIETY = 90; // less than a bush's 200 — foraging flowers, not fruit
+/** A thicket's denser wood costs more to take and more to be heard taking. */
+const THICKET_WOOD_BONUS = 2;
+const THICKET_NOISE_BONUS_PCT = 140; // percent of a normal chop's noise
 const NOISE_PER_RUIN_DIG = 140; // digging through rubble carries, but quieter than stone or ore
 const RUIN_CROWN_CHANCE_PCT = 15; // rubble far more often than a crown
 const CROWN_MELT_COST = 1;
@@ -359,6 +373,8 @@ export interface SimState {
     firstCommonsStanding: boolean;
     firstCrown: boolean;
     firstCrownMelted: boolean;
+    firstClay: boolean;
+    firstCopper: boolean;
   };
 }
 
@@ -403,6 +419,8 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstCommonsStanding: false,
       firstCrown: false,
       firstCrownMelted: false,
+      firstClay: false,
+      firstCopper: false,
     },
   };
 }
@@ -733,13 +751,17 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     const gx = px + ddx;
     const gy = py + ddy;
     const t = world.get(gx, gy);
-    if (t === Tile.Tree) {
+    if (t === Tile.Tree || t === Tile.Thicket) {
+      const thicket = t === Tile.Thicket;
       world.harvest(gx, gy, state.tick, REGROW_TICKS);
       // An axe is more wood and *less* noise — the one tool that makes you
       // safer by being better, which is the same argument skill makes.
       const axed = pack.axe > 0;
-      pack.wood += woodPerTree(player.skills) + (axed ? AXE_WOOD_BONUS : 0);
+      pack.wood += woodPerTree(player.skills) + (axed ? AXE_WOOD_BONUS : 0) + (thicket ? THICKET_WOOD_BONUS : 0);
       let noise = skilledNoise(NOISE_PER_GATHER, player, "woodcraft");
+      // A denser stand costs more to be heard taking, same trade a rock
+      // outcrop already makes between yield and quiet.
+      if (thicket) noise = Math.trunc((noise * THICKET_NOISE_BONUS_PCT) / 100);
       if (axed) {
         noise = Math.trunc((noise * AXE_QUIET) / 100);
         pack.axe--;
@@ -774,6 +796,16 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       }
       return;
     }
+    if (t === Tile.Copper) {
+      // Same rule as ore, one seam rarer — see world.ts's mineral clusters.
+      pack.copper++;
+      bumpNoise(state, NOISE_PER_COPPER, player);
+      if (!state.flags.firstCopper) {
+        state.flags.firstCopper = true;
+        say(state, "The Grey King: “Copper. Older than the ore, and it was mine first too.”");
+      }
+      return;
+    }
     if (t === Tile.Ruin) {
       // Never runs out, like Rock and Ore — but a ruin is not a resource,
       // it is a chance. Most digging turns up nothing at all.
@@ -798,6 +830,22 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     }
     if (t === Tile.Water) {
       player.needs.hydration = clamp(player.needs.hydration + 400, 0, NEED_MAX);
+      return;
+    }
+    if (t === Tile.Clay) {
+      // Soil, not a vein (§3.1) — as ordinary and as quiet as picking a bush.
+      pack.clay++;
+      bumpNoise(state, NOISE_PER_CLAY, player);
+      if (!state.flags.firstClay) {
+        state.flags.firstClay = true;
+        say(state, "The Grey King: “Clay. Even a hedge-witch's kiln needs a pot to hold the water.”");
+      }
+      return;
+    }
+    if (t === Tile.Meadow) {
+      // Foraged, not farmed — never depletes, the same reasoning as Rock and Ore.
+      player.needs.satiety = clamp(player.needs.satiety + MEADOW_SATIETY, 0, NEED_MAX);
+      bumpNoise(state, NOISE_PER_MEADOW, player);
       return;
     }
   }

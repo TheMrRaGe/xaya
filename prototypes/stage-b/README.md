@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (234 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (254 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -382,6 +382,32 @@ plan committed at the repo root's `doc/world/`.
   not just their own, so the death screen is a board the settlement keeps
   rather than one browser's private diary. `data/` is gitignored: it's save
   data, not source.
+- **The Verge stopped being a grid of dice rolls.** Every tile used to get
+  its own independent `rng.nextInt(100)` — trees, water and stone all fell
+  as an even sprinkle, which never read as a valley. Generation is now a
+  sequence of deterministic passes that key off each other: a river walked
+  edge to edge first (two passes, so it reads as a real river and not
+  always a short stream), woodland stands and mineral outcrops and meadows
+  grown outward from seeded clusters, hedgerows walked as short boundary
+  lines, then the riverbank, road and ruin passes exactly as before. Same
+  seed, same map, still only integers and the existing `Rng` — no noise
+  library, no new dependency, just one clustering primitive (`growBlob`)
+  reused by every "clump of terrain" pass instead of three bespoke ones.
+- **Four new tiles, two of them closing a gap PLAN §3.1 left open since day
+  one.** The Verge's own material row names "soil, timber, clay, copper" —
+  clay and copper never had anywhere to come from until now. **Clay**
+  forms at the same riverbank that grows marsh (common and quiet, the way
+  §3.1 treats it as an everyday material, not a vein). **Copper** is the
+  rarest outcome of the same mineral clusters that produce Rock and Ore —
+  §3.1 names copper, not iron, as the Verge's own metal, so this is a
+  second metal alongside the existing chain rather than a replacement for
+  it; nothing spends either material yet (see the gap list below).
+  **Meadow** is a wildflower patch, foraged like a bush for a smaller
+  satiety gain, never stripped bare — it's waiting on Beekeeper, still
+  just a name in PLAN §17's profession list. **Thicket** is a woodland
+  stand's dense core rather than a new biome: more wood per felling than a
+  lone tree, louder to take, and it grows back into itself, not into a
+  lone tree.
 
 ### He used to camp the spawn
 
@@ -484,8 +510,13 @@ O(the map), so it did not get more expensive when the Verge did.)
 It was 2.55 µs at six animals and nine verbs, 5.05 µs at twelve animals and
 thirteen verbs, 30.99 µs once the Verge grew nine times bigger and the
 roster scaled with it to 108, and 35.21 µs now that every mover reads the
-ground under it once a tick (terrain speed — marsh, road). The honest and
-boring answer is still unchanged: **the cost is linear in creatures**,
+ground under it once a tick (terrain speed — marsh, road). Not re-measured
+for the clustered worldgen and the four new tiles: that work is entirely in
+`World`'s constructor, which runs once at startup, not per tick, and the
+new tiles add a handful of mutually-exclusive branches to `isSolid` and
+`doGather` — the same shape of cost the existing fourteen tiles already
+had, not a new order of it. The honest and boring answer is still unchanged:
+**the cost is linear in creatures**,
 because every one of them is stepped every tick, and each new mechanic
 that touches every mover or every creature adds a little more of the same
 linear cost rather than a new order of growth. That is fine at 108 and it

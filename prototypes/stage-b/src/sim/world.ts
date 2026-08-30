@@ -4,6 +4,16 @@
  * A single small zone, generated deterministically from a seed so that a
  * given seed always produces the same map. No terraforming, no ecology
  * population math, no second biome — a grid of tiles and nothing more.
+ *
+ * Generation used to be one independent roll per tile, which reads as
+ * salt-and-pepper rather than a place. It is now a sequence of
+ * deterministic passes, each keying off what an earlier one decided, the
+ * same shape marsh/road/ruin already used before this rewrite generalised
+ * it: a river first (§4A "river fords"), then woodland stands and mineral
+ * clusters and hedgerows and meadows grown from seeds rather than
+ * sprinkled tile by tile, then the riverbank, then roads and ruins exactly
+ * as before. The point is not more tiles for their own sake — it is a map
+ * that reads as a valley instead of a grid of dice rolls.
  */
 import { Rng } from "./rng.js";
 import { clamp } from "./fixed.js";
@@ -22,7 +32,7 @@ export const WORLD_H = 48;
 export enum Tile {
   Grass = 0,
   Tree = 1,
-  Stump = 2, // a harvested tree; regrows after RESPAWN_TICKS
+  Stump = 2, // a harvested tree or thicket; regrows after RESPAWN_TICKS into whichever it was
   Water = 3,
   Bush = 4,
   BareBush = 5, // a picked-clean bush; regrows after RESPAWN_TICKS
@@ -44,13 +54,16 @@ export enum Tile {
    * doc/world/PLAN.md §15 actually names for Stage B: ore + charcoal → bar →
    * sword. A rock outcrop gets you a knife in an afternoon; a vein gets you
    * a sword after you have also kept a fire, cut wood down to charcoal, and
-   * smelted the result — which is the point of putting it last.
+   * smelted the result — which is the point of putting it last. Generated
+   * as part of the same mineral clusters as Rock and Copper (below) rather
+   * than its own independent roll — an outcrop that is mostly stone,
+   * sometimes hiding a real vein.
    */
   Ore = 10,
   /**
    * Wet ground at a river's edge. Slower to cross than grass and louder
    * while you're crossing it — the one tile that punishes moving through it
-   * rather than gathering from it, which nothing else here does.
+   * rather than working it, which nothing else here does.
    */
   Marsh = 11,
   /**
@@ -67,18 +80,50 @@ export enum Tile {
    * carrying: a chance at an old crown, not a guaranteed one.
    */
   Ruin = 13,
+  /**
+   * Open clay along a riverbank — soil, not a vein. Per §3.1's Verge
+   * material row ("soil, timber, clay, copper") this is as ordinary a
+   * material as wood, so unlike Rock/Ore it is common and quiet rather
+   * than rare and loud. Never depletes; a riverbank does not run out of
+   * clay any faster than an outcrop runs out of stone.
+   */
+  Clay = 14,
+  /**
+   * A seam of copper, generated as the rarest outcome of the same mineral
+   * clusters that produce Rock and Ore (rarer than Ore, per §3.1 naming
+   * copper rather than iron as the Verge's own metal). Its chain is item
+   * 2's job; this tile only makes it possible to dig one up.
+   */
+  Copper = 15,
+  /** A wildflower patch. Common, quiet, and Verge foraging in its own right — never depletes. */
+  Meadow = 16,
+  /**
+   * The dense core of a woodland stand rather than a separate biome: more
+   * wood per felling than a lone Tree, and louder, the same trade a rock
+   * outcrop already makes between yield and being heard. Felled, it grows
+   * back as itself (see `harvest`) — a stand's core stays a core.
+   */
+  Thicket = 17,
 }
 
 /** How long a burnt-out camp is still visible before the grass closes over it. */
 export const ASH_TICKS = 600;
 
 export function isSolid(t: Tile): boolean {
-  return t === Tile.Tree || t === Tile.Water || t === Tile.Campfire || t === Tile.Rock || t === Tile.Ore;
+  return (
+    t === Tile.Tree ||
+    t === Tile.Water ||
+    t === Tile.Campfire ||
+    t === Tile.Rock ||
+    t === Tile.Ore ||
+    t === Tile.Copper ||
+    t === Tile.Thicket
+  );
 }
 
 export interface Resource {
   tile: Tile; // Stump or BareBush — what it reverts from
-  regrowTo: Tile; // Tree or Bush — what it reverts to
+  regrowTo: Tile; // Tree, Thicket or Bush — what it reverts to
   readyAtTick: number;
 }
 
@@ -99,42 +144,28 @@ export class World {
     const rng = new Rng(seed);
     this.tiles = new Array(WORLD_W * WORLD_H).fill(Tile.Grass);
 
-    for (let y = 0; y < WORLD_H; y++) {
-      for (let x = 0; x < WORLD_W; x++) {
-        // Keep a clearing around the arrival point so a new soul doesn't
-        // wash up standing inside a tree.
-        if (Math.abs(x - 3) <= 1 && Math.abs(y - 3) <= 1) continue;
+    // Water first — everything else in this file reads off where the river
+    // actually ran, the way a real valley's geography would, rather than
+    // each feature deciding independently and occasionally disagreeing.
+    // Two walks, same as the roads below get: one alone is sometimes a
+    // short stream if its start and end happen to land close together, and
+    // "river valley" (§4A) wants water a soul actually has to route around.
+    for (let i = 0; i < 2; i++) this.drawRiver(rng);
+    this.growForest(rng);
+    this.growMineralClusters(rng);
+    this.growHedgerows(rng);
+    this.growMeadows(rng);
 
-        const roll = rng.nextInt(100);
-        if (roll < 14) this.set(x, y, Tile.Tree);
-        else if (roll < 19) this.set(x, y, Tile.Water);
-        else if (roll < 26) this.set(x, y, Tile.Bush);
-        else if (roll < 29) this.set(x, y, Tile.Rock);
-        // Rarer than a rock outcrop on purpose — a sword is meant to take
-        // longer to reach than a knife.
-        else if (roll < 31) this.set(x, y, Tile.Ore);
-      }
-    }
-
-    // Marsh forms at a river's edge, not anywhere flat and grassy — a
-    // second pass over what the first one already decided was Water,
-    // rather than another independent roll.
-    for (let y = 0; y < WORLD_H; y++) {
-      for (let x = 0; x < WORLD_W; x++) {
-        if (this.get(x, y) !== Tile.Grass || this.inClearing(x, y)) continue;
-        const nearWater =
-          this.get(x, y - 1) === Tile.Water ||
-          this.get(x, y + 1) === Tile.Water ||
-          this.get(x - 1, y) === Tile.Water ||
-          this.get(x + 1, y) === Tile.Water;
-        if (nearWater && rng.chance(1, 3)) this.set(x, y, Tile.Marsh);
-      }
-    }
+    // The riverbank: a second, deterministic pass over the water this
+    // constructor already placed, exactly like the road and ruin passes
+    // below — never an independent roll.
+    this.growRiverbank(rng);
 
     // A road or two, walked as a wandering line rather than scattered like
     // everything above — the one terrain feature that has to read as a
     // path to mean anything. It only ever overwrites open ground, and
-    // never the clearing a new soul arrives in.
+    // never the clearing a new soul arrives in. Where it crosses the river
+    // it simply does not paint over the water — the ford is the gap.
     for (let i = 0; i < 2; i++) this.drawRoad(rng);
 
     // A handful of ruins, each its own single collapsed room rather than
@@ -147,22 +178,193 @@ export class World {
     return Math.abs(x - 3) <= 1 && Math.abs(y - 3) <= 1;
   }
 
+  /** One wandering river, walked edge to edge like a road but laid first, in Water. */
+  private drawRiver(rng: Rng): void {
+    const { x: startX, y: startY } = this.edgePoint(rng);
+    let x = startX;
+    let y = startY;
+    const end = this.edgePoint(rng);
+    const maxSteps = (WORLD_W + WORLD_H) * 3;
+
+    for (let step = 0; step < maxSteps && (x !== end.x || y !== end.y); step++) {
+      if (!this.inClearing(x, y)) this.set(x, y, Tile.Water);
+      // A river runs about two tiles wide in stretches, not a uniform
+      // ruler-line — a soul should be able to find a narrow crossing
+      // rather than the whole length being equally impassable.
+      if (rng.chance(1, 2)) {
+        const wx = rng.chance(1, 2) ? x + 1 : x;
+        const wy = wx === x ? y + 1 : y;
+        if (this.inBounds(wx, wy) && !this.inClearing(wx, wy)) this.set(wx, wy, Tile.Water);
+      }
+      const dx = end.x - x;
+      const dy = end.y - y;
+      if (Math.abs(dx) > Math.abs(dy)) x += dx > 0 ? 1 : -1;
+      else y += dy > 0 ? 1 : -1;
+      if (rng.chance(1, 3)) {
+        if (rng.chance(1, 2)) x += rng.chance(1, 2) ? 1 : -1;
+        else y += rng.chance(1, 2) ? 1 : -1;
+      }
+      x = clamp(x, 0, WORLD_W - 1);
+      y = clamp(y, 0, WORLD_H - 1);
+    }
+  }
+
+  private edgePoint(rng: Rng): { x: number; y: number } {
+    switch (rng.nextInt(4)) {
+      case 0:
+        return { x: rng.nextInt(WORLD_W), y: 0 };
+      case 1:
+        return { x: rng.nextInt(WORLD_W), y: WORLD_H - 1 };
+      case 2:
+        return { x: 0, y: rng.nextInt(WORLD_H) };
+      default:
+        return { x: WORLD_W - 1, y: rng.nextInt(WORLD_H) };
+    }
+  }
+
+  /**
+   * Grows a cluster outward from (cx, cy): a frontier-based random walk
+   * that visits up to `size` grass tiles, calling `place` on each one
+   * actually painted. The one clustering primitive every "clumps of
+   * terrain" pass below uses, so a stand of trees, a rock outcrop and a
+   * meadow are the same algorithm with different inputs, not three bespoke
+   * ones. Only ever grows into ground still Grass — which is what makes
+   * every pass below respect what an earlier one already placed, for free,
+   * without any pass needing to know about any other.
+   */
+  private growBlob(rng: Rng, cx: number, cy: number, size: number, place: (x: number, y: number) => void): void {
+    const frontier: Array<{ x: number; y: number }> = [{ x: cx, y: cy }];
+    const seen = new Set<number>();
+    let placed = 0;
+    while (frontier.length > 0 && placed < size) {
+      // Pop a random member rather than always the newest, so the blob's
+      // outline comes out irregular instead of a diagonal streak.
+      const pick = rng.nextInt(frontier.length);
+      const { x, y } = frontier.splice(pick, 1)[0]!;
+      if (!this.inBounds(x, y)) continue;
+      const idx = this.index(x, y);
+      if (seen.has(idx)) continue;
+      seen.add(idx);
+      if (this.inClearing(x, y) || this.get(x, y) !== Tile.Grass) continue;
+      place(x, y);
+      placed++;
+      const neighbors: Array<{ x: number; y: number }> = [
+        { x: x + 1, y },
+        { x: x - 1, y },
+        { x, y: y + 1 },
+        { x, y: y - 1 },
+      ];
+      for (const n of neighbors) {
+        // Growth loses steam with distance from the seed, so a cluster
+        // tapers into open ground instead of stopping on a hard edge.
+        if (rng.chance(7, 10)) frontier.push(n);
+      }
+    }
+  }
+
+  /**
+   * Woodland stands, not a sprinkle: pick a handful of cluster seeds and
+   * grow each outward, so the Verge reads as clearings and stands the way
+   * §4A's "woodland" actually implies. A stand's own interior comes in
+   * denser than its edge — a Thicket core inside a Tree fringe, which is
+   * what a real wood looks like from above, not a new biome bolted on.
+   */
+  private growForest(rng: Rng): void {
+    const clusters = 14;
+    for (let i = 0; i < clusters; i++) {
+      const cx = rng.nextInt(WORLD_W);
+      const cy = rng.nextInt(WORLD_H);
+      this.growBlob(rng, cx, cy, 30, (x, y) => {
+        const core = Math.abs(x - cx) + Math.abs(y - cy) <= 2;
+        this.set(x, y, core ? Tile.Thicket : Tile.Tree);
+      });
+    }
+  }
+
+  /**
+   * Rock, Ore and Copper are one geological feature, not three: an outcrop
+   * that is mostly stone, sometimes hides a vein worth smelting, and
+   * rarely a seam of copper — which is why a soul checks every stone they
+   * find rather than only the ones that already look different.
+   */
+  private growMineralClusters(rng: Rng): void {
+    const clusters = 30;
+    for (let i = 0; i < clusters; i++) {
+      const cx = rng.nextInt(WORLD_W);
+      const cy = rng.nextInt(WORLD_H);
+      this.growBlob(rng, cx, cy, 5, (x, y) => {
+        const roll = rng.nextInt(100);
+        if (roll < 10) this.set(x, y, Tile.Copper);
+        else if (roll < 40) this.set(x, y, Tile.Ore);
+        else this.set(x, y, Tile.Rock);
+      });
+    }
+  }
+
+  /**
+   * A hedgerow is a boundary, not a thicket of bushes — a short line walked
+   * once, the same shape as a road at a fraction of the length, which is
+   * what actually reads as a field edge instead of undergrowth.
+   */
+  private growHedgerows(rng: Rng): void {
+    const hedges = 26;
+    for (let i = 0; i < hedges; i++) {
+      let x = rng.nextInt(WORLD_W);
+      let y = rng.nextInt(WORLD_H);
+      const length = 4 + rng.nextInt(7);
+      const horizontal = rng.chance(1, 2);
+      for (let step = 0; step < length; step++) {
+        if (!this.inClearing(x, y) && this.get(x, y) === Tile.Grass) this.set(x, y, Tile.Bush);
+        if (horizontal) x += rng.chance(1, 2) ? 1 : -1;
+        else y += rng.chance(1, 2) ? 1 : -1;
+        // A little waver — nobody plants a hedge with a ruler.
+        if (rng.chance(1, 4)) {
+          if (horizontal) y += rng.chance(1, 2) ? 1 : -1;
+          else x += rng.chance(1, 2) ? 1 : -1;
+        }
+        x = clamp(x, 0, WORLD_W - 1);
+        y = clamp(y, 0, WORLD_H - 1);
+      }
+    }
+  }
+
+  /** Wildflower patches, clustered the same way a stand of trees is. */
+  private growMeadows(rng: Rng): void {
+    const clusters = 10;
+    for (let i = 0; i < clusters; i++) {
+      const cx = rng.nextInt(WORLD_W);
+      const cy = rng.nextInt(WORLD_H);
+      this.growBlob(rng, cx, cy, 10, (x, y) => this.set(x, y, Tile.Meadow));
+    }
+  }
+
+  /**
+   * A riverbank is marsh in some stretches and open clay in others — one
+   * roll per water-adjacent tile decides which, rather than marsh getting
+   * first refusal and clay only ever existing in the enum.
+   */
+  private growRiverbank(rng: Rng): void {
+    for (let y = 0; y < WORLD_H; y++) {
+      for (let x = 0; x < WORLD_W; x++) {
+        if (this.get(x, y) !== Tile.Grass || this.inClearing(x, y)) continue;
+        const nearWater =
+          this.get(x, y - 1) === Tile.Water ||
+          this.get(x, y + 1) === Tile.Water ||
+          this.get(x - 1, y) === Tile.Water ||
+          this.get(x + 1, y) === Tile.Water;
+        if (!nearWater) continue;
+        const roll = rng.nextInt(3);
+        if (roll === 0) this.set(x, y, Tile.Marsh);
+        else if (roll === 1) this.set(x, y, Tile.Clay);
+        // roll === 2: stays grass — an ordinary bank, not every riverside tile is special.
+      }
+    }
+  }
+
   /** A wandering line from one edge of the map to another, laid only over open ground. */
   private drawRoad(rng: Rng): void {
-    const edgePoint = (): { x: number; y: number } => {
-      switch (rng.nextInt(4)) {
-        case 0:
-          return { x: rng.nextInt(WORLD_W), y: 0 };
-        case 1:
-          return { x: rng.nextInt(WORLD_W), y: WORLD_H - 1 };
-        case 2:
-          return { x: 0, y: rng.nextInt(WORLD_H) };
-        default:
-          return { x: WORLD_W - 1, y: rng.nextInt(WORLD_H) };
-      }
-    };
-    let { x, y } = edgePoint();
-    const end = edgePoint();
+    let { x, y } = this.edgePoint(rng);
+    const end = this.edgePoint(rng);
     const maxSteps = (WORLD_W + WORLD_H) * 3;
 
     for (let step = 0; step < maxSteps && (x !== end.x || y !== end.y); step++) {
@@ -233,12 +435,14 @@ export class World {
     this.tiles[this.index(x, y)] = t;
   }
 
-  /** Harvest a Tree or Bush at (x, y); schedules regrowth. No-op if not harvestable. */
+  /** Harvest a Tree, Thicket or Bush at (x, y); schedules regrowth. No-op if not harvestable. */
   harvest(x: number, y: number, currentTick: number, regrowTicks: number): boolean {
     const t = this.get(x, y);
-    if (t === Tile.Tree) {
+    if (t === Tile.Tree || t === Tile.Thicket) {
+      // A felled thicket grows back into a thicket, not a lone tree — a
+      // stand's dense core stays its core.
       this.set(x, y, Tile.Stump);
-      this.resources.set(this.index(x, y), { tile: Tile.Stump, regrowTo: Tile.Tree, readyAtTick: currentTick + regrowTicks });
+      this.resources.set(this.index(x, y), { tile: Tile.Stump, regrowTo: t, readyAtTick: currentTick + regrowTicks });
       return true;
     }
     if (t === Tile.Bush) {

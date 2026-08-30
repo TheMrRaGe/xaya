@@ -34,7 +34,9 @@ export type Tradeable =
   | "charcoal"
   | "bar"
   | "fish"
-  | "crowns";
+  | "crowns"
+  | "clay"
+  | "copper";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -48,6 +50,8 @@ export const TRADEABLES: readonly Tradeable[] = [
   "bar",
   "fish",
   "crowns",
+  "clay",
+  "copper",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -82,6 +86,21 @@ export interface Pack {
    * to be spendable, in a world with no mint left to make more.
    */
   crowns: number;
+  /**
+   * Dug from a clay deposit at a riverbank. Ordinary soil, not a vein —
+   * §3.1 names it alongside timber as one of the Verge's everyday
+   * materials, not a rare find. Nothing consumes it yet (item 2 of
+   * doc/world/CONTENT.md's worldgen follow-on); it is gatherable and
+   * storable a commit ahead of having somewhere to spend it, the same
+   * order ore/bar/sword shipped in.
+   */
+  clay: number;
+  /**
+   * Dug from a copper seam — the rarest outcome of the same mineral
+   * clusters that produce Ore (world.ts), because §3.1 names copper, not
+   * iron, as the Verge's own metal. Nothing consumes it yet; see `clay`.
+   */
+  copper: number;
   /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
@@ -163,6 +182,8 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       bar: 0,
       fish: 0,
       crowns: 0,
+      clay: 0,
+      copper: 0,
       spear: 0,
       cloak: 0,
       knife: 0,

@@ -1083,5 +1083,130 @@ function check(name, cond, detail = "") {
   check("no fire, no melting either", noFire.players[0].pack.crowns === 3);
 }
 
+// --- 37. new terrain: clay clings to the river like marsh does, copper is rarer than ore ---
+{
+  const s = fresh();
+  let clay = 0;
+  let clayAwayFromWater = 0;
+  let copper = 0;
+  let ore = 0;
+  let meadow = 0;
+  let thicket = 0;
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      const t = s.world.get(x, y);
+      if (t === Tile.Clay) {
+        clay++;
+        const near =
+          s.world.get(x, y - 1) === Tile.Water ||
+          s.world.get(x, y + 1) === Tile.Water ||
+          s.world.get(x - 1, y) === Tile.Water ||
+          s.world.get(x + 1, y) === Tile.Water;
+        if (!near) clayAwayFromWater++;
+      } else if (t === Tile.Copper) copper++;
+      else if (t === Tile.Ore) ore++;
+      else if (t === Tile.Meadow) meadow++;
+      else if (t === Tile.Thicket) thicket++;
+    }
+  }
+  check("clay exists", clay > 0, `clay=${clay}`);
+  check(
+    "every clay tile sits at a river's edge, same rule as marsh",
+    clayAwayFromWater === 0,
+    `${clayAwayFromWater} of ${clay} not near water`,
+  );
+  check("copper exists, and is rarer than ore", copper > 0 && copper < ore, `copper=${copper} ore=${ore}`);
+  check("meadow exists", meadow > 0, `meadow=${meadow}`);
+  check("thicket exists", thicket > 0, `thicket=${thicket}`);
+}
+
+// --- 38. copper and thicket block movement like ore and trees do; clay and meadow don't ---
+{
+  // One tick's move (300 units) never reaches a tile's far edge (1000
+  // units) on its own — walk toward the tile for long enough that an
+  // unobstructed soul would have crossed several of them, then look at
+  // where they actually ended up.
+  const wallStops = (tile) => {
+    const s = fresh();
+    const p = s.players[0];
+    const px = Math.floor(p.x / TILE);
+    const py = Math.floor(p.y / TILE);
+    s.world.set(px + 1, py, tile);
+    for (let i = 0; i < 8; i++) stepTick(s, [I({ dx: 1 })]);
+    return p.x < (px + 1) * TILE;
+  };
+  check("copper blocks the way, same as ore", wallStops(Tile.Copper));
+  check("a thicket blocks the way, same as a tree", wallStops(Tile.Thicket));
+  check("clay is open ground, not a vein", !wallStops(Tile.Clay));
+  check("a meadow is open ground too", !wallStops(Tile.Meadow));
+}
+
+// --- 39. gathering the four new tiles: clay and copper fill the pack, a meadow feeds you, a thicket outpays a tree ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+
+  s.world.set(px + 1, py, Tile.Clay);
+  stepTick(s, [I({ gather: true })]);
+  check("digging clay fills the pack", p.pack.clay === 1);
+  check("and the deposit is still there — it never runs out", s.world.get(px + 1, py) === Tile.Clay);
+
+  const noiseBefore = s.noise;
+  stepTick(s, [I({ gather: true })]);
+  check("clay is quiet to dig, unlike a vein", s.noise - noiseBefore < 300, `noise +${s.noise - noiseBefore}`);
+
+  s.world.set(px + 1, py, Tile.Copper);
+  stepTick(s, [I({ gather: true })]);
+  check("digging copper fills the pack too", p.pack.copper === 1);
+  check("and the vein is still there — it never runs out", s.world.get(px + 1, py) === Tile.Copper);
+
+  s.world.set(px + 1, py, Tile.Meadow);
+  p.needs.satiety = 200;
+  stepTick(s, [I({ gather: true })]);
+  check("foraging a meadow feeds you", p.needs.satiety > 200);
+  check("and the meadow is still there — it's grazed, not stripped", s.world.get(px + 1, py) === Tile.Meadow);
+
+  const treeSoul = fresh();
+  const t = treeSoul.players[0];
+  const tx = Math.floor(t.x / TILE);
+  const ty = Math.floor(t.y / TILE);
+  treeSoul.world.set(tx + 1, ty, Tile.Tree);
+  const woodBefore = t.pack.wood;
+  const treeNoise = (() => {
+    const before = treeSoul.noise;
+    stepTick(treeSoul, [I({ gather: true })]);
+    return treeSoul.noise - before;
+  })();
+  const treeWood = t.pack.wood - woodBefore;
+
+  const thicketSoul = fresh();
+  const th = thicketSoul.players[0];
+  const thx = Math.floor(th.x / TILE);
+  const thy = Math.floor(th.y / TILE);
+  thicketSoul.world.set(thx + 1, thy, Tile.Thicket);
+  const thWoodBefore = th.pack.wood;
+  const thicketNoise = (() => {
+    const before = thicketSoul.noise;
+    stepTick(thicketSoul, [I({ gather: true })]);
+    return thicketSoul.noise - before;
+  })();
+  const thicketWood = th.pack.wood - thWoodBefore;
+
+  check("a thicket yields more wood than a lone tree", thicketWood > treeWood, `tree=${treeWood} thicket=${thicketWood}`);
+  check("and costs more to be heard taking", thicketNoise > treeNoise, `tree=${treeNoise} thicket=${thicketNoise}`);
+  check("felling it leaves a stump, same as a tree", thicketSoul.world.get(thx + 1, thy) === Tile.Stump);
+
+  // REGROW_TICKS is 900 (tick.ts) and not exported; 950 idle ticks is
+  // comfortably past it without the test needing to know the exact number.
+  for (let i = 0; i < 950; i++) stepTick(thicketSoul, IDLE);
+  check(
+    "and it grows back into a thicket, not a lone tree",
+    thicketSoul.world.get(thx + 1, thy) === Tile.Thicket,
+    `tile=${thicketSoul.world.get(thx + 1, thy)}`,
+  );
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
