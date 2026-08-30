@@ -6,7 +6,7 @@
 //
 // Every check here exists because something was once wrong. Add one when
 // you fix something; that is cheaper than remembering.
-import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT, NOTORIOUS_STANDING, BOARD_X, BOARD_Y } from "../dist/sim/tick.js";
+import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT, NOTORIOUS_STANDING, BOARD_X, BOARD_Y, ALERT_TICKS } from "../dist/sim/tick.js";
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile, WORLD_W, WORLD_H } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
@@ -1884,6 +1884,62 @@ function check(name, cond, detail = "") {
   }
   check("a chance of a mark lands over enough casts", markedAtLeastOnce, "never marked in 200 casts");
   check("but not on every single one", !markedEveryTime, "marked every one of 200 casts");
+}
+
+// --- 58. the Lieutenant: he routes around a wall instead of getting stuck on it, opens a hunt slower than he finishes it, and always says so ---
+{
+  // A long wall of trees, with a gap far off to one side — straight-line
+  // stepToward-and-slide could never find that gap; only an actual route
+  // around the obstacle gets him there.
+  const s = fresh(1);
+  const [p] = s.players;
+  for (let x = 0; x < 40; x++) s.world.set(x, 12, Tile.Tree);
+  s.lieutenant.x = 10 * TILE;
+  s.lieutenant.y = 10 * TILE;
+  p.x = 10 * TILE;
+  p.y = 14 * TILE;
+  s.lieutenant.state = "hunt";
+  s.lieutenant.target = p.id;
+  for (let i = 0; i < 800; i++) {
+    p.needs.satiety = NEED_MAX;
+    p.needs.hydration = NEED_MAX;
+    p.needs.warmth = NEED_MAX;
+    stepTick(s, [I()]);
+    // Isolate pathfinding from the rest of the state machine: keep him
+    // committed to this hunt regardless of line-of-sight distance, the
+    // same way the patrol-bias test above pins state between iterations.
+    s.lieutenant.state = "hunt";
+    s.lieutenant.target = p.id;
+  }
+  const gap = Math.hypot(s.lieutenant.x - p.x, s.lieutenant.y - p.y) / TILE;
+  check("routing around a 40-tile wall actually gets him to the other side", gap < 2, `${gap.toFixed(1)} tiles short`);
+
+  // A fresh hunt opens slower than it runs, and always says so — checked
+  // with the target standing still, far enough away that neither the
+  // opening step nor the settled one is close enough to snap onto it
+  // (stepToward clamps once distance <= speed, which would mask the
+  // difference this is actually testing).
+  const alert = fresh(1);
+  const target = alert.players[0];
+  target.x = 32 * TILE;
+  target.y = 28 * TILE; // open ground for this seed, verified clear down to y=22 — see the wall test above for why that matters
+  alert.lieutenant.x = target.x;
+  alert.lieutenant.y = target.y - 4.9 * TILE; // inside BASE_DETECTION_RADIUS (5 tiles), still patrolling
+  const before = { x: alert.lieutenant.x, y: alert.lieutenant.y };
+  stepTick(alert, IDLE);
+  check("a sighting fires the hunt", alert.lieutenant.state === "hunt", alert.lieutenant.state);
+  check("and always narrates the trail, not just the first sighting ever", alert.log.some((l) => l.includes("picked up") && l.includes("trail")), JSON.stringify(alert.log));
+  const openingMove = Math.hypot(alert.lieutenant.x - before.x, alert.lieutenant.y - before.y);
+
+  for (let i = 0; i < ALERT_TICKS - 1; i++) stepTick(alert, IDLE);
+  const settledBefore = { x: alert.lieutenant.x, y: alert.lieutenant.y };
+  stepTick(alert, IDLE);
+  const settledMove = Math.hypot(alert.lieutenant.x - settledBefore.x, alert.lieutenant.y - settledBefore.y);
+  check(
+    "the opening move is slower than the hunt settles into once the alert window passes",
+    openingMove < settledMove,
+    `opening=${openingMove.toFixed(1)} settled=${settledMove.toFixed(1)}`,
+  );
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

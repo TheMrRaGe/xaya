@@ -12,7 +12,7 @@
  */
 import { TILE, clamp, distSq } from "./fixed.js";
 import { Rng } from "./rng.js";
-import { World, WORLD_W, WORLD_H, Tile, VILLAGE_X, VILLAGE_Y } from "./world.js";
+import { World, WORLD_W, WORLD_H, Tile, VILLAGE_X, VILLAGE_Y, isSolid } from "./world.js";
 import {
   Player,
   Pack,
@@ -100,10 +100,43 @@ const STRIKE_RADIUS = TILE * 1.2; // how close to hit, or to butcher
 const TRADE_RADIUS = TILE * 1.5; // how close to hand something over
 const TALK_RADIUS = TILE * 1.5; // same reach as trading
 const FIRE_RADIUS = TILE * 2;
-const BASE_DETECTION_RADIUS = TILE * 4;
+/**
+ * Raised from 4/3 (tiles of base radius / of noise-scaled radius on top of
+ * it): the pathing fix below means a lake or a wood can no longer just
+ * stall him forever once he's actually hunting, so his reach could
+ * finally afford to grow without also making him unbeatable. At max noise,
+ * by night, he now notices from 11 tiles rather than 9 — a real increase,
+ * not a rounding change.
+ */
+const BASE_DETECTION_RADIUS = TILE * 5;
 const NIGHT_DETECTION_BONUS = TILE * 2;
-const NOISE_DETECTION_SCALE = TILE * 3; // at max noise, this much extra radius
+const NOISE_DETECTION_SCALE = TILE * 4; // at max noise, this much extra radius
 const LOSE_INTEREST_RADIUS = TILE * 9; // hysteresis so fleeing actually works
+
+/**
+ * The counterweight to the radius increase above: a fresh hunt doesn't
+ * open at full pace. For ALERT_TICKS he's moving at ALERT_SPEED — faster
+ * than a patrol, well short of a real hunt — and the moment always says so
+ * out loud (tickLieutenant), not just the first time it ever happens. That
+ * is the "more time to prepare" this trades for the wider reach: a real,
+ * legible couple of seconds where the honest move is already to be
+ * running, before he's actually gaining on you.
+ */
+export const ALERT_TICKS = 20; // ~2s
+const LIEUTENANT_ALERT_SPEED = Math.trunc(LIEUTENANT_SPEED * 0.8);
+
+/**
+ * How he actually gets to where he's going while hunting, instead of
+ * `stepToward`'s straight line: a plain BFS over the tile grid (every edge
+ * costs the same, so Dijkstra/A* would buy nothing a queue doesn't already
+ * give for free), recomputed only when the cached route is missing, stale,
+ * or the target has moved well off the end of it — not every tick. Patrol
+ * and the crow-drift still walk a straight line; getting briefly hung up
+ * while ambling is far less noticeable than doing it mid-chase, and it
+ * would triple the replanning this does for no real benefit.
+ */
+const PATH_RECOMPUTE_TICKS = 50; // ~5s between replans while a hunt is already under way
+const PATH_STALE_RADIUS = TILE * 3; // replan early if the target's drifted this far past the route's own end
 
 const NOISE_MAX = 1000;
 const NOISE_PER_GATHER = 120;
@@ -2082,6 +2115,78 @@ function bumpNoise(state: SimState, amount: number, source: Player): void {
   state.noiseY = source.y;
 }
 
+const PATH_DIRS: ReadonlyArray<readonly [number, number]> = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
+];
+
+/**
+ * A route from one tile to another, walking around anything `isSolid`. Plain
+ * breadth-first, not A* or Dijkstra — every edge costs the same here, so a
+ * priority queue would buy nothing a plain FIFO queue doesn't already give
+ * for free, and the map is small enough (72x48) that a full search costs
+ * microseconds even so. `null` if the target is solid or simply unreachable
+ * (an island of trees with no way in, say) — the caller falls back to
+ * walking straight at it, same as before this existed.
+ *
+ * 8-directional, including diagonals that graze a solid corner: the actual
+ * per-tick movement (moveWithCollision) is still the one thing that decides
+ * whether a step is honoured, so a path that cuts a corner too closely just
+ * becomes a slide against it, the same as walking there by hand always was
+ * — this only has to get him *generally* around an obstacle, not trace its
+ * exact edge.
+ */
+function findPath(world: World, fromTx: number, fromTy: number, toTx: number, toTy: number): Array<{ x: number; y: number }> | null {
+  if (!world.inBounds(toTx, toTy) || isSolid(world.get(toTx, toTy))) return null;
+  if (fromTx === toTx && fromTy === toTy) return [];
+
+  const w = WORLD_W;
+  const h = WORLD_H;
+  const startIdx = fromTy * w + fromTx;
+  const targetIdx = toTy * w + toTx;
+  const visited = new Uint8Array(w * h);
+  const cameFrom = new Int32Array(w * h).fill(-1);
+  visited[startIdx] = 1;
+  const queue: number[] = [startIdx];
+  let head = 0;
+  let found = false;
+  while (head < queue.length) {
+    const idx = queue[head++]!;
+    if (idx === targetIdx) {
+      found = true;
+      break;
+    }
+    const x = idx % w;
+    const y = Math.trunc(idx / w);
+    for (const [dx, dy] of PATH_DIRS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const nidx = ny * w + nx;
+      if (visited[nidx] || isSolid(world.get(nx, ny))) continue;
+      visited[nidx] = 1;
+      cameFrom[nidx] = idx;
+      queue.push(nidx);
+    }
+  }
+  if (!found) return null;
+
+  const path: Array<{ x: number; y: number }> = [];
+  let cur = targetIdx;
+  while (cur !== startIdx) {
+    path.push({ x: (cur % w) * TILE + TILE / 2, y: Math.trunc(cur / w) * TILE + TILE / 2 });
+    cur = cameFrom[cur]!;
+  }
+  path.reverse();
+  return path;
+}
+
 function tickLieutenant(state: SimState): void {
   const { lieutenant, world, rng } = state;
   const night = isNight(state.tick);
@@ -2094,6 +2199,8 @@ function tickLieutenant(state: SimState): void {
   // With several in the Verge that makes proximity to another player a real
   // risk and a real shield at once, which is the first genuinely social
   // thing in this prototype.
+  const wasHunting = lieutenant.state === "hunt";
+
   // A marked soul is wanted above all others, wherever they are (§3.5) —
   // unless they have fallen past NOTORIOUS_STANDING, in which case marking
   // them means nothing: he does not chase what is already his.
@@ -2121,27 +2228,56 @@ function tickLieutenant(state: SimState): void {
   if (!resting && lieutenant.state === "patrol" && nearest && nearestSq <= detectionRadius * detectionRadius) {
     lieutenant.state = "hunt";
     lieutenant.target = nearest.id;
-    if (!state.flags.firstSighting) {
-      state.flags.firstSighting = true;
-      say(state, "The Grey King: “One of my Lieutenants has your scent. Run, if you think it will help.”");
-    }
   } else if (lieutenant.state === "hunt") {
     const hunted = state.players[lieutenant.target];
-    const goneSq = hunted && hunted.alive ? distSq(lieutenant.x, lieutenant.y, hunted.x, hunted.y) : Number.MAX_SAFE_INTEGER;
-    if (goneSq > LOSE_INTEREST_RADIUS * LOSE_INTEREST_RADIUS) {
+    // A soul who is actually gone (dead, or a corpse) ends the hunt
+    // outright. Otherwise, as long as a real route to them is cached, he
+    // does not give up on distance alone — a soul outruns him by 40
+    // units/tick in the open (PLAYER_SPEED vs. LIEUTENANT_SPEED), and that
+    // speed gap is what makes fleeing actually work, not a give-up timer.
+    // A wide detour around a lake or a wood legitimately reads as "farther
+    // away" in a straight line while he is still closing the only distance
+    // that matters, so judging by the line rather than the route would
+    // make him give up mid-chase for routing around the very obstacle
+    // that's supposed to make him work harder. He only truly loses the
+    // scent once nothing connects him to them at all: no cached route
+    // (never found one, or the last one ran out), and no straight line
+    // short enough to suggest one is still findable nearby.
+    const gone =
+      !hunted ||
+      !hunted.alive ||
+      (lieutenant.path.length === 0 && distSq(lieutenant.x, lieutenant.y, hunted.x, hunted.y) > LOSE_INTEREST_RADIUS * LOSE_INTEREST_RADIUS);
+    if (gone) {
       lieutenant.state = "patrol";
       lieutenant.target = -1;
       lieutenant.waypointX = lieutenant.x;
       lieutenant.waypointY = lieutenant.y;
+      lieutenant.path = [];
+    }
+  }
+
+  // A fresh hunt, however it started, opens with a window to react rather
+  // than full pace from the first tick — and always says so, not just the
+  // first time this ever happens (ALERT_TICKS above has the why).
+  if (!wasHunting && lieutenant.state === "hunt") {
+    lieutenant.alertUntil = state.tick + ALERT_TICKS;
+    lieutenant.path = []; // a stale route from the last hunt means nothing now
+    const freshTarget = state.players[lieutenant.target];
+    if (freshTarget) say(state, `A Lieutenant has picked up Soul #${freshTarget.lineage}'s trail. He hasn't committed yet.`);
+    if (!state.flags.firstSighting) {
+      state.flags.firstSighting = true;
+      say(state, "The Grey King: “One of my Lieutenants has your scent. Run, if you think it will help.”");
     }
   }
 
   let targetX: number;
   let targetY: number;
+  let usePath = false;
   const hunted = state.players[lieutenant.target];
   if (lieutenant.state === "hunt" && hunted) {
     targetX = hunted.x;
     targetY = hunted.y;
+    usePath = true;
   } else if (state.noise >= CROW_THRESHOLD && !resting) {
     // He does not need to see you. He needs to see the birds — which is the
     // whole design in one line: what you build is what gives you away.
@@ -2176,9 +2312,46 @@ function tickLieutenant(state: SimState): void {
     targetY = lieutenant.waypointY;
   }
 
-  const base = lieutenant.state === "hunt" ? LIEUTENANT_SPEED : LIEUTENANT_PATROL_SPEED;
+  // Route around solid ground instead of just sliding along it, but only
+  // while actually hunting — see PATH_RECOMPUTE_TICKS above for why patrol
+  // and the crow-drift don't bother.
+  let moveTargetX = targetX;
+  let moveTargetY = targetY;
+  if (usePath) {
+    const last = lieutenant.path[lieutenant.path.length - 1];
+    const stale =
+      state.tick >= lieutenant.pathRecomputeAt ||
+      lieutenant.path.length === 0 ||
+      !last ||
+      distSq(last.x, last.y, targetX, targetY) > PATH_STALE_RADIUS * PATH_STALE_RADIUS;
+    if (stale) {
+      const found = findPath(
+        world,
+        Math.floor(lieutenant.x / TILE),
+        Math.floor(lieutenant.y / TILE),
+        Math.floor(targetX / TILE),
+        Math.floor(targetY / TILE),
+      );
+      lieutenant.path = found ?? [];
+      lieutenant.pathRecomputeAt = state.tick + PATH_RECOMPUTE_TICKS;
+    }
+    while (lieutenant.path.length > 0 && distSq(lieutenant.x, lieutenant.y, lieutenant.path[0]!.x, lieutenant.path[0]!.y) < (TILE / 2) * (TILE / 2)) {
+      lieutenant.path.shift();
+    }
+    if (lieutenant.path.length > 0) {
+      moveTargetX = lieutenant.path[0]!.x;
+      moveTargetY = lieutenant.path[0]!.y;
+    }
+    // No path found at all (unreachable) — fall through and walk straight
+    // at it, same as every Lieutenant ever did before this existed.
+  } else {
+    lieutenant.path = []; // don't let a hunt's old route leak into the next one
+  }
+
+  const alerting = lieutenant.state === "hunt" && state.tick < lieutenant.alertUntil;
+  const base = lieutenant.state === "hunt" ? (alerting ? LIEUTENANT_ALERT_SPEED : LIEUTENANT_SPEED) : LIEUTENANT_PATROL_SPEED;
   const speed = Math.trunc((base * terrainSpeedPct(world, lieutenant.x, lieutenant.y)) / 100);
-  const next = stepToward(lieutenant.x, lieutenant.y, targetX, targetY, speed);
+  const next = stepToward(lieutenant.x, lieutenant.y, moveTargetX, moveTargetY, speed);
   const moved = moveWithCollision(world, lieutenant.x, lieutenant.y, next.x, next.y);
   lieutenant.x = clamp(moved.x, 0, (WORLD_W - 1) * TILE);
   lieutenant.y = clamp(moved.y, 0, (WORLD_H - 1) * TILE);

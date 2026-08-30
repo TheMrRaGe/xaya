@@ -1394,17 +1394,38 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   what an unskilled soul is permitted to try. Mining itself stays exempt:
   a vein is loud no matter how good you are at working one, same as stone.
 - ~~**Is one Lieutenant still a credible threat over nine times the
-  ground?**~~ — first pass taken, not closed outright. §44's cut list forbids
-  the obvious answer (more officers), so the fix stays inside the one
-  Lieutenant already there: his patrol speed rose from 60% to 75% of hunting
-  speed (still well under a soul's own, so outrunning a *patrol* stays easy —
-  only staying unnoticed for longer got harder), and a fresh patrol waypoint
-  now lands near recently loud ground roughly 60% of the time instead of
-  anywhere on the map uniformly — a hunter reading sign of habitation rather
-  than touring empty corners, using the same global noise position the crows
-  already do (§1), not a new information leak. What this does not settle:
-  whether that is *enough* compensation for 9x the area, which is a playtest
-  question rather than a code one.
+  ground?**~~ — a second pass taken, still not closed outright. §44's cut
+  list forbids the obvious answer (more officers), so both fixes stay
+  inside the one Lieutenant already there.
+
+  First pass: his patrol speed rose from 60% to 75% of hunting speed (still
+  well under a soul's own, so outrunning a *patrol* stays easy — only
+  staying unnoticed for longer got harder), and a fresh patrol waypoint now
+  lands near recently loud ground roughly 60% of the time instead of
+  anywhere on the map uniformly — a hunter reading sign of habitation
+  rather than touring empty corners, using the same global noise position
+  the crows already do (§1), not a new information leak.
+
+  Second pass, on the same open question, from a different angle: he used
+  to navigate by `stepToward` alone — a straight line, sliding along
+  whatever it walked him into — which meant a lake or a decent-sized wood
+  could stall a hunt forever, since a target due south of him gives
+  sliding no horizontal component to slide *along* at all. He now plans an
+  actual route while hunting (a plain breadth-first search over the tile
+  grid, replanned roughly every five seconds rather than every tick, cheap
+  enough that a worst-case measurement — forcing a full replan on every
+  single tick, which no real chase can produce — landed within noise of
+  the patrol baseline). That fix is what let `BASE_DETECTION_RADIUS` and
+  `NOISE_DETECTION_SCALE` both grow (11 tiles now at max noise by night,
+  up from 9) without also making him unbeatable, and it surfaced a real
+  bug on the way: the "lose interest" check judged by the straight line to
+  a target, which a detour legitimately grows even while he's still
+  closing the real distance, so it now defers to the cached route when one
+  exists. The counterweight to the wider reach is a real one: a fresh hunt
+  opens at 80% pace for about two seconds, and every sighting is narrated
+  now, not only the first one the game ever produces. What neither pass
+  settles: whether this is *enough* compensation for 9x the area, still a
+  playtest question rather than a code one.
 - ~~**The arrival custom (§1A) has no one to perform it.**~~ — closed: the
   village, the Teacher and her tutorial conversation exist (§2.5), and an
   NPC can now be struck and killed, at 60 standing rather than 40 and no

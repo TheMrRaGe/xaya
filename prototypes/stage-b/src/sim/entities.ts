@@ -307,8 +307,38 @@ export interface Lieutenant {
    * arrive is not frightening, it is a wall.
    */
   restUntil: number;
+  /**
+   * Until this tick, a fresh hunt moves at LIEUTENANT_ALERT_SPEED rather
+   * than full pace — he's picked up a trail, not committed to it yet. Set
+   * the moment patrol flips to hunt (tickLieutenant in tick.ts); the same
+   * moment always says so out loud too, so "he's noticed you" is something
+   * you're told, not something you have to notice on the minimap.
+   */
+  alertUntil: number;
+  /**
+   * A short cached route while hunting (findPath/tickLieutenant in
+   * tick.ts) — tile centres left to walk through, front to back. Only
+   * computed and followed while actively hunting a soul; patrol and the
+   * crow-drift still walk a straight line, since getting briefly hung up
+   * while ambling is far less noticeable than doing it mid-chase.
+   */
+  path: { x: number; y: number }[];
+  /** Tick at or after which a stale or absent path gets rebuilt, rather than replanning every tick a moving target makes the cached one imperfect. */
+  pathRecomputeAt: number;
 }
 
 export function newLieutenant(x: number, y: number): Lieutenant {
-  return { x, y, state: "patrol", target: -1, waypointX: x, waypointY: y, contactTicks: 0, restUntil: 0 };
+  return {
+    x,
+    y,
+    state: "patrol",
+    target: -1,
+    waypointX: x,
+    waypointY: y,
+    contactTicks: 0,
+    restUntil: 0,
+    alertUntil: 0,
+    path: [],
+    pathRecomputeAt: 0,
+  };
 }

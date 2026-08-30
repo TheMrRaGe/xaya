@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (339 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (343 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -592,6 +592,40 @@ plan committed at the repo root's `doc/world/`.
   frequent worker leaves, or a real Working exists yet — this is the
   smallest slice that makes "illegal, not absent" playable rather than
   just written down.
+- **The Lieutenant finally routes around what he can't walk through, notices
+  more, and opens every hunt with a couple of seconds you can actually use.**
+  He used to just `stepToward` whoever he was after and slide along
+  whatever that walked him into — a lake or a decent-sized wood could stall
+  him forever, since a straight line with no horizontal component at all
+  gives sliding nothing to slide *along*. He now plans a real route
+  (`findPath`, a plain breadth-first search over the tile grid — every edge
+  costs the same here, so A* would buy nothing a queue doesn't already give
+  for free) whenever he's actively hunting, recomputed roughly every five
+  seconds rather than every tick. Measured directly against a worst case no
+  real chase can produce — one player, the full 108-creature roster, him
+  permanently hunting a target that teleports across the map *every single
+  tick*, forcing a full replan every tick: **38.00 µs/tick, against a 37.23
+  µs/tick patrol baseline.** The one place "no allocation in the hot path"
+  isn't quite true any more — `findPath` allocates its visited/parent
+  buffers each call — but it isn't hot in the sense that matters, at maybe
+  once every five seconds during an actual chase.
+
+  That fix is what let his reach grow without also making him unbeatable:
+  `BASE_DETECTION_RADIUS` and `NOISE_DETECTION_SCALE` are both up (11
+  tiles now at max noise by night, was 9), because a lake can no longer
+  just stall him forever once he's actually committed. The counterweight
+  is a real one, not a text warning alone: a fresh hunt opens at
+  `LIEUTENANT_ALERT_SPEED` (80% of full pace) for about two seconds before
+  ramping up, and it's always narrated the moment it happens — "a
+  Lieutenant has picked up Soul #N's trail" — not just the very first
+  sighting the game ever produces, which is all the old code told you.
+  Fixing the pathing surfaced a real bug in the process: the old
+  "lose interest past `LOSE_INTEREST_RADIUS`" check judged by the straight
+  line to the target, which a wide detour legitimately grows even while
+  he's still closing the only distance that matters — so a hunt with a
+  cached, still-valid route no longer gives up on distance alone; only a
+  dead target, or no route and no straight line short enough to suggest
+  one, ends a hunt now.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a
@@ -872,6 +906,22 @@ would be fine at ten times that. It is *not* fine at the point someone
 adds a population model, which is exactly why §44 cut one — the roster is
 fixed and respawns on a timer, and a tick that costs milliseconds is what
 happens if that ever stops being true.
+
+**One honest exception to "no allocation in the hot path": `findPath`
+does allocate** — a `Uint8Array`/`Int32Array` sized to the whole map for
+its visited/parent buffers, each time it runs. It is not in the hot path
+in the sense that matters, though: it runs only while the Lieutenant is
+actively hunting, and only when his cached route is missing, stale, or
+the target has drifted well past the end of it (`PATH_RECOMPUTE_TICKS`,
+`PATH_STALE_RADIUS`) — roughly once every five seconds during a chase,
+not once a tick. Measured directly (`stepTick` in a loop, one player, the
+full 108-creature roster, the Lieutenant permanently hunting a target
+that teleports across the map *every single tick* — forcing a full
+replan every tick, an adversarial case no real chase can produce since a
+soul can't cross the map in 100ms): **38.00 µs/tick, against a 37.23
+µs/tick baseline with the same setup patrolling instead.** The
+difference a full BFS replan makes, forced every tick, is within noise
+of measuring the same sim twice.
 
 ## What to actually test
 
