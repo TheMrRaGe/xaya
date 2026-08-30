@@ -198,6 +198,22 @@ const STANDING_KILL_PENALTY = 40;
 /** At or below this he stops hunting you at all — roughly three kills. Exported so the HUD can read the same line the sim does. */
 export const NOTORIOUS_STANDING = -100;
 
+/**
+ * Commons standing (doc/world/PLAN.md §3): "kindness needs teeth." Of the
+ * acts §3 names — stabilising a stranger, sheltering someone, feeding the
+ * starving, teaching for free, paying another's mark, purifying land you do
+ * not own — only one has anywhere to happen in Stage B: there is no Mortal
+ * Wound, no shelter, no teaching verb, no currency to owe, no corruption to
+ * clear. Feeding a hungry soul does not have that problem — G already
+ * exists — so it is the only one built. §3 also warns this must not be
+ * farmable by alt-pairs; nothing here stops two cooperating players trading
+ * scraps back and forth for standing, which is a real gap, left open on
+ * purpose rather than guarded by a mechanism nobody asked for yet.
+ */
+const FOOD_ITEMS: ReadonlySet<Tradeable> = new Set(["rawMeat", "cookedMeat", "fish"]);
+const COMMONS_SATIETY_THRESHOLD = 300; // genuinely hungry, not just peckish
+const COMMONS_STANDING_GAIN = 15; // several acts to undo one kill's -40 — cooperation is the slower climb
+
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
 const REGROW_TICKS = 900; // ~90s
@@ -335,6 +351,7 @@ export interface SimState {
     firstFish: boolean;
     firstSoulKill: boolean;
     firstNotorious: boolean;
+    firstCommonsStanding: boolean;
   };
 }
 
@@ -376,6 +393,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstFish: false,
       firstSoulKill: false,
       firstNotorious: false,
+      firstCommonsStanding: false,
     },
   };
 }
@@ -1104,6 +1122,11 @@ function doGive(state: SimState, player: Player): void {
   }
   if (!recipient) return;
 
+  // Judged before the hand-over lands, on what the recipient actually
+  // needed — not on what was given, or a soul buried in cooked meat could
+  // still be "fed" for standing by someone topping off a full belly.
+  const feedingTheHungry = FOOD_ITEMS.has(item) && recipient.needs.satiety < COMMONS_SATIETY_THRESHOLD;
+
   pack[item]--;
   recipient.pack[item]++;
   state.trades.push({ tick: state.tick, from: player.id, to: recipient.id, item });
@@ -1111,6 +1134,15 @@ function doGive(state: SimState, player: Player): void {
   if (!state.flags.firstTrade) {
     state.flags.firstTrade = true;
     say(state, "The Grey King: “You are giving things away. To each other. How new.”");
+  }
+
+  if (feedingTheHungry) {
+    player.standing += COMMONS_STANDING_GAIN;
+    say(state, `Soul #${player.lineage} feeds a starving soul. The road remembers kindness too.`);
+    if (!state.flags.firstCommonsStanding) {
+      state.flags.firstCommonsStanding = true;
+      say(state, "The Grey King: “...Feeding each other. I would almost call it a strategy, if it were not so small.”");
+    }
   }
 }
 

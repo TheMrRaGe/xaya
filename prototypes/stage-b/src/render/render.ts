@@ -394,13 +394,15 @@ export function drawHud(
   // or the player spends them running from nothing.
   const grace = p.graceUntil > state.tick ? `  [unseen ${Math.ceil((p.graceUntil - state.tick) / 10)}s]` : "";
   // How the road speaks of you (doc/world/PLAN.md §2A) — silent at zero, so
-  // a soul who has never killed anyone sees nothing here at all.
+  // a soul who has never killed or fed anyone sees nothing here at all.
   const standing =
     p.standing <= NOTORIOUS_STANDING
       ? "  [his own now — the Lieutenant no longer hunts you]"
       : p.standing < 0
         ? `  [marked, standing ${p.standing}]`
-        : "";
+        : p.standing > 0
+          ? `  [standing +${p.standing}]`
+          : "";
   ctx.fillText(
     `soul #${p.lineage}  ${isNight(state.tick) ? "night" : "day"}  kills ${p.kills}` +
       `${p.atFire ? "  [at fire]" : ""}${grace}${standing}${others > 0 ? `  ${others} other soul${others > 1 ? "s" : ""} nearby` : ""}`,

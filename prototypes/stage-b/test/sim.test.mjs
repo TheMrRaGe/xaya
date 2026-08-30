@@ -883,5 +883,51 @@ function check(name, cond, detail = "") {
   );
 }
 
+// --- 31. Commons standing: feeding a genuinely hungry soul is the one kindness Stage B has ---
+{
+  const s = fresh(2);
+  const [giver, hungry] = s.players;
+  giver.x = hungry.x;
+  giver.y = hungry.y;
+  giver.pack.cookedMeat = 3;
+  giver.offer = "cookedMeat";
+  hungry.needs.satiety = 100; // genuinely hungry
+  stepTick(s, [I({ give: true }), I()]);
+  check("feeding a hungry soul raises the giver's standing", giver.standing > 0, `standing=${giver.standing}`);
+
+  const s2 = fresh(2);
+  const [giver2, full] = s2.players;
+  giver2.x = full.x;
+  giver2.y = full.y;
+  giver2.pack.cookedMeat = 3;
+  giver2.offer = "cookedMeat";
+  full.needs.satiety = 950; // already fed — this is a courtesy, not a kindness
+  stepTick(s2, [I({ give: true }), I()]);
+  check("feeding a soul who isn't hungry earns nothing", giver2.standing === 0, `standing=${giver2.standing}`);
+
+  const s3 = fresh(2);
+  const [giver3, hungry3] = s3.players;
+  giver3.x = hungry3.x;
+  giver3.y = hungry3.y;
+  giver3.pack.wood = 5;
+  giver3.offer = "wood";
+  hungry3.needs.satiety = 50;
+  stepTick(s3, [I({ give: true }), I()]);
+  check("wood doesn't feed anyone, so it earns no standing either", giver3.standing === 0, `standing=${giver3.standing}`);
+
+  // Kindness climbs the same ledger a kill spends — it does not erase the
+  // kill, it moves the same number back the other way.
+  const s4 = fresh(2);
+  const [samaritan, needy] = s4.players;
+  samaritan.standing = -40; // as if freshly marked from a kill
+  samaritan.x = needy.x;
+  samaritan.y = needy.y;
+  samaritan.pack.fish = 2;
+  samaritan.offer = "fish";
+  needy.needs.satiety = 80;
+  stepTick(s4, [I({ give: true }), I()]);
+  check("kindness climbs the same ledger a kill spends", samaritan.standing === -40 + 15, `standing=${samaritan.standing}`);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

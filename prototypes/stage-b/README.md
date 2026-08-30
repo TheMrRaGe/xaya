@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (214 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (218 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -323,10 +323,22 @@ plan committed at the repo root's `doc/world/`.
   stops looking. Standing lives on the character, not an account — Stage B
   has no login layer for it to survive a death on — so it resets exactly
   like a skill does: die, and the next soul starts clean, same as everything
-  else in the pack. Nothing yet earns it back while you're alive (Commons
-  standing, PLAN §3's kindness side, is unbuilt), and neither bounty payouts
-  nor plunder off a body came with this — see the cut-list note for the rest
-  of what didn't ship.
+  else in the pack. Neither bounty payouts nor plunder off a body came with
+  this — see the cut-list note for the rest of what didn't ship.
+- **And one way back: Commons standing.** PLAN §3's "kindness needs teeth"
+  names six acts that build it — stabilising a stranger, sheltering someone,
+  feeding the starving, teaching for free, paying another's mark, purifying
+  land you do not own. Five need systems Stage B doesn't have (Mortal Wound,
+  shelter, teaching, currency, corruption). The sixth already had a verb:
+  **G**, when the recipient is genuinely hungry (satiety under 300), raises
+  the giver's standing by 15 — a third of what one kill costs, so climbing
+  back out is deliberately the slower road. Giving food to someone who
+  isn't hungry, or giving anything that isn't food, earns nothing; this
+  isn't a courtesy discount, it has to answer a real need. PLAN §3 warns
+  this exact mechanic must not be farmable by alt-pairs, and nothing here
+  stops two cooperating players trading scraps back and forth for standing
+  — left open on purpose rather than guarded by machinery nobody has asked
+  for yet.
 - **Giving, and a ledger.** **T** picks what you're offering, **G** hands one
   to the soul beside you. Giving is one-sided on purpose: two people who
   each want what the other has will trade by giving twice, and that is
@@ -414,18 +426,18 @@ it stayed a gap for several rounds of work on purpose. It was raised as a
 gate worth confirming rather than crossing on momentum, and the call to
 cross it now — ahead of Stage C, on the grounds that §44 is a previous
 agent's cut list rather than a standing rule from whoever is actually
-directing this project — was made explicitly. It shipped in two passes:
-first SPACE striking another soul at all, with its own honest death cause;
-then a real cost for doing it — a kill marks the killer and drops their
-standing, and enough kills (see the standing bullet above) makes the
-Lieutenant stop hunting them altogether. No bounty payout, no plunder off a
-body, no Commons-standing counterweight to climb back with, and no
-murder-guild economy came with either pass — that is still exactly as
+directing this project — was made explicitly. It shipped in three passes:
+SPACE striking another soul at all, with its own honest death cause; a real
+cost for doing it — a kill marks the killer and drops their standing, and
+enough kills makes the Lieutenant stop hunting them altogether; and one way
+back — feeding a genuinely hungry soul builds Commons standing (see the two
+bullets above). No bounty payout, no plunder off a body, and no murder-guild
+economy came with any of the three passes — that is still exactly as
 unbuilt as it was, and is a much bigger question than whether killing costs
-you something.
+you something and can be climbed back from.
 
 Explicitly **out**, same as the plan says otherwise: land, guilds, ecology
-population math, the Shards, magic, the bounty/plunder/Commons-standing
+population math, the Shards, magic, the bounty/plunder half of the outlawry
 economy PvP was meant to prove or disprove. The creatures are a fixed
 roster that respawns on a timer somewhere you aren't — deliberately *not*
 a population model, because that is the fun thing to write that later

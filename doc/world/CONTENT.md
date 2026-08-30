@@ -692,11 +692,24 @@ crosses into **notorious**: the Lieutenant stops hunting them by mark *or* by
 proximity — §29's "notorious player-killers... can be plundered into actual
 rank" read literally, one Lieutenant deep. This is a narrow slice of §25/§28's
 outlawry, crossed ahead of §44's own Stage C gate on explicit instruction —
-see this document's gap list, below — and it stops well short of that system:
-no bounty payout, no plunder off a body, no Commons-standing counterweight to
-climb back with, no Host rank actually offered to a notorious soul. It answers
-one question narrowly — does killing cost you something — not the larger one
-the full system is for.
+see this document's gap list, below — and it stops well short of that
+system: no bounty payout, no plunder off a body, no Host rank actually
+offered to a notorious soul. It answers one question narrowly — does
+killing cost you something — not the larger one the full system is for.
+
+**Commons standing (§3's "kindness needs teeth") has exactly one act built,
+because it is the only one of §3's named acts Stage B has anywhere to put.**
+Stabilising a stranger needs the Mortal Wound system (cut, §44); sheltering
+someone needs shelter; teaching for free needs a teaching verb; paying
+another's mark needs a currency; purifying land needs corruption and land to
+purify — none of it exists yet. **Feeding a hungry soul does not have that
+problem: G already existed.** Give food to a soul whose satiety is genuinely
+low and the giver's own standing rises — the same ledger a kill spends,
+climbed the other direction, at roughly a third the rate (three acts of
+kindness to undo one kill, not one for one). §3 explicitly warns this must
+not be farmable by alt-pairs; nothing here stops two cooperating players
+trading scraps back and forth for standing, and that gap is left open on
+purpose rather than guarded by a mechanism nobody has asked for yet.
 
 ---
 
@@ -1059,17 +1072,18 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   crossing on momentum. The call to cross it now, ahead of Stage C, was made
   explicitly, on the grounds that §44 is a previous agent's cut list, not a
   standing rule from the person actually directing this project. What landed
-  in two passes: first, SPACE striking another soul at all, with its own
-  honest death cause (§11.3); then a real cost for it — a kill marks the
-  killer and drops their standing, and enough kills makes the Lieutenant
-  stop hunting them altogether (§8.7). What still has *not* landed, and
-  remains exactly as open as before: any bounty payout, any plunder off a
-  body, any of §28's other "five ways to answer a mark," the Grey King's
-  coin actually funding any of it, Commons standing as the counterweight
-  that could climb a soul back out, or the murder-guild economy the whole
-  system was supposed to prove or disprove. This closes "can killing cost
-  you something," not "does the outlawry economy work" — that second,
-  much larger question is still entirely unbuilt and unasked.
+  in three passes: SPACE striking another soul at all, with its own honest
+  death cause (§11.3); a real cost for it — a kill marks the killer and
+  drops their standing, and enough kills makes the Lieutenant stop hunting
+  them altogether (§8.7); and one way back — feeding a genuinely hungry
+  soul builds Commons standing, the only one of §3's kindness acts Stage B
+  has anywhere to put (§8.7). What still has *not* landed, and remains
+  exactly as open as before: any bounty payout, any plunder off a body, any
+  of §28's other "five ways to answer a mark," the Grey King's coin actually
+  funding any of it, or the murder-guild economy the whole system was
+  supposed to prove or disprove. This closes "can killing cost you
+  something, and can it be climbed back from" — not "does the outlawry
+  economy work," which is still entirely unbuilt and unasked.
 - ~~**The sword chain compresses eight professions into zero new skills.**~~
   — closed: **smithing** is the seventh skill, covering charcoal-burning,
   smelting and forging. It settles a point worth stating plainly, because it
