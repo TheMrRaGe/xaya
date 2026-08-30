@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (185 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (190 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -270,10 +270,21 @@ plan committed at the repo root's `doc/world/`.
   Lieutenant, because that would put the very thing fog just hid back on
   screen through a different door.
 
-  The one thing this does *not* pretend to answer: whether one Lieutenant
-  is still a credible threat patrolling nine times the ground alone. He
-  isn't reinforced here — see the open question in
-  `doc/world/CONTENT.md`'s gap list.
+  Whether one Lieutenant is still a credible threat patrolling nine times
+  the ground alone got a first answer, not a final one — see the next
+  bullet. He still isn't *reinforced*; §44 forbids that.
+- **His patrol got smarter, not more numerous.** §44 keeps "one Lieutenant,
+  no Captain, no Warden, no Muster" even at nine times the map, so the only
+  lever left is how well the one you have covers it. Patrol speed rose from
+  60% to 75% of his hunting speed — still well under a soul's own 300, so
+  outrunning a *patrol* stays exactly as easy as before; only staying
+  unnoticed for longer got harder. More importantly, a fresh patrol waypoint
+  is now drawn near wherever the Verge was last loud about 60% of the time,
+  jittered by up to ten tiles, instead of landing anywhere on the map with
+  equal odds — the same global noise position the crows already answer to
+  (§1), not a new way for him to know where you are, just a reason for him
+  to stop touring empty corners. Whether that is *enough* compensation for
+  9x the area is a playtest question, tracked open in `doc/world/CONTENT.md`.
 - **The Verge holds more than one soul.** The tick takes one `Input` per
   player and returns every death that happened in it — the same shape a
   server or a chain would hand it, so nothing above `src/sim/` needs to know

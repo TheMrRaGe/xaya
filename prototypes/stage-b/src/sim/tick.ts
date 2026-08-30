@@ -62,6 +62,23 @@ export const TICK_HZ = 10;
 const PLAYER_SPEED = 300; // fixed-point units/tick — 3 tiles/sec
 const PLAYER_SPEED_DIAG = 212; // 300/sqrt(2): a diagonal must not be a sprint
 const LIEUTENANT_SPEED = 260; // slightly slower than a soul: fleeing must work (doc/world/PLAN.md §21)
+/**
+ * Patrol used to be 60% of hunt speed. The Verge is now nine times its
+ * original area and §44 forbids the obvious fix — a second Lieutenant — so
+ * the one there is has to cover more ground on his own. This still keeps
+ * him well under the player's 300: outrunning a patrol must stay easy,
+ * only staying unnoticed for longer should get harder.
+ */
+const LIEUTENANT_PATROL_SPEED = Math.trunc(LIEUTENANT_SPEED * 0.75);
+/**
+ * How often a fresh patrol waypoint is drawn near recently loud ground
+ * instead of anywhere on the map — a hunter reads sign of habitation
+ * rather than touring empty corners, which is what keeps coverage
+ * meaningful over a much bigger Verge without adding a second officer
+ * (doc/world/CONTENT.md's Lieutenant-coverage gap).
+ */
+const PATROL_NOISE_BIAS_PCT = 60;
+const PATROL_BIAS_JITTER = TILE * 10;
 
 const HYDRATION_DRAIN_EVERY = 1; // ticks per -1 hydration
 const SATIETY_DRAIN_EVERY = 2;
@@ -1040,14 +1057,31 @@ function tickLieutenant(state: SimState): void {
   } else {
     const wpSq = distSq(lieutenant.x, lieutenant.y, lieutenant.waypointX, lieutenant.waypointY);
     if (wpSq < (TILE / 2) * (TILE / 2)) {
-      lieutenant.waypointX = rng.nextInt(WORLD_W) * TILE;
-      lieutenant.waypointY = rng.nextInt(WORLD_H) * TILE;
+      if (rng.chance(PATROL_NOISE_BIAS_PCT, 100)) {
+        // Drift toward wherever the Verge was last loud, jittered so he
+        // never walks to the exact tile — that would read as him already
+        // knowing where you are, which is the crows' job (§1), not a
+        // patrol's.
+        lieutenant.waypointX = clamp(
+          state.noiseX + rng.nextInt(PATROL_BIAS_JITTER * 2 + 1) - PATROL_BIAS_JITTER,
+          0,
+          (WORLD_W - 1) * TILE,
+        );
+        lieutenant.waypointY = clamp(
+          state.noiseY + rng.nextInt(PATROL_BIAS_JITTER * 2 + 1) - PATROL_BIAS_JITTER,
+          0,
+          (WORLD_H - 1) * TILE,
+        );
+      } else {
+        lieutenant.waypointX = rng.nextInt(WORLD_W) * TILE;
+        lieutenant.waypointY = rng.nextInt(WORLD_H) * TILE;
+      }
     }
     targetX = lieutenant.waypointX;
     targetY = lieutenant.waypointY;
   }
 
-  const speed = lieutenant.state === "hunt" ? LIEUTENANT_SPEED : Math.trunc(LIEUTENANT_SPEED * 0.6);
+  const speed = lieutenant.state === "hunt" ? LIEUTENANT_SPEED : LIEUTENANT_PATROL_SPEED;
   const next = stepToward(lieutenant.x, lieutenant.y, targetX, targetY, speed);
   const moved = moveWithCollision(world, lieutenant.x, lieutenant.y, next.x, next.y);
   lieutenant.x = clamp(moved.x, 0, (WORLD_W - 1) * TILE);

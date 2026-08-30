@@ -1029,16 +1029,18 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   professions in one lifetime — and from Realm-gating, not from a lock on
   what an unskilled soul is permitted to try. Mining itself stays exempt:
   a vein is loud no matter how good you are at working one, same as stone.
-- **Is one Lieutenant still a credible threat over nine times the ground?**
-  §44's Stage B cut is explicit — "one Lieutenant, no Captain, no Warden, no
-  Muster" — and that was sized for a Verge a soul crossed in eight seconds.
-  It is now 72x48 tiles and a real fog of war hides him at any distance,
-  which makes a solo patrol's *coverage*, not just his danger in a fight,
-  the open question. Not a bug to fix reflexively: the cut list forbids the
-  obvious answer (more officers) on purpose, so the honest options are
-  either a faster/smarter patrol for the one he already has, or an argument
-  that thinner coverage over more ground is the correct feel for a bigger
-  Verge. Recorded here rather than decided.
+- ~~**Is one Lieutenant still a credible threat over nine times the
+  ground?**~~ — first pass taken, not closed outright. §44's cut list forbids
+  the obvious answer (more officers), so the fix stays inside the one
+  Lieutenant already there: his patrol speed rose from 60% to 75% of hunting
+  speed (still well under a soul's own, so outrunning a *patrol* stays easy —
+  only staying unnoticed for longer got harder), and a fresh patrol waypoint
+  now lands near recently loud ground roughly 60% of the time instead of
+  anywhere on the map uniformly — a hunter reading sign of habitation rather
+  than touring empty corners, using the same global noise position the crows
+  already do (§1), not a new information leak. What this does not settle:
+  whether that is *enough* compensation for 9x the area, which is a playtest
+  question rather than a code one.
 
 ---
 

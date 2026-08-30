@@ -696,5 +696,52 @@ function check(name, cond, detail = "") {
   );
 }
 
+// --- 25. the Lieutenant covers ground: a faster, noise-biased patrol ---
+{
+  const s = fresh(1);
+  s.noise = 0;
+  // Let the coincident spawn waypoint (equal to his own position) get
+  // replaced by a real one before measuring anything.
+  stepTick(s, IDLE);
+  check("he starts out patrolling, alone and far from anyone", s.lieutenant.state === "patrol", s.lieutenant.state);
+
+  const before = { x: s.lieutenant.x, y: s.lieutenant.y };
+  stepTick(s, IDLE);
+  const moved = Math.hypot(s.lieutenant.x - before.x, s.lieutenant.y - before.y);
+  check("patrol is faster than the old 60% of hunt speed", moved > 156, `moved ${moved.toFixed(1)}`);
+  check("but still well under hunting speed, so fleeing a patrol stays easy", moved < 220, `moved ${moved.toFixed(1)}`);
+
+  // Fix a hotspot far from both the Lieutenant and the lone player, then
+  // watch where fresh patrol waypoints land over many reselections. The
+  // player is marked not-alive for this part only, so `nearest` never
+  // resolves to them (tick.ts skips non-alive players) — teleporting the
+  // Lieutenant to 200 different points would otherwise occasionally land
+  // within his detection radius of a real target, trigger a genuine hunt,
+  // and then trap every later iteration re-teleporting to that same stale
+  // waypoint, since only the patrol branch below ever updates it. That is
+  // a quirk of this synthetic harness re-testing one tick 200 times over,
+  // not something a real playthrough can hit.
+  s.noiseX = 40 * TILE;
+  s.noiseY = 30 * TILE;
+  s.noise = 0; // below the crow threshold — this has to be the patrol bias, not the crow pull
+  s.players[0].alive = false;
+  let nearHotspot = 0;
+  const trials = 200;
+  for (let i = 0; i < trials; i++) {
+    // Put him on his current waypoint so this tick is forced to pick a
+    // fresh one, without caring what path he actually walked to get there.
+    s.lieutenant.state = "patrol";
+    s.lieutenant.target = -1;
+    s.lieutenant.restUntil = 0;
+    s.lieutenant.x = s.lieutenant.waypointX;
+    s.lieutenant.y = s.lieutenant.waypointY;
+    stepTick(s, IDLE);
+    const d = Math.hypot(s.lieutenant.waypointX - s.noiseX, s.lieutenant.waypointY - s.noiseY) / TILE;
+    if (d <= 10) nearHotspot++;
+  }
+  check("most fresh patrol waypoints land near recently loud ground", nearHotspot > trials * 0.4, `${nearHotspot}/${trials}`);
+  check("but not all of them — he still wanders and can still find you elsewhere", nearHotspot < trials * 0.9, `${nearHotspot}/${trials}`);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
