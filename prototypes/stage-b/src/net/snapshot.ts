@@ -28,6 +28,7 @@ import { World, Tile } from "../sim/world.js";
 import { Player, Lieutenant } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
 import { Npc } from "../sim/npc.js";
+import { Scout } from "../sim/scout.js";
 
 /** A Bounty Board posting, with the target's lineage folded in so it reads without needing that soul to also be in view — a wanted poster is public knowledge, not a body to fog. */
 export interface SnapshotBounty {
@@ -54,6 +55,8 @@ export interface Snapshot {
   creatures: Creature[];
   /** Fogged the same as creatures — a villager is a body like any other, not a fixture of the terrain. */
   npcs: Npc[];
+  /** Fogged too — a Scout is a body to find, not something the King simply hands you the position of. */
+  scouts: Scout[];
   /** Fogged too — plunder is personal until you're standing near enough to see it, not a landmark like a fire. */
   lootPiles: LootPile[];
   /** Global, unlike a body — a posted bounty is a wanted poster, public the moment it's nailed up, not something you have to be standing near to know about. */
@@ -84,6 +87,7 @@ export function snapshot(state: SimState, viewerId: number): Snapshot {
     lieutenant: visible(state.lieutenant.x, state.lieutenant.y) ? state.lieutenant : null,
     creatures: state.creatures.filter((c) => visible(c.x, c.y)),
     npcs: state.npcs.filter((n) => visible(n.x, n.y)),
+    scouts: state.scouts.filter((s) => visible(s.x, s.y)),
     lootPiles: state.lootPiles.filter((p) => visible(p.x, p.y)),
     bounties: state.bounties.map((b) => ({ targetId: b.targetId, targetLineage: state.players[b.targetId]?.lineage ?? 0, amount: b.amount })),
     deadStockpile: state.deadStockpile,

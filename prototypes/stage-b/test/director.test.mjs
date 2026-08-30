@@ -87,6 +87,7 @@ const check = (name, cond, detail = "") => {
     JSON.stringify(middling),
   );
   check("while the cheap ones are open", middling.includes("false_crows"), JSON.stringify(middling));
+  check("and a Scout is cheaper still — the probe before the Lieutenant himself", middling.includes("send_scout"), JSON.stringify(middling));
 }
 
 // --- the Understudy always picks something legal ---
@@ -164,6 +165,11 @@ const check = (name, cond, detail = "") => {
   applyAction(e, { kind: "false_crows", x: 2 * TILE, y: 14 * TILE });
   check("a feint puts the crows where nothing happened", e.crowX !== e.players[0].x || e.noiseX === 2 * TILE);
   check("and it is loud enough for them to gather", e.noise >= 250, `${e.noise}`);
+
+  const f = fresh();
+  applyAction(f, { kind: "send_scout", x: 20 * TILE, y: 20 * TILE });
+  check("a sent Scout actually arrives", f.scouts.length === 1, `scouts=${f.scouts.length}`);
+  check("heading for where he was sent to look, not standing on top of it", f.scouts[0].investigateX === 20 * TILE && f.scouts[0].investigateY === 20 * TILE);
 }
 
 // --- determinism survives all of it ---

@@ -12,6 +12,7 @@ import { Tile, WORLD_W, WORLD_H } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
 import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus, fishChance, teachingCeiling } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
+import { newScout, SCOUT_REPORT_TICKS } from "../dist/sim/scout.js";
 
 
 const I = (o = {}) => ({ ...NO_INPUT, ...o });
@@ -1940,6 +1941,63 @@ function check(name, cond, detail = "") {
     openingMove < settledMove,
     `opening=${openingMove.toFixed(1)} settled=${settledMove.toFixed(1)}`,
   );
+}
+
+// --- 59. Scouts: approach, flee once spotted, and either report or get silenced first ---
+{
+  // Wandering in to look, until a soul is close enough to actually spot.
+  const s = fresh(1);
+  const p = s.players[0];
+  s.scouts.push(newScout(p.x + 6 * TILE, p.y, p.x + 10 * TILE, p.y)); // outside SCOUT_SPOT_RADIUS (4 tiles)
+  stepTick(s, [I()]);
+  check("a Scout keeps approaching until someone is close enough to spot", s.scouts[0].state === "approach", s.scouts[0].state);
+
+  const spot = fresh(1);
+  const p2 = spot.players[0];
+  spot.scouts.push(newScout(p2.x + 2 * TILE, p2.y, p2.x + 10 * TILE, p2.y)); // inside SCOUT_SPOT_RADIUS (4 tiles)
+  stepTick(spot, [I()]);
+  check("close enough, and he flees instead of continuing to approach", spot.scouts[0].state === "fleeing", spot.scouts[0].state);
+  check("fleeing the soul who actually spotted him", spot.scouts[0].spottedId === p2.id, `spottedId=${spot.scouts[0].spottedId}`);
+  const gapBefore = Math.hypot(spot.scouts[0].x - p2.x, spot.scouts[0].y - p2.y);
+  stepTick(spot, [I()]);
+  const gapAfter = Math.hypot(spot.scouts[0].x - p2.x, spot.scouts[0].y - p2.y);
+  check("and actually moving away, not just labelled as fleeing", gapAfter > gapBefore, `before=${gapBefore.toFixed(0)} after=${gapAfter.toFixed(0)}`);
+
+  // Surviving long enough to flee means he gets away and reports.
+  const report = fresh(1);
+  const target = report.players[0];
+  const scout = newScout(target.x + 2 * TILE, target.y, target.x + 10 * TILE, target.y);
+  scout.state = "fleeing";
+  scout.spottedId = target.id;
+  scout.reportAtTick = report.tick + 1; // due on the very next tick
+  report.scouts.push(scout);
+  stepTick(report, [I()]);
+  check("a Scout who gets clear reports, and it costs the spotted soul nothing but the report itself", target.scoutReports === 1, `reports=${target.scoutReports}`);
+  check("and he's gone once he's reported", report.scouts.length === 0, `scouts=${report.scouts.length}`);
+
+  // Killing him first means no report at all — the whole point of the fragile kind.
+  const silence = fresh(1);
+  const hunter = silence.players[0];
+  hunter.pack.sword = 10; // SWORD_DAMAGE (6) per hit against SCOUT_HEALTH (10) — two hits, deliberately fragile either way
+  const doomed = newScout(hunter.x, hunter.y, hunter.x + 10 * TILE, hunter.y);
+  silence.scouts.push(doomed);
+  stepTick(silence, [I({ strike: true })]);
+  stepTick(silence, [I({ strike: true })]);
+  check("striking the nearest Scout down clears him with no report", silence.scouts.length === 0, `scouts=${silence.scouts.length}`);
+  check("and nothing was ever reported", hunter.scoutReports === 0, `reports=${hunter.scoutReports}`);
+
+  // Enough reports, and the King has a rough fix — the same noise/crow machinery a struggle already feeds.
+  const locate = fresh(1);
+  const found = locate.players[0];
+  found.scoutReports = 2; // one more closes it (SCOUT_LOCATE_THRESHOLD is 3)
+  const lastScout = newScout(found.x + 2 * TILE, found.y, found.x + 10 * TILE, found.y);
+  lastScout.state = "fleeing";
+  lastScout.spottedId = found.id;
+  lastScout.reportAtTick = locate.tick + 1;
+  locate.scouts.push(lastScout);
+  stepTick(locate, [I()]);
+  check("the third report resets the count rather than piling up", found.scoutReports === 0, `reports=${found.scoutReports}`);
+  check("and lands real noise on the soul it found, past the crow threshold", locate.noise >= 500, `noise=${locate.noise}`);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

@@ -28,11 +28,13 @@ import { Player } from "./entities.js";
 import { SKILLS, level } from "./skills.js";
 import { newCreature, WOLF_ANGER_TICKS } from "./creatures.js";
 import { walkable } from "./move.js";
+import { Scout, newScout } from "./scout.js";
 
 /** Everything the Overlord may do. Nothing outside this list is possible. */
 export type OverlordAction =
   | { kind: "nothing" }
   | { kind: "send_lieutenant"; x: number; y: number }
+  | { kind: "send_scout"; x: number; y: number }
   | { kind: "false_crows"; x: number; y: number }
   | { kind: "cold_snap"; ticks: number }
   | { kind: "blight"; ticks: number }
@@ -116,6 +118,7 @@ export interface DirectorState {
   world: World;
   players: Player[];
   creatures: { kind: string }[];
+  scouts: Scout[];
   lieutenant: { waypointX: number; waypointY: number; state: string; target: number };
   noise: number;
   noiseX: number;
@@ -172,6 +175,17 @@ export function offers(state: DirectorState, points: number): Offer[] {
     `Walk your Lieutenant toward (${Math.trunc(walk.x / TILE)}, ${Math.trunc(walk.y / TILE)}), near where they have been working.`,
     70,
     60,
+  );
+
+  // Cheaper than committing the Lieutenant himself: a Reaver sent to look,
+  // fragile and unarmed. Killed before he gets away, nothing happens at
+  // all — the whole point of building the kind that can be silenced first.
+  const scoutSpot = openNear(state, richest.x, richest.y, 5);
+  push(
+    { kind: "send_scout", x: scoutSpot.x, y: scoutSpot.y },
+    `Send a Scout to look near (${Math.trunc(scoutSpot.x / TILE)}, ${Math.trunc(scoutSpot.y / TILE)}). If he finds someone and gets clear, that is one report closer to knowing where they are.`,
+    65,
+    10,
   );
 
   push(
@@ -240,6 +254,14 @@ export function applyAction(state: DirectorState, action: OverlordAction): void 
       state.lieutenant.waypointX = action.x;
       state.lieutenant.waypointY = action.y;
       return;
+
+    case "send_scout": {
+      // Arrives from a real distance rather than already standing over
+      // whoever he's meant to be investigating.
+      const spawn = openNear(state, action.x, action.y, 12);
+      state.scouts.push(newScout(spawn.x, spawn.y, action.x, action.y));
+      return;
+    }
 
     case "false_crows":
       // The crows do not know the difference, and neither will they.

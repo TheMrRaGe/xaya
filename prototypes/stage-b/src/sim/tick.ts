@@ -62,6 +62,7 @@ import {
 } from "./creatures.js";
 import { Npc, spawnNpcs, stepNpc, woundNpc } from "./npc.js";
 import { DIALOGUE_TREES, ROOT_NODE } from "./dialogue.js";
+import { Scout, newScout, stepScout, woundScout, SCOUT_SPOT_RADIUS } from "./scout.js";
 
 export const TICK_HZ = 10;
 
@@ -371,6 +372,17 @@ const LOOT_TOOL_KEYS: ReadonlyArray<keyof Pack> = [
 ];
 
 /**
+ * A Scout who gets away reports — the consequence lands on the same
+ * noise/crow machinery a struggle or a working already feeds (§1), rather
+ * than a new information channel of its own. Killing enough of them
+ * before they escape means this never fires at all, which is the whole
+ * point of building the fragile, fleeing kind of Reaver first: he is
+ * entirely optional to deal with, right up until he isn't.
+ */
+const SCOUT_LOCATE_THRESHOLD = 3; // reports against one soul before the King has a rough fix
+const SCOUT_LOCATE_NOISE = 500; // comfortably past CROW_THRESHOLD — a guaranteed, immediate tell
+
+/**
  * The Bounty Board — a fixed point near the village rather than a new tile
  * or a player-held Sheriff role, the same "smallest thing that answers the
  * ask" call the rest of this file makes. No target picker either: pressing
@@ -614,6 +626,8 @@ export interface SimState {
   lieutenant: Lieutenant;
   creatures: Creature[];
   npcs: Npc[];
+  /** The Grey King's Scouts currently out — sent by the Overlord (director.ts's send_scout), not part of the fixed roster. */
+  scouts: Scout[];
   trades: TradeRecord[];
   incidents: Incident[];
   lootPiles: LootPile[];
@@ -669,6 +683,7 @@ export interface SimState {
     firstBow: boolean;
     firstBounty: boolean;
     firstMagic: boolean;
+    firstScoutLocate: boolean;
   };
 }
 
@@ -684,6 +699,7 @@ export function newSim(seed: number, players: Player[]): SimState {
     lieutenant,
     creatures: spawnCreatures(world, rng, players),
     npcs: spawnNpcs(),
+    scouts: [],
     trades: [],
     incidents: [],
     lootPiles: [],
@@ -730,6 +746,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstBow: false,
       firstBounty: false,
       firstMagic: false,
+      firstScoutLocate: false,
     },
   };
 }
@@ -879,6 +896,30 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
 
   // --- the village ---
   for (const npc of state.npcs) stepNpc(npc, world, state.rng, state.tick);
+
+  // --- the Grey King's Scouts: report if they get away, vanish either way ---
+  for (const scout of state.scouts) stepScout(scout, world, state.players, state.tick);
+  state.scouts = state.scouts.filter((scout) => {
+    if (!scout.alive) return false; // killed — bought time, nothing more happens
+    if (scout.state === "fleeing" && state.tick >= scout.reportAtTick) {
+      const target = state.players[scout.spottedId];
+      if (target && target.alive) {
+        target.scoutReports++;
+        say(state, `A Scout breaks off, out of reach. Soul #${target.lineage} was seen.`);
+        if (target.scoutReports >= SCOUT_LOCATE_THRESHOLD) {
+          target.scoutReports = 0;
+          bumpNoise(state, SCOUT_LOCATE_NOISE, target);
+          say(state, `Enough of his Scouts have found Soul #${target.lineage}. He knows roughly where they are.`);
+          if (!state.flags.firstScoutLocate) {
+            state.flags.firstScoutLocate = true;
+            say(state, "The Grey King: “Three of the same story. I don't need a fourth to know where to look.”");
+          }
+        }
+      }
+      return false; // reported — this one is done, killed or not
+    }
+    return true;
+  });
 
   // A trapline pays out whether or not anyone is standing there.
   for (const catch_ of checkSnares(state.creatures, ctx)) {
@@ -1318,20 +1359,37 @@ function doCastHeal(state: SimState, player: Player): void {
  * none) and whether the bow is worth trying next.
  */
 function strikeNearest(state: SimState, player: Player, radius: number, damage: number, spend: () => void): boolean {
-  // Whichever living thing is nearer gets hit — a beast, another soul, or
-  // now a villager. "The nearest living thing in reach" was always the
-  // honest description of this verb.
+  // Whichever living thing is nearer gets hit — a beast, another soul, a
+  // villager, or now a Scout. "The nearest living thing in reach" was
+  // always the honest description of this verb.
   const creatureTarget = nearestCreature(state, player, (c) => c.state !== "dead", radius);
   const creatureSq = creatureTarget ? distSq(creatureTarget.x, creatureTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
   const soulTarget = nearestSoul(state, player, radius);
   const soulSq = soulTarget ? distSq(soulTarget.x, soulTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
   const npcTarget = nearestNpc(state, player, radius);
   const npcSq = npcTarget ? distSq(npcTarget.x, npcTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
-  if (!creatureTarget && !soulTarget && !npcTarget) return false;
+  const scoutTarget = nearestScout(state, player, radius);
+  const scoutSq = scoutTarget ? distSq(scoutTarget.x, scoutTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  if (!creatureTarget && !soulTarget && !npcTarget && !scoutTarget) return false;
 
-  // Whichever of the three is actually nearest gets hit, checked in the
-  // same "closer wins" shape the beast-vs-soul choice already used.
-  if (npcTarget && npcSq <= creatureSq && npcSq <= soulSq) {
+  // Whichever is actually nearest gets hit, checked in the same
+  // "closer wins" shape the beast-vs-soul choice already used.
+  if (scoutTarget && scoutSq <= creatureSq && scoutSq <= soulSq && scoutSq <= npcSq) {
+    const killed = woundScout(scoutTarget, damage);
+    spend();
+    // No standing cost and no outlawry mark: he is the King's own agent,
+    // not the "expelled from normal towns" case a villager or a player
+    // kill answers to. A little hunting XP, same as any other kill —
+    // silencing him before he reports is still a real hunt.
+    learn(state, player, "hunting", killed ? XP.kill : XP.strike);
+    if (killed) {
+      player.kills++;
+      say(state, "The Scout goes down before he can turn and run.");
+    }
+    return true;
+  }
+
+  if (npcTarget && npcSq <= creatureSq && npcSq <= soulSq && npcSq <= scoutSq) {
     const killed = woundNpc(npcTarget, damage, state.tick);
     spend();
     if (killed) {
@@ -1348,7 +1406,7 @@ function strikeNearest(state: SimState, player: Player, radius: number, damage: 
     return true;
   }
 
-  if (soulTarget && soulSq <= creatureSq) {
+  if (soulTarget && soulSq <= creatureSq && soulSq <= scoutSq) {
     soulTarget.health = clamp(soulTarget.health - damage, 0, HEALTH_MAX);
     state.lastDamageSource[soulTarget.id] = "killed by another soul";
     state.lastKilledBy[soulTarget.id] = player.id; // read by kill() below, for loot and any bounty
@@ -1987,6 +2045,20 @@ function nearestNpc(state: SimState, player: Player, radius: number): Npc | null
     if (d <= bestSq) {
       bestSq = d;
       best = npc;
+    }
+  }
+  return best;
+}
+
+function nearestScout(state: SimState, player: Player, radius: number): Scout | null {
+  let best: Scout | null = null;
+  let bestSq = radius * radius;
+  for (const scout of state.scouts) {
+    if (!scout.alive) continue;
+    const d = distSq(scout.x, scout.y, player.x, player.y);
+    if (d <= bestSq) {
+      bestSq = d;
+      best = scout;
     }
   }
   return best;

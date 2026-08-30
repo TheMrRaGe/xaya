@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (343 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (356 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -626,6 +626,33 @@ plan committed at the repo root's `doc/world/`.
   cached, still-valid route no longer gives up on distance alone; only a
   dead target, or no route and no straight line short enough to suggest
   one, ends a hunt now.
+- **Scouts — the Reaver tier's first actual member, not a second
+  Lieutenant.** CONTENT.md §2.4 names Reavers as "many, pure code, patrol,
+  harass" below the Lieutenant, and until now none existed; §44's own cut
+  keeps "one Lieutenant, no Captain, no Warden, no Muster," which a Scout
+  doesn't touch — he doesn't fight, doesn't hold ground, and killing him
+  costs no standing at all, because he's the King's own agent, not an
+  "expelled from normal towns" case. The whole thing is one sentence: he
+  comes to investigate, and either you silence him or he reports. A new
+  Overlord action, `send_scout` — cheaper and more frequent than committing
+  the Lieutenant himself (`director.ts`'s pressure gate is 10, against the
+  Lieutenant's 60) — drops one a real distance from wherever the Verge has
+  been busy, walking in slow and cautious (**approach**). The instant a
+  living, un-graced soul is within `SCOUT_SPOT_RADIUS` (4 tiles) he flips
+  to **fleeing** that specific soul at 290 units/tick — just under a soul's
+  own 300, so melee alone is a real gamble once he's running and a bow or
+  a bolt is the reliable answer. Ten health, gone in a hit or two: killing
+  him before he survives `SCOUT_REPORT_TICKS` (~5s) buys real time and
+  ends the encounter with nothing else happening. Let him get clear and he
+  reports — `Player.scoutReports` ticks up for that soul specifically, and
+  the third report against the same soul (`SCOUT_LOCATE_THRESHOLD`, then
+  the counter resets) lands real noise at their current position
+  (`SCOUT_LOCATE_NOISE`, comfortably past `CROW_THRESHOLD`) — the exact
+  same crow/patrol-bias machinery a struggle or a working already feeds,
+  not a new information channel invented just for this. "Killing scouts
+  buys you time; enough of them get away and he knows roughly where you
+  are" is the whole ask, built on wiring that already existed everywhere
+  except the Scout himself.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a
@@ -812,7 +839,7 @@ Per the plan's own named cut list (§44), checked off:
 | A few professions worth of actions | ✅ gather, chip, mine, salvage a ruin, hunt, fish, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar, fishing line) |
 | Three creatures | ✅ and then some — hare, deer, river-goat, hedge-boar, wolf, and the crows. §44 asked for three; the extras came after the gate passed, and each one answers a different question rather than padding a bestiary |
 | Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
-| One Lieutenant, no Muster | ✅ — patched to patrol smarter as the map grew, not to grow a second one |
+| One Lieutenant, no Muster | ✅ — patched to patrol smarter as the map grew, and given the Reaver tier's first member (a Scout), not a second Lieutenant |
 | Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
 
 §44 names ten professions in scope (Farmer, Hunter, Miner, Logger,
@@ -860,15 +887,25 @@ enough kills makes the Lieutenant stop hunting them altogether; and one way
 back — feeding a genuinely hungry soul builds Commons standing (see the two
 bullets above). A fourth pass, later, added plunder: a soul-on-soul kill now
 drops the loser's pack as a lootable pile (crowns split instead — a killer's
-cut now, the King's share simply gone, §30A's shape), see the bow bullet's
-neighbour below. No bounty payout and no murder-guild economy came with any
-of these passes — that is still exactly as unbuilt as it was, and is a
-bigger question than whether killing costs you something and can be climbed
-back from.
+cut now, the King's share banked rather than lost, §30A's shape), and a
+fifth gave that banked share somewhere to go: the Bounty Board. No bounty
+payout *for a mark* and no murder-guild economy came with any of these
+passes — that is still exactly as unbuilt as it was, and is a bigger
+question than whether killing costs you something and can be climbed back
+from.
+
+**A third line crossed the same way, later still: a fourth Reaver-tier
+unit, the Scout** (see its own bullet above). §44 keeps "one Lieutenant, no
+Captain, no Warden, no Muster" — a Scout doesn't touch any of that: he
+doesn't fight, doesn't hold ground, and isn't a second Lieutenant, just the
+Reaver tier's first actual member, sent by a new cheap Overlord action
+rather than added to any fixed roster.
 
 Explicitly **out**, same as the plan says otherwise: land, guilds, ecology
-population math, the Shards, magic, the bounty/plunder half of the outlawry
-economy PvP was meant to prove or disprove. The creatures are a fixed
+population math, the Shards, the bounty/plunder half of the outlawry
+economy PvP was meant to prove or disprove, and everything about magic
+beyond the two spells above (the Given, the bright trace a frequent worker
+leaves, a real Working). The creatures are a fixed
 roster that respawns on a timer somewhere you aren't — deliberately *not*
 a population model, because that is the fun thing to write that later
 turns out to be why a tick costs 40ms.

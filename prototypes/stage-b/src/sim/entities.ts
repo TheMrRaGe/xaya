@@ -231,6 +231,16 @@ export interface Player {
    */
   boltCooldown: number;
   healCooldown: number;
+  /**
+   * How many of the Grey King's Scouts have gotten away from this soul
+   * specifically and reported back (scout.ts/tickScouts in tick.ts).
+   * Killing a Scout before he escapes buys time and never touches this;
+   * enough successful reports and the King has a rough fix on you, the
+   * same noise/crow machinery a struggle or a working already feeds.
+   * Resets with everything else in the pack on death (§6.1) — a new
+   * lineage isn't answering for its last life's carelessness.
+   */
+  scoutReports: number;
 }
 
 /**
@@ -288,6 +298,7 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     dialogueNode: null,
     boltCooldown: 0,
     healCooldown: 0,
+    scoutReports: 0,
   };
 }
 

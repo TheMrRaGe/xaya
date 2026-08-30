@@ -156,7 +156,15 @@ Intelligence is deliberately scarce — a world where a dozen entities are
 genuinely intelligent and the rest are furniture is more unsettling than one
 where every bandit monologues, and it bounds the inference bill.
 
-**In code today:** one Lieutenant `[built]`, per the Stage B cut `[plan §44]`.
+**In code today:** one Lieutenant `[built]`, per the Stage B cut `[plan §44]`
+— and, crossed narrowly, the Reaver tier's first actual member: the
+**Scout** `[built, §8.7]`, sent by a new Overlord action rather than part
+of the fixed roster, fragile and unarmed, who investigates and either gets
+silenced or reports. Not a second Lieutenant and not a violation of §44's
+"no Captain, no Warden, no Muster" — he doesn't fight, doesn't hold ground,
+and killing him costs no standing, since he's the King's own agent rather
+than the "expelled from normal towns" case a villager or a player kill
+answers to.
 
 > **Name collision, flagged:** `doc/archon/DESIGN.md` §5 uses **Warden** for an
 > emergency governance council, and PLAN §36 uses **Warden Quorums** for the
@@ -854,12 +862,18 @@ verb that names the Hoard and no verb that produces a death.
 
 ### 8.7 What is built today `[built]`
 
-Eight actions, chosen every half minute from a pressure-gated menu, each with a
+Nine actions, chosen every half minute from a pressure-gated menu, each with a
 stated reason that becomes the line the player sees:
 
 `nothing` (always on the menu, and the commonest choice) · `send_lieutenant` ·
-`false_crows` · `cold_snap` · `blight` · `loose_a_boar` · `loose_the_wolves` ·
-`mark`.
+`send_scout` · `false_crows` · `cold_snap` · `blight` · `loose_a_boar` ·
+`loose_the_wolves` · `mark`.
+
+**`send_scout` is the cheapest real action on the menu** (pressure gate 10,
+against `send_lieutenant`'s 60) — a Reaver sent to look rather than the
+Lieutenant himself committed, which is most of why it reads as the probe
+that comes before the real threat rather than a second copy of it. See §2.4
+for what a Scout actually does.
 
 Pressure is computed from what the Verge has built — goods carried, tools held,
 skills learned, fires lit, souls alive — and **a death buys the survivors quiet**.

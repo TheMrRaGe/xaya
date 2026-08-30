@@ -23,6 +23,7 @@ import { SnapshotBounty } from "../net/snapshot.js";
 import { Player, Pack, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature, STATS, CreatureKind } from "../sim/creatures.js";
 import { Npc } from "../sim/npc.js";
+import { Scout } from "../sim/scout.js";
 import { Lieutenant } from "../sim/entities.js";
 import { DIALOGUE_TREES } from "../sim/dialogue.js";
 import { SKILLS, Skill, level, bestSkill, teachingCeiling } from "../sim/skills.js";
@@ -66,6 +67,7 @@ export interface ViewState {
   lieutenant: Lieutenant | null;
   creatures: Creature[];
   npcs: Npc[];
+  scouts: Scout[];
   lootPiles: LootPile[];
   bounties: SnapshotBounty[];
   deadStockpile: number;
@@ -356,6 +358,12 @@ function drawNpc(ctx: CanvasRenderingContext2D, npc: Npc, camera: Camera): void 
   ctx.textAlign = "left";
 }
 
+/** Grey while he's still just looking; the same red the noise gauge warns you with once he's spotted someone and is running to report it. */
+function drawScout(ctx: CanvasRenderingContext2D, scout: Scout, camera: Camera): void {
+  if (!scout.alive) return;
+  dot(ctx, scout.x, scout.y, 6, scout.state === "fleeing" ? "#c24a3a" : "#8a8478", camera, "#2a2825");
+}
+
 /** A dropped pack, drawn as a small sack rather than a dot — nothing else in the Verge is a thing to pick up rather than a thing to strike or talk to. */
 function drawLootPile(ctx: CanvasRenderingContext2D, pile: LootPile, camera: Camera): void {
   const x = toPx(pile.x, camera.x) + TILE_PX / 2 - 6;
@@ -384,6 +392,7 @@ export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, lo
   for (const pile of state.lootPiles) drawLootPile(ctx, pile, camera);
   for (const c of state.creatures) drawCreature(ctx, c, camera);
   for (const n of state.npcs) drawNpc(ctx, n, camera);
+  for (const s of state.scouts) drawScout(ctx, s, camera);
   drawCrows(ctx, state, camera);
 
   for (const player of state.players) {
@@ -1213,7 +1222,16 @@ function drawFieldNotesPage(ctx: CanvasRenderingContext2D, x: number, y: number,
     ctx.fillText(b.note, x + 220, by);
   });
 
-  const villagersY = bestiaryY + 16 + BESTIARY.length * 16 + 16;
+  const scoutNoteY = bestiaryY + 16 + BESTIARY.length * 16 + 16;
+  ctx.fillStyle = "#7a7568";
+  ctx.fillText("The Grey King's Host", x, scoutNoteY);
+  ctx.fillStyle = "#e8e0c8";
+  ctx.font = "10.5px 'Inter', sans-serif";
+  ctx.fillText("Scout", x, scoutNoteY + 16);
+  ctx.fillStyle = "#8a8278";
+  ctx.fillText("fragile — flees once he sees you, and reports if he gets away", x + 100, scoutNoteY + 16);
+
+  const villagersY = scoutNoteY + 16 + 16;
   ctx.fillStyle = "#7a7568";
   ctx.fillText("In the village", x, villagersY);
   state.npcs.forEach((n, i) => {
