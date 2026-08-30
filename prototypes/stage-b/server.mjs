@@ -8,9 +8,10 @@
  * renderer exists — and it is the same arrangement a chain would want, with
  * a cheaper answer to "who decides."
  *
- * Whole state goes out every tick. At 24x16 tiles and six beasts that is
- * ~2.5 KB of JSON at 10 Hz, so a client that joins late, lags, or
- * reconnects is correct on the next tick with no reconciliation code.
+ * Whole state goes out every tick — terrain and sound to everyone, bodies
+ * fogged per viewer (see net/snapshot.ts) — so a client that joins late,
+ * lags, or reconnects is correct on the next tick with no reconciliation
+ * code, and can never learn where anything is by simply lagging less.
  */
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
@@ -188,10 +189,12 @@ setInterval(() => {
     menu,
   );
 
-  const snap = snapshot(state);
-  const payload = JSON.stringify({ t: "state", snap, deaths, souls: sockets.size });
-  for (const socket of sockets.values()) {
-    if (socket.readyState === socket.OPEN) socket.send(payload);
+  // One snapshot per socket, not one for everyone — a fogged view is a
+  // personal one, so the JSON now differs by who is asking (net/snapshot.ts).
+  for (const [id, socket] of sockets) {
+    if (socket.readyState !== socket.OPEN) continue;
+    const snap = snapshot(state, id);
+    socket.send(JSON.stringify({ t: "state", snap, deaths, souls: sockets.size }));
   }
 }, TICK_MS);
 

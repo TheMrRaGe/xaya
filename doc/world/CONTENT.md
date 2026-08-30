@@ -219,7 +219,14 @@ is fully testable with two.
 **At the Spire there are two prizes and they are not the same thing:** the Hoard
 is his mundane treasury; **the working is the actual endgame** (§10.3).
 
-**In code today:** the Verge only `[built]`, no Realm gating.
+**In code today:** the Verge only `[built]`, no Realm gating — grown to nine
+times its original footprint (72x48 tiles, three camera-screens by three) with
+a real fog of war behind it: net/snapshot.ts now sends each player a
+personally filtered view, so another soul, the Lieutenant and the creatures
+are cut from the wire itself once they are far enough away, not merely cropped
+off a client's screen. Terrain and the noise/crow signal stay global — a
+Realm's shape is knowable, what is currently standing on it is not. One
+zone, still, so this is scale rather than a second Realm.
 
 ### 3.2 The Grey `[plan §6]`
 
@@ -1022,6 +1029,16 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   professions in one lifetime — and from Realm-gating, not from a lock on
   what an unskilled soul is permitted to try. Mining itself stays exempt:
   a vein is loud no matter how good you are at working one, same as stone.
+- **Is one Lieutenant still a credible threat over nine times the ground?**
+  §44's Stage B cut is explicit — "one Lieutenant, no Captain, no Warden, no
+  Muster" — and that was sized for a Verge a soul crossed in eight seconds.
+  It is now 72x48 tiles and a real fog of war hides him at any distance,
+  which makes a solo patrol's *coverage*, not just his danger in a fight,
+  the open question. Not a bug to fix reflexively: the cut list forbids the
+  obvious answer (more officers) on purpose, so the honest options are
+  either a faster/smarter patrol for the one he already has, or an argument
+  that thinner coverage over more ground is the correct feel for a bigger
+  Verge. Recorded here rather than decided.
 
 ---
 

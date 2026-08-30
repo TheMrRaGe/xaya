@@ -164,25 +164,34 @@ function findOpenTile(
   return { x: (WORLD_W - 2) * TILE, y: (WORLD_H - 2) * TILE };
 }
 
+/**
+ * The original Verge (24x16) is the density baseline. §44's cut list is
+ * explicit that there is no ecology or population model here — this is not
+ * one either, it is the same fixed roster from before, scaled by area so a
+ * bigger Verge doesn't just mean more empty ground. Whether one Lieutenant
+ * is still a real threat over nine times the space is a separate, open
+ * question (doc/world/CONTENT.md's gap list) — this only keeps the animals
+ * themselves from thinning out.
+ */
+const DENSITY_BASELINE = 24 * 16;
+const BASE_ROSTER: ReadonlyArray<readonly [CreatureKind, number]> = [
+  ["deer", 3],
+  ["hare", 3],
+  ["river-goat", 2],
+  ["hedge-boar", 2],
+  ["wolf", 2],
+];
+
 export function spawnCreatures(
   world: World,
   rng: Rng,
   souls: ReadonlyArray<{ x: number; y: number }>,
 ): Creature[] {
-  const roster: CreatureKind[] = [
-    "deer",
-    "deer",
-    "deer",
-    "hare",
-    "hare",
-    "hare",
-    "river-goat",
-    "river-goat",
-    "hedge-boar",
-    "hedge-boar",
-    "wolf",
-    "wolf",
-  ];
+  const scale = (WORLD_W * WORLD_H) / DENSITY_BASELINE;
+  const roster: CreatureKind[] = [];
+  for (const [kind, base] of BASE_ROSTER) {
+    for (let i = 0; i < Math.round(base * scale); i++) roster.push(kind);
+  }
   return roster.map((kind) => {
     const spot = findOpenTile(world, rng, souls, 6);
     return newCreature(kind, spot.x, spot.y);

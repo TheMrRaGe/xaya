@@ -13,15 +13,18 @@
  * doc/world/PLAN.md §44. It exists to answer one question: does dying
  * hurt, and do you start again anyway?
  */
-import { WORLD_W, WORLD_H, World } from "./sim/world.js";
-import { TILE_PX, ViewState, drawWorld, drawEntities, drawNight, drawHud, drawDeathScreen } from "./render/render.js";
+import { World } from "./sim/world.js";
+import { TILE_PX, VIEW_W, VIEW_H, ViewState, computeCamera, drawWorld, drawEntities, drawNight, drawMinimap, drawHud, drawDeathScreen } from "./render/render.js";
 import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
 
 const HUD_H = 225;
+// The canvas is the camera's window, not the map — VIEW_W/VIEW_H, not
+// WORLD_W/WORLD_H. The Verge can grow behind this without the page's layout
+// ever needing to change again.
 const canvas = document.getElementById("game") as HTMLCanvasElement;
-canvas.width = WORLD_W * TILE_PX;
-canvas.height = WORLD_H * TILE_PX + HUD_H;
+canvas.width = VIEW_W * TILE_PX;
+canvas.height = VIEW_H * TILE_PX + HUD_H;
 const ctx = canvas.getContext("2d")!;
 
 let myId = -1;
@@ -135,13 +138,16 @@ setInterval(() => {
  * an isolated world can see the DOM but not our globals.
  */
 function publishDebug(current: Snapshot): void {
+  // `players` is sparse now — a `null` slot is a soul fogged out by
+  // distance (net/snapshot.ts), not a soul that doesn't exist — and
+  // `lieutenant` is `null` outright when nobody here can see him.
   canvas.dataset.verge = JSON.stringify({
     id: myId,
     tick: current.tick,
     souls: current.players.length,
     me: myId >= 0 ? current.players[myId] : null,
-    others: current.players.filter((p) => p.id !== myId).map((p) => ({ id: p.id, x: p.x, y: p.y, alive: p.alive })),
-    lieutenant: { x: current.lieutenant.x, y: current.lieutenant.y, state: current.lieutenant.state },
+    others: current.players.filter((p): p is NonNullable<typeof p> => p !== null && p.id !== myId).map((p) => ({ id: p.id, x: p.x, y: p.y, alive: p.alive })),
+    lieutenant: current.lieutenant ? { x: current.lieutenant.x, y: current.lieutenant.y, state: current.lieutenant.state } : null,
     trades: current.trades,
   });
 }
@@ -166,11 +172,16 @@ function frame(): void {
 
   const view: ViewState = snap;
   const me = snap.players[myId];
+  // The camera follows whoever this browser is driving. A soul with no
+  // body yet (mid-connect, or dead and waiting to respawn) gets no camera
+  // motion rather than one snapped to the origin.
+  const camera = me ? computeCamera(me.x, me.y) : { x: 0, y: 0 };
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawWorld(ctx, world, snap.tick);
-  drawEntities(ctx, view, myId);
-  drawNight(ctx, WORLD_W * TILE_PX, WORLD_H * TILE_PX, snap.tick);
-  if (me) drawHud(ctx, view, me, WORLD_H * TILE_PX, canvas.width, HUD_H);
+  drawWorld(ctx, world, snap.tick, camera);
+  drawEntities(ctx, view, myId, camera);
+  drawNight(ctx, VIEW_W * TILE_PX, VIEW_H * TILE_PX, snap.tick);
+  drawMinimap(ctx, world, snap.players, myId, canvas.width);
+  if (me) drawHud(ctx, view, me, VIEW_H * TILE_PX, canvas.width, HUD_H);
   if (lastDeath) drawDeathScreen(ctx, canvas.width, canvas.height, lastDeath, barrowList);
   if (connection) drawWaiting(connection);
 }

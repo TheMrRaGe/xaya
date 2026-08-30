@@ -31,12 +31,17 @@ function check(name, cond, detail = "") {
 {
   const s = fresh();
   const p = s.players[0];
-  const kinds = s.creatures.map((c) => c.kind).sort().join(",");
-  check("twelve creatures spawn", s.creatures.length === 12, `got ${s.creatures.length}`);
+  // A 72x48 Verge is nine times the original 24x16 footprint, and the
+  // roster scales with it (creatures.ts's DENSITY_BASELINE) so the animals
+  // don't just thin out into empty ground: 27 deer, 27 hare, 18 each of
+  // river-goat, hedge-boar and wolf — 108 in total.
+  check("the roster scales with the Verge's area", s.creatures.length === 108, `got ${s.creatures.length}`);
+  const counts = { deer: 0, hare: 0, "hedge-boar": 0, "river-goat": 0, wolf: 0 };
+  for (const c of s.creatures) counts[c.kind]++;
   check(
-    "the roster is prey, boar and wolves",
-    kinds === "deer,deer,deer,hare,hare,hare,hedge-boar,hedge-boar,river-goat,river-goat,wolf,wolf",
-    kinds,
+    "the roster is prey, boar and wolves, nine times over",
+    counts.deer === 27 && counts.hare === 27 && counts["hedge-boar"] === 18 && counts["river-goat"] === 18 && counts.wolf === 18,
+    JSON.stringify(counts),
   );
   const tooClose = s.creatures.filter((c) => Math.hypot(c.x - p.x, c.y - p.y) < 6 * TILE);
   check("nothing spawns in your lap", tooClose.length === 0, `${tooClose.length} within 6 tiles`);

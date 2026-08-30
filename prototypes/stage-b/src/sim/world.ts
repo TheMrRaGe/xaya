@@ -7,8 +7,16 @@
  */
 import { Rng } from "./rng.js";
 
-export const WORLD_W = 24;
-export const WORLD_H = 16;
+/**
+ * Nine times the original Verge's footprint — three screens by three
+ * screens, where a "screen" is the 24x16-tile window the camera actually
+ * shows (`VIEW_W`/`VIEW_H` in render.ts). The ratio is exact on purpose: it
+ * is what lets the creature roster and the render/network code below reason
+ * about "how much bigger is this than the original Verge" as one clean
+ * number instead of two independent ones that happen to drift apart.
+ */
+export const WORLD_W = 72;
+export const WORLD_H = 48;
 
 export enum Tile {
   Grass = 0,

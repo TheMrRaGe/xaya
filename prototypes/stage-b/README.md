@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (167 of them across 4 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (185 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -238,11 +238,42 @@ plan committed at the repo root's `doc/world/`.
 - **The server is the only thing that decides what is true.** `server.mjs`
   owns the sim and runs it at 10 Hz; a client sends which keys are down and
   draws whatever it is told, and runs no sim of its own. Whole state goes
-  out every tick — at 24×16 tiles and six beasts that is ~2.5 KB of JSON,
-  so a client that joins late, lags or reconnects is correct on the next
-  tick with no reconciliation code at all. That split is DESIGN §6.8's
-  point: swap this authority for a chain and neither the renderer nor
+  out every tick, so a client that joins late, lags or reconnects is correct
+  on the next tick with no reconciliation code at all. That split is DESIGN
+  §6.8's point: swap this authority for a chain and neither the renderer nor
   `src/sim/` notices.
+- **The Verge is nine times its original size, and a camera now follows
+  you through it.** 72x48 tiles instead of 24x16 — three screens by three,
+  where a "screen" is the 24x16-tile window (`VIEW_W`/`VIEW_H` in
+  render.ts) the camera actually shows. The canvas itself never grows: it
+  is sized to the camera's window, not the map, so the page's layout is
+  done changing regardless of how much bigger the Verge gets from here.
+
+  This is what makes fog of war real rather than cosmetic: **the server
+  now sends every soul a personally fogged snapshot** (net/snapshot.ts) —
+  another player, the Lieutenant, and every creature are cut out of *your*
+  copy of the world once they are more than `VISIBILITY_RADIUS` (16 tiles,
+  comfortably past the camera's far edge) from your own soul. A soul across
+  the map cannot be found by opening the browser's network tab any more
+  than by looking at the screen, because the data was never sent. Terrain
+  and fires stay global — nothing here hides *where things are built*, only
+  *who is currently standing where* — and so does `noise`/the crows'
+  position, on purpose: the noise thesis (§1) is about being *heard*, which
+  travels differently than being *seen*, and a single shared flock has no
+  notion of "visible to whom" to filter against in the first place.
+
+  Bandwidth grew with the map (tiles are ~9x the JSON, ~225 KB/s per player
+  now instead of ~25 KB/s) but the creature/player payload actually shrank
+  for a typical viewer, since most of a much bigger Verge is now nobody's
+  concern. A small terrain-only minimap sits in the corner of the screen so
+  a soul can still tell north from south — it never marks a creature or the
+  Lieutenant, because that would put the very thing fog just hid back on
+  screen through a different door.
+
+  The one thing this does *not* pretend to answer: whether one Lieutenant
+  is still a credible threat patrolling nine times the ground alone. He
+  isn't reinforced here — see the open question in
+  `doc/world/CONTENT.md`'s gap list.
 - **The Verge holds more than one soul.** The tick takes one `Input` per
   player and returns every death that happened in it — the same shape a
   server or a chain would hand it, so nothing above `src/sim/` needs to know
@@ -333,21 +364,26 @@ The whole sim, worst case — moving, gathering and striking every single
 tick with the full creature roster alive — measured on this machine:
 
 ```
-5.05 µs/tick  ≈  0.005% of one core at 10 Hz
+30.99 µs/tick  ≈  0.03% of one core at 10 Hz
 ```
 
-That is the budget to protect. Everything in `src/sim/` is integer math on
-a 24×16 grid with no allocation in the hot path, which is why it runs on
-anything. If a feature can't be done in that shape, it's a feature for a
-tier that isn't the tick.
+That is the budget to protect. Everything in `src/sim/` is integer math
+with no allocation in the hot path, which is why it runs on anything. If a
+feature can't be done in that shape, it's a feature for a tier that isn't
+the tick. (Rendering is a separate budget now that the map has outgrown the
+screen — see the camera above — but drawing is O(the 24x16 viewport), not
+O(the map), so it did not get more expensive when the Verge did.)
 
-It was 2.55 µs when the roster was six animals and there were nine verbs.
-Twelve animals and thirteen verbs doubled it, which is the honest and
-boring answer: **the cost is linear in creatures**, because every one of
-them is stepped every tick. That is fine at twelve and it is fine at fifty.
-It is *not* fine at the point someone adds a population model, which is
-exactly why §44 cut one — the roster is fixed and respawns on a timer, and
-a tick that costs 40ms is what happens if that ever stops being true.
+It was 2.55 µs at six animals and nine verbs, 5.05 µs at twelve animals and
+thirteen verbs, and 30.99 µs now that the Verge is nine times bigger and the
+roster scaled with it to 108. The honest and boring answer is unchanged:
+**the cost is linear in creatures**, because every one of them is stepped
+every tick, and it grew a little less than 9x only because some per-tick
+work (movement, needs, verbs) is bound to player count, not creature count.
+That is fine at 108 and it would be fine at ten times that. It is *not*
+fine at the point someone adds a population model, which is exactly why
+§44 cut one — the roster is fixed and respawns on a timer, and a tick that
+costs milliseconds is what happens if that ever stops being true.
 
 ## What to actually test
 
@@ -391,9 +427,11 @@ temporarily steeper skill effects.
 **Don't tune the attention numbers here.** Every constant governing how fast
 the Grey King's forces notice you — detection radius, noise decay,
 `KILL_REST_TICKS`, `RESPAWN_GRACE_TICKS`, `SPAWN_CLEAR_TILES`, the wolves'
-own `WOLF_DETECT_BASE` and `WOLF_ANGER_TICKS` — is squeezed
-into a 24×16 zone where a soul crosses the whole world in eight seconds. The
-real Realms are much larger and drawing real attention is meant to take far
+own `WOLF_DETECT_BASE` and `WOLF_ANGER_TICKS` — is squeezed into a Verge a
+soul still crosses corner to corner in well under a minute (24 seconds, at
+72 tiles across and 3 tiles/sec — up from eight seconds when the map was a
+third the size, still nothing like a real Realm's scale). The real Realms
+are much larger still, and drawing real attention is meant to take far
 longer: hours of visible activity, not ninety seconds of chopping. These
 values exist so a playtest fits in a coffee break, and every one of them is
 throwaway. Judge the *shape* of the mechanic — noise accrues, birds show it,
