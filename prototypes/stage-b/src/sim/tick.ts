@@ -12,7 +12,7 @@
  */
 import { TILE, clamp, distSq } from "./fixed.js";
 import { Rng } from "./rng.js";
-import { World, WORLD_W, WORLD_H, Tile } from "./world.js";
+import { World, WORLD_W, WORLD_H, Tile, VILLAGE_X, VILLAGE_Y } from "./world.js";
 import {
   Player,
   Pack,
@@ -338,6 +338,24 @@ const LOOT_TOOL_KEYS: ReadonlyArray<keyof Pack> = [
 ];
 
 /**
+ * The Bounty Board — a fixed point near the village rather than a new tile
+ * or a player-held Sheriff role, the same "smallest thing that answers the
+ * ask" call the rest of this file makes. No target picker either: pressing
+ * U simply funds a price on whichever other known soul the road already
+ * points at hardest, in whichever direction the poster's own standing
+ * looks from — a lawful soul funds it from their own crowns and it lands
+ * on the worst soul around; a notorious one spends from the dead stockpile
+ * (dropLoot above) and it lands on the best. No escrow beyond the post
+ * itself and no refund if the target dies some other way first
+ * (resolveBounty) — the same laissez-faire the rest of §12's economy
+ * already runs on.
+ */
+export const BOARD_X = (VILLAGE_X + 4) * TILE; // clear of the houses' own wander bubble
+export const BOARD_Y = VILLAGE_Y * TILE;
+const BOARD_RADIUS = TILE * 1.5; // same reach as trading or talking
+const BOUNTY_POST_AMOUNT = 5; // crowns per press — several presses to build a real price, same shape every other verb here has
+
+/**
  * Commons standing (doc/world/PLAN.md §3): "kindness needs teeth." Of the
  * acts §3 names — stabilising a stranger, sheltering someone, feeding the
  * starving, teaching for free, paying another's mark, purifying land you do
@@ -420,6 +438,8 @@ export interface Input {
   teach: boolean;
   makeBow: boolean; // R — wood, cordage and pitch, no fire needed
   makeArrow: boolean; // N — wood and glue, needs a knife in hand, no fire needed
+  /** U — post crowns to the Bounty Board, at the board itself. See doPostBounty for who it actually funds and who it lands on. */
+  postBounty: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -450,6 +470,7 @@ export const NO_INPUT: Input = {
   teach: false,
   makeBow: false,
   makeArrow: false,
+  postBounty: false,
 };
 
 export interface DeathEvent {
@@ -494,13 +515,26 @@ export interface Incident {
  * Only a soul-on-soul kill drops one (§11.3): starvation, the cold, a boar,
  * a wolf or the Lieutenant take a life and nothing of what it carried —
  * only another soul's blade leaves something for the ground to keep. Crowns
- * never land here at all; see `applyCrownCut` for where those actually go.
+ * never land here at all; see `dropLoot` for where those actually go.
  */
 export interface LootPile {
   x: number;
   y: number;
   pack: Pack;
   diedAtTick: number;
+}
+
+/**
+ * A price on a specific soul's head, posted at the Bounty Board (doPostBounty)
+ * and paid out whole to whoever actually lands the kill (resolveBounty) —
+ * or, if something else takes that soul first, forfeited to the dead
+ * stockpile rather than refunded to whoever posted it (§28's "five ways to
+ * answer a mark" names none of this; it's a narrower, player-run cousin of
+ * that system, not an implementation of it).
+ */
+export interface Bounty {
+  targetId: number;
+  amount: number;
 }
 
 export interface SimState {
@@ -513,6 +547,15 @@ export interface SimState {
   trades: TradeRecord[];
   incidents: Incident[];
   lootPiles: LootPile[];
+  bounties: Bounty[];
+  /**
+   * PLAN's own "his coin funds the bandits who do it" (top-level decisions
+   * table), made literal: the King's cut of every kill's crowns lands here
+   * rather than vanishing, and it's the only funding source a notorious
+   * soul has at the Bounty Board — an outlaw spends the dead's money, a
+   * lawful soul spends their own.
+   */
+  deadStockpile: number;
   noise: number;
   /** What the Storyteller has done to the Verge, and for how long (§3.5). */
   grief: number; // recent deaths buy the survivors quiet
@@ -525,6 +568,8 @@ export interface SimState {
   crowY: number;
   rng: Rng;
   lastDamageSource: DeathCause[]; // per player id
+  /** Who last struck them, per player id, or -1 — only meaningful alongside a "killed by another soul" cause; see dropLoot/resolveBounty in kill(). */
+  lastKilledBy: number[];
   log: string[];
   flags: {
     firstGather: boolean;
@@ -552,6 +597,7 @@ export interface SimState {
     firstNpcKill: boolean;
     firstTeaching: boolean;
     firstBow: boolean;
+    firstBounty: boolean;
   };
 }
 
@@ -570,6 +616,8 @@ export function newSim(seed: number, players: Player[]): SimState {
     trades: [],
     incidents: [],
     lootPiles: [],
+    bounties: [],
+    deadStockpile: 0,
     noise: 0,
     grief: 0,
     coldUntil: 0,
@@ -581,6 +629,7 @@ export function newSim(seed: number, players: Player[]): SimState {
     crowY: first ? first.y : 0,
     rng,
     lastDamageSource: players.map(() => "starved" as DeathCause),
+    lastKilledBy: players.map(() => -1),
     log: [],
     flags: {
       firstGather: false,
@@ -608,6 +657,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstNpcKill: false,
       firstTeaching: false,
       firstBow: false,
+      firstBounty: false,
     },
   };
 }
@@ -642,6 +692,7 @@ export function addSoul(state: SimState, lineage: number): Player {
   const player = newPlayer(lineage, state.players.length, spot.x, spot.y, state.tick + RESPAWN_GRACE_TICKS);
   state.players.push(player);
   state.lastDamageSource.push("starved");
+  state.lastKilledBy.push(-1);
   return player;
 }
 
@@ -651,6 +702,7 @@ export function replaceSoul(state: SimState, id: number, lineage: number): Playe
   const player = newPlayer(lineage, id, spot.x, spot.y, state.tick + RESPAWN_GRACE_TICKS);
   state.players[id] = player;
   state.lastDamageSource[id] = "starved";
+  state.lastKilledBy[id] = -1;
   if (state.lieutenant.target === id) {
     state.lieutenant.state = "patrol";
     state.lieutenant.target = -1;
@@ -810,6 +862,14 @@ function kill(state: SimState, player: Player): DeathEvent {
     lieutenant.waypointX = (WORLD_W - 1) * TILE - lieutenant.x;
     lieutenant.waypointY = (WORLD_H - 1) * TILE - lieutenant.y;
   }
+
+  // Plunder and any bounty both hinge on whether another soul actually did
+  // this — starvation, the cold, a boar, a wolf and the Lieutenant himself
+  // leave nothing behind and collect nothing either.
+  const killer = cause === "killed by another soul" ? state.players[state.lastKilledBy[player.id] ?? -1] : undefined;
+  if (killer) dropLoot(state, killer, player);
+  resolveBounty(state, player.id, killer ?? null);
+
   return {
     id: player.id,
     lineage: player.lineage,
@@ -944,6 +1004,7 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     if (input.makeGloves) doMakeGloves(state, player);
     if (input.makeBow) doMakeBow(state, player);
     if (input.makeArrow) doMakeArrow(state, player);
+    if (input.postBounty) doPostBounty(state, player);
   }
 
   // A death still has to land even mid-conversation — starvation and the
@@ -1182,6 +1243,7 @@ function strikeNearest(state: SimState, player: Player, radius: number, damage: 
   if (soulTarget && soulSq <= creatureSq) {
     soulTarget.health = clamp(soulTarget.health - damage, 0, HEALTH_MAX);
     state.lastDamageSource[soulTarget.id] = "killed by another soul";
+    state.lastKilledBy[soulTarget.id] = player.id; // read by kill() below, for loot and any bounty
     const killed = soulTarget.health <= 0;
     learn(state, player, "hunting", killed ? XP.kill : XP.strike);
     spend();
@@ -1193,7 +1255,6 @@ function strikeNearest(state: SimState, player: Player, radius: number, damage: 
         say(state, "The Grey King: “There. Now you understand what I have always wanted from this valley.”");
       }
       applyOutlawry(state, player, STANDING_KILL_PENALTY);
-      dropLoot(state, player, soulTarget);
     }
     return true;
   }
@@ -1226,6 +1287,10 @@ function dropLoot(state: SimState, killer: Player, victim: Player): void {
   if (crowns > 0) {
     const cut = Math.trunc((crowns * KILLER_CROWN_CUT_PCT) / 100);
     killer.pack.crowns += cut;
+    // Not vanished — banked. The one funding source a notorious soul has
+    // at the Bounty Board (doPostBounty), same coin the top-level "his coin
+    // funds the bandits who do it" decision already promised.
+    state.deadStockpile += crowns - cut;
     victim.pack.crowns = 0;
     say(
       state,
@@ -1238,6 +1303,69 @@ function dropLoot(state: SimState, killer: Player, victim: Player): void {
   const dropped: Pack = { ...victim.pack };
   state.lootPiles.push({ x: victim.x, y: victim.y, pack: dropped, diedAtTick: state.tick });
   say(state, `Soul #${victim.lineage}'s pack spills across the ground. Someone will take it, or the valley will.`);
+}
+
+/**
+ * Pay a bounty on a dead soul to whoever actually killed them, or forfeit
+ * it to the dead stockpile if nothing did (starvation, the cold, a boar, a
+ * wolf, the Lieutenant himself) — nobody swung for it, so nobody collects.
+ */
+function resolveBounty(state: SimState, targetId: number, killer: Player | null): void {
+  const idx = state.bounties.findIndex((b) => b.targetId === targetId);
+  if (idx < 0) return;
+  const bounty = state.bounties[idx]!;
+  state.bounties.splice(idx, 1);
+  if (killer) {
+    killer.pack.crowns += bounty.amount;
+    say(state, `Soul #${killer.lineage} collects a ${bounty.amount}-crown bounty off the body.`);
+  } else {
+    state.deadStockpile += bounty.amount;
+    say(state, `A bounty goes unclaimed — the crowns fall back into the stockpile.`);
+  }
+}
+
+/**
+ * U — post crowns to the Bounty Board. No picker: a lawful soul (standing
+ * above NOTORIOUS_STANDING) spends their own crowns and always funds the
+ * worst other soul currently known; a notorious one spends the dead
+ * stockpile instead and always funds the best — the two poles standing
+ * already gives us, rather than a name the poster has to somehow choose.
+ */
+function doPostBounty(state: SimState, player: Player): void {
+  if (distSq(player.x, player.y, BOARD_X, BOARD_Y) > BOARD_RADIUS * BOARD_RADIUS) return;
+
+  const outlaw = player.standing <= NOTORIOUS_STANDING;
+  let target: Player | null = null;
+  for (const other of state.players) {
+    if (other.id === player.id || !other.alive) continue;
+    if (!target || (outlaw ? other.standing > target.standing : other.standing < target.standing)) target = other;
+  }
+  if (!target) return;
+
+  if (outlaw) {
+    if (state.deadStockpile < BOUNTY_POST_AMOUNT) return;
+    state.deadStockpile -= BOUNTY_POST_AMOUNT;
+  } else {
+    if (player.pack.crowns < BOUNTY_POST_AMOUNT) return;
+    player.pack.crowns -= BOUNTY_POST_AMOUNT;
+  }
+
+  let bounty = state.bounties.find((b) => b.targetId === target!.id);
+  if (!bounty) {
+    bounty = { targetId: target.id, amount: 0 };
+    state.bounties.push(bounty);
+  }
+  bounty.amount += BOUNTY_POST_AMOUNT;
+  say(
+    state,
+    outlaw
+      ? `Soul #${player.lineage} spends the dead's own coin — ${bounty.amount} crowns now on Soul #${target.lineage}'s head.`
+      : `Soul #${player.lineage} posts ${BOUNTY_POST_AMOUNT} crowns on Soul #${target.lineage}'s head — ${bounty.amount} now, on the board.`,
+  );
+  if (!state.flags.firstBounty) {
+    state.flags.firstBounty = true;
+    say(state, "The Grey King: “A price on each other's heads. I used to be the only one who could set one. How democratic.”");
+  }
 }
 
 /** Whatever a melee strike spends: the same priority the damage itself follows. */

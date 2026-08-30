@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (317 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (329 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -112,6 +112,7 @@ is often registered as `text/plain`, and Chrome refuses a
 | **K** | teach whoever's nearest a little of your best skill — free, and it never makes them your equal |
 | **R** | string a bow (3 wood, 2 cord, 1 pitch) — reach, not extra bite |
 | **N** | fletch two arrows (1 wood, 1 glue) — needs a knife in hand |
+| **U** | at the Bounty Board: post 5 crowns on the worst soul you know of (your own crowns), or, if you're notorious, on the best one (the dead stockpile's crowns instead) |
 | **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
 
 ## HUD & UI redesign
@@ -531,11 +532,12 @@ plan committed at the repo root's `doc/world/`.
   spills as a lootable pile where they fell (**E** loots it first, ahead
   of a carcass, if you're standing over one), except crowns: those are cut
   on the spot rather than dropped, a 20% share straight into the killer's
-  own pack and the rest simply gone — his due, the same "he takes a cut
-  before the rest reaches the Hoard" shape §30A already gives his
-  officers. A pile is fogged like a creature or a villager (personal, not
-  a landmark) and rots after about three unclaimed minutes, the same way
-  ash takes a dead fire back. Looting sums whatever actually stacks (wood,
+  own pack and the rest banked rather than lost — his due, the same "he
+  takes a cut before the rest reaches the Hoard" shape §30A already gives
+  his officers (see the next bullet for where that remainder actually
+  goes). A pile is fogged like a creature or a villager (personal, not a
+  landmark) and rots after about three unclaimed minutes, the same way ash
+  takes a dead fire back. Looting sums whatever actually stacks (wood,
   arrows, cordage, the lot) and takes whichever of a wear-counter tool is
   better rather than adding two "one bow"s into a number that means
   nothing — you don't end up with two swords, you end up with the sharper
@@ -543,6 +545,29 @@ plan committed at the repo root's `doc/world/`.
   one, and any bounty payout for a mark, remain entirely unbuilt) — it
   answers "what happens to the body," not "does the outlawry economy
   work."
+- **The Bounty Board, and a first answer for where the King's cut actually
+  goes.** The top-level "Decisions locked" table's own PvP line — "his coin
+  funds the bandits who do it" — used to be aspirational; the crowns his
+  cut takes off every kill now land in a real `deadStockpile`, and the
+  board (**U**, a fixed landmark near the village) is the one thing that
+  spends it. No Sheriff NPC and no player-held role: a board is the
+  smaller of the two things asked for, and everything a Sheriff would do
+  by title, the board already does by function. It also has no target
+  picker, on purpose — every other verb here resolves "who" by nearest;
+  this one resolves it by *worst*, which needed no new input at all,
+  because standing already sorts everyone. A lawful soul (standing above
+  `NOTORIOUS_STANDING`) spends their own crowns and it always lands on the
+  worst other soul currently known; a notorious one spends the dead
+  stockpile instead and it always lands on the *best* one — the two poles
+  standing already gives, aimed at each other. Repeat presses stack onto
+  the same bounty rather than starting a second one, so "goes higher with
+  each infraction" is just what happens when more than one soul agrees
+  someone's earned it. Collected in full by whoever actually lands the
+  kill (on top of whatever fell out of the pack itself), or forfeited back
+  to the stockpile if the target dies some other way first — no escrow
+  ledger beyond the post itself, and no refund to whoever posted it,
+  matching the "we build the tools for verification and record, not
+  protection from bad judgement" line §12 already commits to.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a

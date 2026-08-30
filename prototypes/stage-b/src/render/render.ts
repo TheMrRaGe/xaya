@@ -18,7 +18,8 @@
  */
 import { TILE, clamp } from "../sim/fixed.js";
 import { World, WORLD_W, WORLD_H, Tile, isSolid } from "../sim/world.js";
-import { isNight, CROW_THRESHOLD, NOTORIOUS_STANDING, DeathEvent, LootPile } from "../sim/tick.js";
+import { isNight, CROW_THRESHOLD, NOTORIOUS_STANDING, DeathEvent, LootPile, BOARD_X, BOARD_Y } from "../sim/tick.js";
+import { SnapshotBounty } from "../net/snapshot.js";
 import { Player, Pack, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature, STATS, CreatureKind } from "../sim/creatures.js";
 import { Npc } from "../sim/npc.js";
@@ -66,6 +67,8 @@ export interface ViewState {
   creatures: Creature[];
   npcs: Npc[];
   lootPiles: LootPile[];
+  bounties: SnapshotBounty[];
+  deadStockpile: number;
   noise: number;
   crowX: number;
   crowY: number;
@@ -365,7 +368,19 @@ function drawLootPile(ctx: CanvasRenderingContext2D, pile: LootPile, camera: Cam
   ctx.stroke();
 }
 
+/** A fixed landmark, not a tile — unfogged like a fire, since its location is public the moment anyone posts to it. */
+function drawBountyBoard(ctx: CanvasRenderingContext2D, camera: Camera): void {
+  const x = toPx(BOARD_X, camera.x) + TILE_PX / 2 - 8;
+  const y = toPx(BOARD_Y, camera.y) + TILE_PX / 2 - 10;
+  ctx.fillStyle = "#6a5638";
+  ctx.fillRect(x, y, 16, 20);
+  ctx.strokeStyle = "#e8d8a0";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 2, y + 2, 12, 16);
+}
+
 export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, localId: number, camera: Camera): void {
+  drawBountyBoard(ctx, camera);
   for (const pile of state.lootPiles) drawLootPile(ctx, pile, camera);
   for (const c of state.creatures) drawCreature(ctx, c, camera);
   for (const n of state.npcs) drawNpc(ctx, n, camera);
@@ -572,21 +587,31 @@ function drawStatusChip(ctx: CanvasRenderingContext2D, state: ViewState, p: Play
   ctx.fillStyle = "#cfc7b0";
   ctx.fillText(text, VITALS_X + 10 + dotR * 2 + 6, y + chipH / 2 + 3.5);
 
+  let bx = VITALS_X + chipW + 8;
   const badge = standingBadge(p);
-  if (badge) {
-    const bx = VITALS_X + chipW + 8;
-    ctx.font = "10px 'IBM Plex Mono', monospace";
-    const bw = ctx.measureText(badge.label).width + 16;
-    roundRectPath(ctx, bx, y, bw, chipH, chipH / 2);
-    ctx.fillStyle = `${badge.color}2e`;
-    ctx.fill();
-    ctx.strokeStyle = `${badge.color}80`;
-    ctx.stroke();
-    ctx.fillStyle = badge.color;
-    ctx.textAlign = "center";
-    ctx.fillText(badge.label, bx + bw / 2, y + chipH / 2 + 3.5);
-    ctx.textAlign = "left";
-  }
+  if (badge) bx = drawPillBadge(ctx, bx, y, chipH, badge.label, badge.color);
+
+  // A bounty is public the moment it's posted (net/snapshot.ts) — this is
+  // the one place a soul finds out about their own, same corner the
+  // standing badge already lives in.
+  const bounty = state.bounties.find((b) => b.targetId === p.id);
+  if (bounty) drawPillBadge(ctx, bx, y, chipH, `wanted: ${bounty.amount}`, "#e04a2a");
+}
+
+/** One rounded pill, filled/stroked from `color`, returning the x just past it — the standing and bounty badges are two of these in a row. */
+function drawPillBadge(ctx: CanvasRenderingContext2D, x: number, y: number, h: number, label: string, color: string): number {
+  ctx.font = "10px 'IBM Plex Mono', monospace";
+  const w = ctx.measureText(label).width + 16;
+  roundRectPath(ctx, x, y, w, h, h / 2);
+  ctx.fillStyle = `${color}2e`;
+  ctx.fill();
+  ctx.strokeStyle = `${color}80`;
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.fillText(label, x + w / 2, y + h / 2 + 3.5);
+  ctx.textAlign = "left";
+  return x + w + 8;
 }
 
 /**
@@ -803,6 +828,9 @@ function usableActions(state: ViewState, p: Player): Array<{ key: string; label:
   if (p.atFire) actions.push({ key: "F", label: "Feed fire" });
   else if (p.pack.wood >= 5) actions.push({ key: "F", label: "Build fire" });
   if (p.pack.cookedMeat > 0 || p.pack.fish > 0 || p.pack.rawMeat > 0) actions.push({ key: "4", label: "Eat" });
+  if (actions.length < 2 && (BOARD_X - p.x) ** 2 + (BOARD_Y - p.y) ** 2 <= NEARBY_UNITS * NEARBY_UNITS) {
+    actions.push({ key: "U", label: "Post bounty" });
+  }
   const nearTalkable = state.npcs.some((n) => n.alive && (n.x - p.x) ** 2 + (n.y - p.y) ** 2 <= NEARBY_UNITS * NEARBY_UNITS);
   if (actions.length < 2 && nearTalkable) actions.push({ key: "H", label: "Talk" });
   if (actions.length < 2) {

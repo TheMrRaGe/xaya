@@ -483,8 +483,10 @@ maintenance is the war.
   `[built, springs once and is spent]`, **loot pile** `[built, PLAN §8.5's
   "the plunder is on the floor" — spilled by a soul-on-soul kill, fogged
   like a creature rather than global like a fire, gone after ~3 unclaimed
-  minutes]`; kiln, drying rack, tannery, quern, cache, shelter, well,
-  granary, wall `[named]`.
+  minutes]`, **Bounty Board** `[built, narrow, §12 — a fixed landmark near
+  the village, unfogged like a fire; the smaller of "a Sheriff job or a
+  bounty board" asked for]`; kiln, drying rack, tannery, quern, cache,
+  shelter, well, granary, wall `[named]`.
   Shelter is load-bearing: **logging off camped is safe, the open field is not**
   (the plan's own "Decisions locked" table, not a numbered section — corrected
   from this document's earlier `[plan §25]` citation). No `shelter` object
@@ -1163,9 +1165,38 @@ first one. No currency, no escrow — those are for strangers. **§30/§30A's
 "where the plunder goes" now has a first, narrow answer for a player kill,
 too** (§8.7, §11.3): crowns off a killed soul split exactly the way an
 officer's take does, a cut to whoever did the killing and the remainder
-gone rather than banked anywhere a player could later spend it — Stage B
-has no Hoard for it to actually reach, so "gone" is the honest word rather
-than "banked."
+banked in a `deadStockpile` rather than spent by any player directly —
+Stage B has no Hoard for it to actually reach, so a stockpile is the
+honest middle step, and it is not inert money: it is the one funding
+source the Bounty Board gives a notorious soul, below.
+
+**The Bounty Board** `[built, narrow]` — a first, player-run answer to
+"where the plunder goes" from the *other* direction, and to the top-level
+decisions table's own PvP line: **"his coin funds the bandits who do it."**
+A fixed landmark near the village (key **U**), not a Sheriff NPC and not a
+player-held role — the smaller of the two things named when this was
+asked for, since everything a Sheriff would do by title, a board already
+does by function. It has no target picker: every other verb in Stage B
+resolves "who" by nearest; this one resolves it by *worst*, because
+standing (§2A) already sorts every soul without needing new input. A
+lawful soul (standing above `NOTORIOUS_STANDING`) spends their own crowns
+and always funds a price on the worst other soul currently known; a
+notorious one spends the dead stockpile instead and always funds a price
+on the *best* one — the two poles standing already gives, aimed at each
+other rather than chosen by hand. Repeat posts stack onto the same
+bounty, so "the price goes up with each infraction" is an emergent
+property of more than one soul agreeing someone's earned it, not a
+formula. Collected whole by whoever lands the kill, on top of whatever
+plunder falls out of the pack itself; forfeited back to the stockpile,
+uncollected, if the target dies to anything else first. No escrow beyond
+the post itself and no refund to the poster — the same "we build the
+tools for verification and record; we do not build protection from bad
+judgement" line this section already commits to, just applied to a bounty
+instead of a scam. This is **not** §28's mark-answering machinery: no
+"contest," "void," "buy" or "inform," and nothing here interacts with
+`marked` or the Overlord's own choice of who the Lieutenant hunts — it is
+a second, player-run economy sitting next to that one, not an
+implementation of it.
 
 ---
 

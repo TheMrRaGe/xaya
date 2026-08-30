@@ -6,7 +6,7 @@
 //
 // Every check here exists because something was once wrong. Add one when
 // you fix something; that is cheaper than remembering.
-import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT } from "../dist/sim/tick.js";
+import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT, NOTORIOUS_STANDING, BOARD_X, BOARD_Y } from "../dist/sim/tick.js";
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile, WORLD_W, WORLD_H } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
@@ -1720,7 +1720,8 @@ function check(name, cond, detail = "") {
   check("a killed soul leaves exactly one loot pile, at their own spot", s.lootPiles.length === 1, `piles=${s.lootPiles.length}`);
   const pile = s.lootPiles[0];
   check("the pile carries what they had, minus crowns", pile.pack.wood === 7 && pile.pack.crowns === 0, JSON.stringify(pile.pack));
-  check("the killer takes a 20% cut of the crowns, and the rest is simply gone", killer.pack.crowns === 2, `crowns=${killer.pack.crowns}`);
+  check("the killer takes a 20% cut of the crowns", killer.pack.crowns === 2, `crowns=${killer.pack.crowns}`);
+  check("and the rest lands in the dead stockpile rather than vanishing", s.deadStockpile === 8, `stockpile=${s.deadStockpile}`);
 
   // A death that isn't a killing — starvation, the cold, a beast — leaves nothing to loot.
   const starved = fresh(1);
@@ -1749,6 +1750,82 @@ function check(name, cond, detail = "") {
   rot.tick = 1800 + 5; // past LOOT_ROT_TICKS
   stepTick(rot, [I()]);
   check("an unclaimed pile rots away after LOOT_ROT_TICKS", rot.lootPiles.length === 0, `piles=${rot.lootPiles.length}`);
+}
+
+// --- 56. the Bounty Board: lawful souls spend their own crowns, notorious ones spend the dead stockpile, and either can be collected or forfeited ---
+{
+  // A lawful soul funds a bounty on the worst other soul known, from their own pocket.
+  const s = fresh(2);
+  const [poster, worst] = s.players;
+  poster.x = BOARD_X;
+  poster.y = BOARD_Y;
+  poster.pack.crowns = 10;
+  worst.standing = -40;
+  stepTick(s, [I({ postBounty: true }), I()]);
+  check("posting spends 5 crowns from the poster's own pack", poster.pack.crowns === 5, `crowns=${poster.pack.crowns}`);
+  check("and lands the bounty on the worst other soul known", s.bounties.length === 1 && s.bounties[0].targetId === worst.id && s.bounties[0].amount === 5, JSON.stringify(s.bounties));
+
+  // Posting again stacks onto the same bounty rather than starting a second one.
+  stepTick(s, [I({ postBounty: true }), I()]);
+  check("a second post raises the same bounty rather than making a new one", s.bounties.length === 1 && s.bounties[0].amount === 10, JSON.stringify(s.bounties));
+
+  // Too few crowns, or too far from the board, and nothing happens.
+  const poor = fresh(2);
+  poor.players[0].x = BOARD_X;
+  poor.players[0].y = BOARD_Y;
+  poor.players[0].pack.crowns = 2;
+  stepTick(poor, [I({ postBounty: true }), I()]);
+  check("posting with too few crowns does nothing", poor.bounties.length === 0, `bounties=${poor.bounties.length}`);
+
+  const farAway = fresh(2);
+  farAway.players[0].pack.crowns = 10; // wherever fresh() spawned them, nowhere near the board
+  stepTick(farAway, [I({ postBounty: true }), I()]);
+  check("posting from off the board does nothing", farAway.bounties.length === 0, `bounties=${farAway.bounties.length}`);
+
+  // A notorious soul spends the dead stockpile instead, and it lands on the best soul known — the opposite pole.
+  const outlaw = fresh(2);
+  const [criminal, best] = outlaw.players;
+  criminal.x = BOARD_X;
+  criminal.y = BOARD_Y;
+  criminal.standing = NOTORIOUS_STANDING;
+  criminal.pack.crowns = 10; // untouched — this post spends the stockpile, not this
+  best.standing = 50;
+  outlaw.deadStockpile = 10;
+  stepTick(outlaw, [I({ postBounty: true }), I()]);
+  check(
+    "a notorious poster spends the dead stockpile, not their own crowns",
+    outlaw.deadStockpile === 5 && criminal.pack.crowns === 10,
+    `stockpile=${outlaw.deadStockpile} crowns=${criminal.pack.crowns}`,
+  );
+  check("and the bounty lands on the best other soul known", outlaw.bounties.length === 1 && outlaw.bounties[0].targetId === best.id, JSON.stringify(outlaw.bounties));
+
+  const brokeStockpile = fresh(2);
+  brokeStockpile.players[0].x = BOARD_X;
+  brokeStockpile.players[0].y = BOARD_Y;
+  brokeStockpile.players[0].standing = NOTORIOUS_STANDING;
+  brokeStockpile.deadStockpile = 2;
+  stepTick(brokeStockpile, [I({ postBounty: true }), I()]);
+  check("an empty-enough stockpile funds nothing", brokeStockpile.bounties.length === 0, `bounties=${brokeStockpile.bounties.length}`);
+
+  // Collecting one: killing the bountied soul pays the bounty straight to the killer.
+  const collect = fresh(2);
+  const [hunter, wanted] = collect.players;
+  collect.bounties.push({ targetId: wanted.id, amount: 30 });
+  hunter.pack.sword = 10;
+  wanted.x = hunter.x;
+  wanted.y = hunter.y;
+  wanted.health = 1;
+  stepTick(collect, [I({ strike: true }), I()]);
+  check("killing a bountied soul pays the bounty to the killer", hunter.pack.crowns === 30, `crowns=${hunter.pack.crowns}`);
+  check("and clears the bounty", collect.bounties.length === 0, `bounties=${collect.bounties.length}`);
+
+  // Forfeiting one: dying to anything but another soul loses the bounty to the stockpile, uncollected.
+  const forfeit = fresh(1);
+  forfeit.bounties.push({ targetId: forfeit.players[0].id, amount: 30 });
+  forfeit.players[0].needs.satiety = 0;
+  forfeit.players[0].health = 1;
+  stepTick(forfeit, [I()]);
+  check("a bounty on a soul that starves is forfeited to the stockpile", forfeit.deadStockpile === 30 && forfeit.bounties.length === 0, `stockpile=${forfeit.deadStockpile} bounties=${forfeit.bounties.length}`);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

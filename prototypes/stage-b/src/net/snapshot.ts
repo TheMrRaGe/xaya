@@ -29,6 +29,13 @@ import { Player, Lieutenant } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
 import { Npc } from "../sim/npc.js";
 
+/** A Bounty Board posting, with the target's lineage folded in so it reads without needing that soul to also be in view — a wanted poster is public knowledge, not a body to fog. */
+export interface SnapshotBounty {
+  targetId: number;
+  targetLineage: number;
+  amount: number;
+}
+
 /**
  * Comfortably past the camera's far edge (render.ts's viewport is 24x16
  * tiles, so a 16-tile radius already covers it corner to corner) so nothing
@@ -49,6 +56,9 @@ export interface Snapshot {
   npcs: Npc[];
   /** Fogged too — plunder is personal until you're standing near enough to see it, not a landmark like a fire. */
   lootPiles: LootPile[];
+  /** Global, unlike a body — a posted bounty is a wanted poster, public the moment it's nailed up, not something you have to be standing near to know about. */
+  bounties: SnapshotBounty[];
+  deadStockpile: number;
   noise: number;
   noiseX: number;
   noiseY: number;
@@ -75,6 +85,8 @@ export function snapshot(state: SimState, viewerId: number): Snapshot {
     creatures: state.creatures.filter((c) => visible(c.x, c.y)),
     npcs: state.npcs.filter((n) => visible(n.x, n.y)),
     lootPiles: state.lootPiles.filter((p) => visible(p.x, p.y)),
+    bounties: state.bounties.map((b) => ({ targetId: b.targetId, targetLineage: state.players[b.targetId]?.lineage ?? 0, amount: b.amount })),
+    deadStockpile: state.deadStockpile,
     noise: state.noise,
     noiseX: state.noiseX,
     noiseY: state.noiseY,
