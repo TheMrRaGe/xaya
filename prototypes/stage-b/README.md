@@ -98,13 +98,120 @@ is often registered as `text/plain`, and Chrome refuses a
 | **6** | bind an axe (2 stone, 1 wood) — two more logs a tree *and a third less noise*, for 25 chops |
 | **7** | cut cord (1 hide → 2 cord) — needs a knife in hand |
 | **8** | make a snare (2 cord, 1 wood); press again to set the one you're carrying |
-| **9** | smother wood into charcoal (3 wood → 1 charcoal at nothing, 2 at mastery, at a fire) |
-| **0** | smelt a bar (2 ore, 1 charcoal, +1 bar at mastery, at a fire) |
-| **B** | forge a sword (2 bar, 1 wood, 1 cord) — double the spear's base damage, for 30 hits, plus a smith's own skill |
+| **9** | smother wood into charcoal (3 wood → 1 charcoal at nothing, 2 at mastery, at a fire) — a little pitch comes off the same burn |
+| **0** | smelt: ore + charcoal first (+1 bar at mastery), copper alone with no charcoal second, an old crown last — all at a fire |
+| **B** | forge a sword (2 bar, 1 wood, 1 cord), or a weaker copper one (2 copper bar, 1 wood, 1 cord) when there's no iron bar to hand |
+| **P** | fire a pot from clay (3 clay, at a fire) — a hot meal eaten with one in hand goes further |
+| **O** | stitch boots (2 hide, 1 cord) — softens a marsh's speed penalty, worn down by the step through one |
+| **V** | stitch gloves (2 hide, 1 cord) — quieter on Rock, Ore and Copper, worn down by the dig |
 | **L** | knot a fishing line (2 cord, 1 wood) — no fire needed, for 25 casts |
 | **C** | cast at the water's edge with a line in hand — one attempt per press, like every other verb here |
-| **T** | cycle what you're offering (wood / stone / cord / raw meat / cooked meat / hide / ore / charcoal / bar / fish) |
+| **T** | cycle what you're offering |
 | **G** | give one of it to the nearest other soul |
+| **H** | talk to whoever's nearest (a villager, the Teacher); talk again to leave — while a conversation is open, 1-9 pick a reply instead of crafting |
+| **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
+
+## HUD & UI redesign
+
+The HUD used to be a full-width monospace text block stacked below the
+viewport, almost as tall as the map itself — four full-width bars, three
+lines of pack contents, a kit line, a skills line, eight lines of recipe
+text, and two permanent narration lines. It is now a set of compact
+overlays drawn on top of the viewport, and the canvas is just the
+viewport again: `VIEW_H * TILE_PX` (512px), not that plus ~290px of
+reserved HUD strip.
+
+**Always on screen**, all overlays rather than a block:
+
+- **Vitals**, top-left — satiety, hydration, warmth and health as an
+  icon-and-bar cluster instead of four full-width text bars. Each stat is
+  shape-distinct as well as colour-distinct (circle, diamond, square,
+  triangle) on purpose — the redesign's own note that "bars now carry an
+  icon shape too" is worth keeping deliberately, so the cluster still
+  reads under red/green colour-blindness. This is one shape further than
+  the mockup itself used (it repeated diamond for hydration and health);
+  giving health its own triangle finishes what the note was asking for.
+- **Status chip**, under the vitals — soul, day/night, "at fire," an
+  unseen timer, and now a **standing badge** instead of a bracketed clause
+  buried in a sentence ("[marked, standing -40]" reads easy to miss
+  mid-line; a coloured pill next to your name doesn't).
+- **Noise gauge**, top-centre — its own readout, because it's the stat the
+  whole game is about, not one bar among five. Past ~80% of
+  `CROW_THRESHOLD` the screen edge pulses red, faster and stronger the
+  louder you get — "you are about to be seen" as a feeling, which teaches
+  the core mechanic faster than a bar changing colour ever did.
+- **Minimap**, top-right — unchanged in what it draws (terrain and known
+  souls only; never a creature or the Lieutenant, which would undo
+  net/snapshot.ts's fogging), now also marking every lit fire. Fires are
+  already global, unfogged data — a soul's own camp was never a secret —
+  so this makes that fact readable on a map nine times the original size
+  instead of adding a new one. It isn't *your* fire specifically (nothing
+  in the sim tags a fire with who built it), so it's every fire, honestly.
+- **Resource tray**, bottom-left — wood/stone/hide as small chips, then a
+  hotbar row of whatever tools are actually held, each with a wear bar
+  instead of a bare "spear 8" to parse. The full pack (all materials, not
+  just three) lives on the reference panel's Pack page.
+- **Offer chip**, above the tray — what you're currently offering to
+  trade, which used to be buried in the controls text. A nearby soul (and
+  you) can now see it without reading a sentence.
+- **Action bar**, bottom-centre — one or two keycap hints for whatever is
+  *actually usable right now* (feed or build a fire, eat, talk), computed
+  from live state rather than a fixed list. It is not the full verb set;
+  it's the two things worth doing this second.
+- **Tab hint**, bottom-right — how to reach the reference panel, and which
+  page it's showing once open.
+- **Narration toasts**, bottom-centre above the action bar — the Grey
+  King's lines and death notices used to share two permanent HUD lines,
+  silently overwritten by whatever came next. They're now a small stack of
+  toasts, one per new line since the last snapshot, each fading on its own
+  4.2s-hold-plus-1.4s-fade schedule — a fast second event no longer erases
+  the first one before it's been read.
+
+**Tab** opens a reference panel and cycles its four pages — **Crafting**
+(every built recipe as a card: name, key, cost, effect, greyed out if the
+ingredients or a duplicate tool block it), **Pack & Skills** (the full
+material grid plus all eight skills as level bars — "wood 0 hunt 0 butc
+0..." used to read as a debug line; a bar per skill reads as progress),
+**Barrow-list** (the settlement's dead, not just the last three shown on a
+death screen), and **Field notes** (the terrain legend, a bestiary table,
+and who's currently in the village). The panel is reference only — it
+never intercepts a key. Every key does exactly what it always did whether
+the panel is open or closed, which is different from how the dialogue box
+works (that one *does* take over the numbered keys, because a conversation
+is a real exchange, not a lookup) and is the reason Tab was safe to bind
+to something that changes every frame without ever risking an accidental
+craft.
+
+**Death screen and dialogue** were restyled to match — a centred card with
+stat chips (wood / beasts / seconds survived) and the Barrow-list inline
+for the former; a portrait swatch, the speaker's name in their own colour,
+and numbered replies as keycap rows for the latter — same information as
+before, laid out the way the rest of the redesign now does.
+
+**What this leaves out, from the same design pass, and why:**
+
+- **No mouse/click support.** The redesign's own notes ask for a menu "you
+  can also click/select." This client has never had a click handler —
+  adding one is a real new input modality, not a chrome change, so the Tab
+  panel is keyboard-reference-only for now: browsable, not clickable.
+- **No category tabs inside the Crafting page.** The mockup groups recipes
+  under Tools/Food/Gear/Fire & smithing/Fishing & traps; built recipes
+  currently fit in one ungrouped grid without needing a second layer of
+  tab-switching input, so that's what shipped. Worth revisiting once the
+  list is bigger than one screen.
+- **No trade ledger view.** The offer chip shipped; "recent hand-overs" as
+  a visible list didn't, because `Snapshot.trades` is currently just a
+  count (`trades: number`), not the records themselves — showing history
+  would mean widening what the wire actually sends, which is a real
+  decision, not a rendering one.
+- **Three panels from the design-baseline file were skipped outright: an
+  Unbowed encounter, Testimony/Witness, and Realm & Sigil progress.** None
+  of the systems behind them exist in Stage B — no Unbowed creatures, no
+  corroborated-testimony mechanic, no Sigils, no second Realm — and the
+  baseline file says as much about the last one itself ("nothing here is a
+  near-term build target"). Building interactive-looking UI for a system
+  that isn't there would be decoration wearing content's clothes, which is
+  exactly the failure mode this whole project has tried to avoid.
 
 ## What's actually happening under the hood
 

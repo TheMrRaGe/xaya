@@ -14,17 +14,33 @@
  * hurt, and do you start again anyway?
  */
 import { World } from "./sim/world.js";
-import { TILE_PX, VIEW_W, VIEW_H, ViewState, computeCamera, drawWorld, drawEntities, drawNight, drawMinimap, drawHud, drawDialogue, drawDeathScreen } from "./render/render.js";
+import {
+  TILE_PX,
+  VIEW_W,
+  VIEW_H,
+  ViewState,
+  computeCamera,
+  drawWorld,
+  drawEntities,
+  drawNight,
+  drawMinimap,
+  drawHud,
+  drawDialogue,
+  drawPanel,
+  drawToasts,
+  drawTabHint,
+  drawDeathScreen,
+  PANEL_PAGES,
+  Toast,
+} from "./render/render.js";
 import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
 
-const HUD_H = 287; // +14 for "B sword / P pot", +14 for "O boots / V gloves", +14 for "H talk"
-// The canvas is the camera's window, not the map — VIEW_W/VIEW_H, not
-// WORLD_W/WORLD_H. The Verge can grow behind this without the page's layout
-// ever needing to change again.
+// The viewport is the whole canvas now — the HUD moved onto it as overlays
+// instead of a text strip reserved below it (doc/design's HUD redesign).
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 canvas.width = VIEW_W * TILE_PX;
-canvas.height = VIEW_H * TILE_PX + HUD_H;
+canvas.height = VIEW_H * TILE_PX;
 const ctx = canvas.getContext("2d")!;
 
 let myId = -1;
@@ -42,6 +58,24 @@ let lastDeath: DeathEvent | null = null;
  */
 let barrowList: DeathEvent[] = [];
 let connection = "connecting to the Verge...";
+
+/**
+ * The Tab panel's page: 0 is closed, 1..PANEL_PAGES.length cycle through
+ * crafting, pack & skills, the Barrow-list, and field notes. Pure client
+ * state — it changes what's drawn, never what's sent, so nothing about it
+ * needs the server's agreement.
+ */
+let panelPage = 0;
+
+/**
+ * Narration used to be two permanent HUD lines, silently overwritten by
+ * whatever came next. Toasts queue instead: every line new since the last
+ * snapshot gets its own entry with a timestamp, and drawToasts fades each
+ * one out on its own schedule rather than this file deciding how long
+ * anything stays visible.
+ */
+let toasts: Toast[] = [];
+let knownLog: string[] = [];
 
 const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`);
 
@@ -66,6 +100,13 @@ socket.addEventListener("message", (event) => {
   snap = msg.snap as Snapshot;
   world = World.restore(seed, snap.tiles, snap.fires);
   publishDebug(snap);
+
+  // Anything in the new log that wasn't in the last one is a fresh line —
+  // queue it as its own toast rather than only ever showing "the last two."
+  for (const line of snap.log) {
+    if (!knownLog.includes(line)) toasts.push({ text: line, bornAtMs: Date.now() });
+  }
+  knownLog = snap.log;
 
   for (const death of msg.deaths as DeathEvent[]) {
     // Every soul's death joins the shared board, not only this one's own —
@@ -110,6 +151,17 @@ const VERBS: Record<string, string> = {
 window.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
   held.add(key);
+
+  // Tab is pure client chrome — it never reaches the server, and every
+  // other key still does exactly what it always did whether this panel is
+  // open or closed (doc/design's HUD redesign: "keep the keys as
+  // shortcuts"). It only ever browses what a soul already knows.
+  if (e.key === "Tab") {
+    e.preventDefault();
+    panelPage = (panelPage + 1) % (PANEL_PAGES.length + 1);
+    return;
+  }
+
   const verb = VERBS[key];
   if (verb) {
     verbs.add(verb);
@@ -185,10 +237,16 @@ function frame(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawWorld(ctx, world, snap.tick, camera);
   drawEntities(ctx, view, myId, camera);
-  drawNight(ctx, VIEW_W * TILE_PX, VIEW_H * TILE_PX, snap.tick);
+  drawNight(ctx, canvas.width, canvas.height, snap.tick);
+  if (me) drawHud(ctx, view, me, canvas.width, canvas.height);
   drawMinimap(ctx, world, snap.players, myId, canvas.width);
-  if (me) drawHud(ctx, view, me, VIEW_H * TILE_PX, canvas.width, HUD_H);
-  drawDialogue(ctx, view, myId, canvas.width);
+  drawTabHint(ctx, canvas.width, canvas.height, panelPage);
+  drawToasts(ctx, canvas.width, canvas.height, toasts, Date.now());
+  if (me) drawDialogue(ctx, view, myId, canvas.width, canvas.height);
+  // A conversation already owns the numbered keys (tick.ts's stepPlayer) —
+  // don't also cover it with the reference panel, which would just hide
+  // the thing those keys are actually answering.
+  if (me && panelPage > 0 && me.talkingTo === null) drawPanel(ctx, canvas.width, canvas.height, panelPage, me, view, barrowList);
   if (lastDeath) drawDeathScreen(ctx, canvas.width, canvas.height, lastDeath, barrowList);
   if (connection) drawWaiting(connection);
 }
