@@ -16,6 +16,7 @@ import { World, WORLD_W, WORLD_H, Tile, VILLAGE_X, VILLAGE_Y, isSolid } from "./
 import {
   Player,
   Pack,
+  HandItem,
   Lieutenant,
   Tradeable,
   TRADEABLES,
@@ -29,6 +30,7 @@ import { stepToward, moveWithCollision, walkable, terrainSpeedPct } from "./move
 import { OverlordAction, GRIEF_PER_DEATH, GRIEF_DECAY_EVERY, isColdSnap, isBlighted } from "./director.js";
 import {
   Skill,
+  Skills,
   XP,
   gain,
   level,
@@ -520,6 +522,10 @@ export interface Input {
   castBolt: boolean;
   /** M — cast a heal on yourself. Same risk as a bolt, no target. */
   castHeal: boolean;
+  /** I — cycle the main hand through whatever weapons you actually own. Equipping a bow always empties the off hand (below); see doCycleMainHand. */
+  cycleMainHand: boolean;
+  /** J — cycle the off hand the same way, restricted to one-handers and skipping whatever's already in the main hand. Does nothing while a bow is equipped — both hands are already full. */
+  cycleOffHand: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -553,6 +559,8 @@ export const NO_INPUT: Input = {
   postBounty: false,
   castBolt: false,
   castHeal: false,
+  cycleMainHand: false,
+  cycleOffHand: false,
 };
 
 export interface DeathEvent {
@@ -1124,6 +1132,8 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     if (input.postBounty) doPostBounty(state, player);
     if (input.castBolt) doCastBolt(state, player);
     if (input.castHeal) doCastHeal(state, player);
+    if (input.cycleMainHand) doCycleMainHand(state, player);
+    if (input.cycleOffHand) doCycleOffHand(state, player);
   }
 
   // A death still has to land even mid-conversation — starvation and the
@@ -1292,32 +1302,42 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
  * choice, so anything already within arm's length is met with whatever's
  * in the other hand exactly as before.
  */
+/** A hand's own base damage — 0 for "none," or for a hand still labelled with a weapon that's since broken or was never actually forged. */
+function handDamage(pack: Pack, hand: HandItem, skills: Skills): number {
+  if (hand === "sword" && pack.sword > 0) return SWORD_DAMAGE + swordBonus(skills);
+  if (hand === "copperSword" && pack.copperSword > 0) return COPPER_SWORD_DAMAGE;
+  if (hand === "spear" && pack.spear > 0) return SPEAR_DAMAGE;
+  return 0;
+}
+
 function doStrike(state: SimState, player: Player): void {
   const pack = player.pack;
-  // The best melee weapon in hand wins: a sword over a copper sword over a
-  // spear over a fist. Nothing is ever discarded to make room, so carrying
-  // all three just means the copper blade is the fallback when the real
-  // sword gives out, and the spear is the fallback under that. A sword you
-  // smelted and forged yourself hits harder than one merely carried — the
-  // same soul's smithing, not just their hunting, is in the blow. Copper
-  // carries no such bonus: it is a real blade, just not a mastered one.
-  const meleeDamage =
-    pack.sword > 0
-      ? SWORD_DAMAGE + swordBonus(player.skills)
-      : pack.copperSword > 0
-        ? COPPER_SWORD_DAMAGE
-        : pack.spear > 0
-          ? SPEAR_DAMAGE
-          : FIST_DAMAGE;
-  const hit = strikeNearest(state, player, STRIKE_RADIUS, meleeDamage + strikeBonus(player.skills), () => spendWeapon(state, pack));
-  if (hit) {
-    bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
+
+  // Two-handed: equipping a bow always empties the other hand (below), so
+  // there is never a separate melee weapon to prefer here the way the old
+  // auto-pick had to. One reach covers close and far alike — if something
+  // is already in your face with a bow drawn, the honest answer is still
+  // to loose it, not to stand there empty-handed.
+  if (player.mainHand === "bow") {
+    if (pack.bow < 1 || pack.arrow < 1) return; // the bow itself, or the arrows, ran out since it was equipped
+    const shot = strikeNearest(state, player, BOW_RADIUS, BOW_DAMAGE + strikeBonus(player.skills), () => spendArrow(state, pack));
+    if (shot) bumpNoise(state, skilledNoise(NOISE_PER_BOWSHOT, player, "hunting"), player);
     return;
   }
 
-  if (pack.bow < 1 || pack.arrow < 1) return; // nothing in reach, and no reach to spend
-  const shot = strikeNearest(state, player, BOW_RADIUS, BOW_DAMAGE + strikeBonus(player.skills), () => spendArrow(state, pack));
-  if (shot) bumpNoise(state, skilledNoise(NOISE_PER_BOWSHOT, player, "hunting"), player);
+  // Whatever's actually in each hand, chosen by the player (doCycleMainHand/
+  // doCycleOffHand) rather than picked automatically. Dual-wielding two
+  // one-handers adds half the off-hand weapon's own base damage on top of
+  // the main hand's full damage — a real, if modest, reason to carry two
+  // different weapons rather than one.
+  const mainDamage = handDamage(pack, player.mainHand, player.skills);
+  const offDamage = handDamage(pack, player.offHand, player.skills);
+  const damage = (mainDamage > 0 ? mainDamage : FIST_DAMAGE) + Math.trunc(offDamage / 2) + strikeBonus(player.skills);
+  const hit = strikeNearest(state, player, STRIKE_RADIUS, damage, () => {
+    spendHand(state, pack, player.mainHand);
+    if (offDamage > 0) spendHand(state, pack, player.offHand);
+  });
+  if (hit) bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
 }
 
 /** After any successful cast — the noise and the risk every working carries (§9), regardless of which spell or what it hit. */
@@ -1534,17 +1554,76 @@ function doPostBounty(state: SimState, player: Player): void {
   }
 }
 
-/** Whatever a melee strike spends: the same priority the damage itself follows. */
-function spendWeapon(state: SimState, pack: Player["pack"]): void {
-  if (pack.sword > 0) {
+/** Whichever weapon a hand actually holds wears one use — a broken or unowned one has already dealt no damage via handDamage, so there's nothing here to spend either. */
+function spendHand(state: SimState, pack: Pack, hand: HandItem): void {
+  if (hand === "sword" && pack.sword > 0) {
     pack.sword--;
     if (pack.sword === 0) say(state, "The sword's edge finally gives out. It was a blade, once.");
-  } else if (pack.copperSword > 0) {
+  } else if (hand === "copperSword" && pack.copperSword > 0) {
     pack.copperSword--;
     if (pack.copperSword === 0) say(state, "The copper blade bends, then snaps. Soft metal was always going to give out first.");
-  } else if (pack.spear > 0) {
+  } else if (hand === "spear" && pack.spear > 0) {
     pack.spear--;
     if (pack.spear === 0) say(state, "A spear splinters on the last blow.");
+  }
+}
+
+const MAIN_HAND_OPTIONS: readonly HandItem[] = ["none", "spear", "sword", "copperSword", "bow"];
+const OFF_HAND_OPTIONS: readonly HandItem[] = ["none", "spear", "sword", "copperSword"];
+
+function ownsHandItem(pack: Pack, item: HandItem): boolean {
+  if (item === "none") return true;
+  if (item === "bow") return pack.bow > 0;
+  return pack[item] > 0;
+}
+
+function handLabel(item: HandItem): string {
+  return item === "none" ? "empty" : item === "copperSword" ? "copper sword" : item;
+}
+
+/** I — cycle the main hand through whatever weapons you actually own, skipping anything already in the off hand (you only own one of each). Equipping a bow always empties the off hand — it takes both. */
+function doCycleMainHand(state: SimState, player: Player): void {
+  const pack = player.pack;
+  let i = MAIN_HAND_OPTIONS.indexOf(player.mainHand);
+  for (let tries = 0; tries < MAIN_HAND_OPTIONS.length; tries++) {
+    i = (i + 1) % MAIN_HAND_OPTIONS.length;
+    const candidate = MAIN_HAND_OPTIONS[i]!;
+    if (!ownsHandItem(pack, candidate)) continue;
+    if (candidate !== "none" && candidate === player.offHand) continue;
+    player.mainHand = candidate;
+    if (candidate === "bow") player.offHand = "none";
+    say(state, `Main hand: ${handLabel(candidate)}.`);
+    return;
+  }
+}
+
+/** J — the off hand's own cycle: no bow (that's what makes the main hand's bow two-handed), and it does nothing at all while the main hand already is one — there is no second hand left to fill. */
+function doCycleOffHand(state: SimState, player: Player): void {
+  if (player.mainHand === "bow") return;
+  const pack = player.pack;
+  let i = OFF_HAND_OPTIONS.indexOf(player.offHand);
+  for (let tries = 0; tries < OFF_HAND_OPTIONS.length; tries++) {
+    i = (i + 1) % OFF_HAND_OPTIONS.length;
+    const candidate = OFF_HAND_OPTIONS[i]!;
+    if (!ownsHandItem(pack, candidate)) continue;
+    if (candidate !== "none" && candidate === player.mainHand) continue;
+    player.offHand = candidate;
+    say(state, `Off hand: ${handLabel(candidate)}.`);
+    return;
+  }
+}
+
+/**
+ * Crafting a weapon into an empty main hand equips it there automatically
+ * — the one piece of the old auto-pick behaviour worth keeping, so a fresh
+ * soul isn't fighting barehanded by default just because equipping is now
+ * a real choice. Never overrides a hand that already holds something;
+ * that's what I/J are for.
+ */
+function autoEquipMain(player: Player, item: HandItem): void {
+  if (player.mainHand === "none") {
+    player.mainHand = item;
+    if (item === "bow") player.offHand = "none";
   }
 }
 
@@ -1601,6 +1680,7 @@ function doMakeSpear(state: SimState, player: Player): void {
   if (pack.spear > 0 || pack.wood < SPEAR_WOOD_COST) return;
   pack.wood -= SPEAR_WOOD_COST;
   pack.spear = SPEAR_DURABILITY;
+  autoEquipMain(player, "spear");
   bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 4), player);
   say(state, "You sharpen a stake into a spear. Three times the bite.");
 }
@@ -1662,6 +1742,7 @@ function doMakeBow(state: SimState, player: Player): void {
   pack.cordage -= BOW_CORDAGE_COST;
   pack.pitch -= BOW_PITCH_COST;
   pack.bow = BOW_DURABILITY;
+  autoEquipMain(player, "bow");
   say(state, "A stave strung and sealed. Something can finally be hit before it gets close.");
   if (!state.flags.firstBow) {
     state.flags.firstBow = true;
@@ -1865,6 +1946,7 @@ function doMakeSword(state: SimState, player: Player): void {
     pack.wood -= SWORD_WOOD_COST;
     pack.cordage -= SWORD_CORDAGE_COST;
     pack.sword = SWORD_DURABILITY;
+    autoEquipMain(player, "sword");
     bumpNoise(state, NOISE_PER_CRAFT, player);
     learn(state, player, "smithing", XP.forge);
     say(state, "A blade, hafted and bound. Everything else you have made was a stopgap until this.");
@@ -1885,6 +1967,7 @@ function doMakeSword(state: SimState, player: Player): void {
     pack.wood -= COPPER_SWORD_WOOD_COST;
     pack.cordage -= COPPER_SWORD_CORDAGE_COST;
     pack.copperSword = COPPER_SWORD_DURABILITY;
+    autoEquipMain(player, "copperSword");
     bumpNoise(state, NOISE_PER_CRAFT, player);
     learn(state, player, "smithing", XP.copperForge);
     say(state, "A blade of copper, hafted and bound. Softer than iron, and it came together far sooner.");

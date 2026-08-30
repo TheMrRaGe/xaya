@@ -137,6 +137,7 @@ function check(name, cond, detail = "") {
   const py = Math.floor(p.y / TILE);
 
   p.pack.spear = 12;
+  p.mainHand = "spear";
   const boar = s.creatures.find((c) => c.kind === "hedge-boar");
   for (let i = 0; i < 12; i++) {
     p.x = boar.x;
@@ -628,17 +629,18 @@ function check(name, cond, detail = "") {
   check("bar, wood and cord make a sword", p.pack.sword > 0 && p.pack.bar === 0 && p.pack.wood === 0 && p.pack.cordage === 0, JSON.stringify(p.pack));
 }
 
-// --- 23. a sword outfights a spear, and a soul keeps both ---
+// --- 23. a sword outfights a spear, and a soul keeps both — but only the equipped one actually swings ---
 {
   const s = fresh();
   const p = s.players[0];
   p.pack.spear = 12;
   p.pack.sword = 30;
+  p.mainHand = "sword"; // owning a spear too doesn't matter — equipping is the choice now, not auto-pick
   const boar = s.creatures.find((c) => c.kind === "hedge-boar");
   p.x = boar.x;
   p.y = boar.y;
   stepTick(s, [I({ strike: true })]);
-  check("the sword strikes first, not the spear", p.pack.sword === 29 && p.pack.spear === 12, `sword=${p.pack.sword} spear=${p.pack.spear}`);
+  check("the equipped sword strikes, and the unequipped spear sits untouched", p.pack.sword === 29 && p.pack.spear === 12, `sword=${p.pack.sword} spear=${p.pack.spear}`);
   check("a hedge-boar takes real damage from it", boar.health <= STATS["hedge-boar"].health - 6, `hp=${boar.health}`);
 }
 
@@ -685,6 +687,7 @@ function check(name, cond, detail = "") {
   const master = fresh();
   const mp = master.players[0];
   mp.pack.sword = 30;
+  mp.mainHand = "sword";
   mp.skills.smithing = 10000;
   const boar2 = master.creatures.find((c) => c.kind === "hedge-boar");
   mp.x = boar2.x;
@@ -796,6 +799,7 @@ function check(name, cond, detail = "") {
   const s = fresh(2);
   const [striker, victim] = s.players;
   striker.pack.spear = 12;
+  striker.mainHand = "spear";
   victim.x = striker.x;
   victim.y = striker.y;
   const before = victim.health;
@@ -1302,35 +1306,55 @@ function check(name, cond, detail = "") {
   );
 }
 
-// --- 42. in a fight, the real sword beats a copper one, which beats a spear — and carrying all three spends the best one first ---
+// --- 42. in a fight, the real sword beats a copper one, which beats a spear — whichever is actually equipped ---
 {
-  const damageDoneWith = (gear) => {
+  const damageDoneWith = (hand, gear) => {
     const s = fresh(2);
     const [attacker, target] = s.players;
     Object.assign(attacker.pack, gear);
+    attacker.mainHand = hand;
     target.x = attacker.x;
     target.y = attacker.y;
     const before = target.health;
     stepTick(s, [I({ strike: true }), I()]);
     return before - target.health;
   };
-  const spearDamage = damageDoneWith({ spear: 10 });
-  const copperDamage = damageDoneWith({ copperSword: 10 });
-  const swordDamage = damageDoneWith({ sword: 10 });
+  const spearDamage = damageDoneWith("spear", { spear: 10 });
+  const copperDamage = damageDoneWith("copperSword", { copperSword: 10 });
+  const swordDamage = damageDoneWith("sword", { sword: 10 });
   check("a copper sword hits harder than a spear", copperDamage > spearDamage, `copper=${copperDamage} spear=${spearDamage}`);
   check("and softer than the real sword", copperDamage < swordDamage, `copper=${copperDamage} sword=${swordDamage}`);
 
+  // Owning both no longer matters on its own — only the one actually equipped swings, and the unequipped one sits untouched.
   const both = fresh(2);
   const [bothAttacker, bothTarget] = both.players;
   bothAttacker.pack.sword = 10;
   bothAttacker.pack.copperSword = 10;
+  bothAttacker.mainHand = "sword";
   bothTarget.x = bothAttacker.x;
   bothTarget.y = bothAttacker.y;
   stepTick(both, [I({ strike: true }), I()]);
   check(
-    "carrying both, the real sword is spent first",
+    "carrying both, only the equipped sword is spent",
     bothAttacker.pack.sword === 9 && bothAttacker.pack.copperSword === 10,
     JSON.stringify(bothAttacker.pack),
+  );
+
+  // Equip both instead — one in each hand — and the swing draws on both, spending both.
+  const dual = fresh(2);
+  const [dualAttacker, dualTarget] = dual.players;
+  dualAttacker.pack.sword = 10;
+  dualAttacker.pack.copperSword = 10;
+  dualAttacker.mainHand = "sword";
+  dualAttacker.offHand = "copperSword";
+  dualTarget.x = dualAttacker.x;
+  dualTarget.y = dualAttacker.y;
+  const dualBefore = dualTarget.health;
+  stepTick(dual, [I({ strike: true }), I()]);
+  check(
+    "dual-wielding hits harder than the sword alone, and spends both",
+    dualBefore - dualTarget.health > swordDamage && dualAttacker.pack.sword === 9 && dualAttacker.pack.copperSword === 9,
+    `damage=${dualBefore - dualTarget.health} sword=${dualAttacker.pack.sword} copperSword=${dualAttacker.pack.copperSword}`,
   );
 }
 
@@ -1648,20 +1672,37 @@ function check(name, cond, detail = "") {
   stepTick(s2, [I({ makeArrow: true })]);
   check("with a knife, wood and glue fletch a batch of two", p2.pack.arrow === 2 && p2.pack.wood === 0 && p2.pack.glue === 0, JSON.stringify(p2.pack));
 
-  // Melee wins over a bow whenever something is already close enough to hit by hand.
+  // Owning a bow doesn't touch a close fight if the spear is what's actually equipped.
   const near = fresh(2);
   const [meleeAttacker, closeTarget] = near.players;
   meleeAttacker.pack.spear = 10;
   meleeAttacker.pack.bow = 10;
   meleeAttacker.pack.arrow = 10;
+  meleeAttacker.mainHand = "spear";
   closeTarget.x = meleeAttacker.x;
   closeTarget.y = meleeAttacker.y;
   const beforeClose = closeTarget.health;
   stepTick(near, [I({ strike: true }), I()]);
   check(
-    "a spear is used on a target already in melee range, not the bow",
+    "the equipped spear is used on a close target, and the unequipped bow sits untouched",
     beforeClose - closeTarget.health === 3 && meleeAttacker.pack.spear === 9 && meleeAttacker.pack.arrow === 10,
     `damage=${beforeClose - closeTarget.health} spear=${meleeAttacker.pack.spear} arrow=${meleeAttacker.pack.arrow}`,
+  );
+
+  // Equip the bow instead, and it's what fires — even at a target this close, since a two-handed bow leaves no melee weapon to prefer.
+  const closeShot = fresh(2);
+  const [pointBlank, adjacentTarget] = closeShot.players;
+  pointBlank.pack.bow = 10;
+  pointBlank.pack.arrow = 10;
+  pointBlank.mainHand = "bow";
+  adjacentTarget.x = pointBlank.x;
+  adjacentTarget.y = pointBlank.y;
+  const beforePointBlank = adjacentTarget.health;
+  stepTick(closeShot, [I({ strike: true }), I()]);
+  check(
+    "an equipped bow fires even at point-blank range, with no separate melee weapon to fall back on",
+    beforePointBlank - adjacentTarget.health === 2 && pointBlank.pack.arrow === 9,
+    `damage=${beforePointBlank - adjacentTarget.health} arrow=${pointBlank.pack.arrow}`,
   );
 
   // Nothing in melee range, but the bow reaches a target several tiles off.
@@ -1674,6 +1715,7 @@ function check(name, cond, detail = "") {
   for (const npc of far.npcs) { npc.x = archer.x + 20 * TILE; npc.y = archer.y; }
   archer.pack.bow = 10;
   archer.pack.arrow = 10;
+  archer.mainHand = "bow";
   farTarget.x = archer.x + 4 * TILE;
   farTarget.y = archer.y;
   const beforeFar = farTarget.health;
@@ -1979,6 +2021,7 @@ function check(name, cond, detail = "") {
   const silence = fresh(1);
   const hunter = silence.players[0];
   hunter.pack.sword = 10; // SWORD_DAMAGE (6) per hit against SCOUT_HEALTH (10) — two hits, deliberately fragile either way
+  hunter.mainHand = "sword";
   const doomed = newScout(hunter.x, hunter.y, hunter.x + 10 * TILE, hunter.y);
   silence.scouts.push(doomed);
   stepTick(silence, [I({ strike: true })]);
@@ -1998,6 +2041,66 @@ function check(name, cond, detail = "") {
   stepTick(locate, [I()]);
   check("the third report resets the count rather than piling up", found.scoutReports === 0, `reports=${found.scoutReports}`);
   check("and lands real noise on the soul it found, past the crow threshold", locate.noise >= 500, `noise=${locate.noise}`);
+}
+
+// --- 60. hands: equipping is a real choice now, a bow takes both, and a fresh weapon fills an empty one automatically ---
+{
+  // Cycling the main hand only lands on weapons actually owned, and skips whatever's already in the off hand.
+  const s = fresh(1);
+  const p = s.players[0];
+  p.pack.spear = 5;
+  p.pack.sword = 5;
+  p.offHand = "sword"; // owned but already claimed by the other hand
+  stepTick(s, [I({ cycleMainHand: true })]); // none -> spear (sword and copperSword/bow are unowned or claimed)
+  check("cycling the main hand skips anything unowned or already in the other hand", p.mainHand === "spear", p.mainHand);
+  stepTick(s, [I({ cycleMainHand: true })]); // spear -> none (sword is off-limits, copperSword/bow unowned)
+  check("and comes back around to empty-handed rather than stalling", p.mainHand === "none", p.mainHand);
+
+  // Equipping a bow always empties the off hand — it takes both.
+  const bow = fresh(1);
+  const bp = bow.players[0];
+  bp.pack.bow = 10;
+  bp.pack.sword = 5;
+  bp.offHand = "sword";
+  bp.mainHand = "sword"; // starting point for the cycle below
+  stepTick(bow, [I({ cycleMainHand: true })]); // sword -> bow (the only other owned option)
+  check("cycling onto a bow claims the main hand", bp.mainHand === "bow", bp.mainHand);
+  check("and empties the off hand in the same move", bp.offHand === "none", bp.offHand);
+
+  // With a bow equipped, the off-hand cycle does nothing — there is no second hand left.
+  stepTick(bow, [I({ cycleOffHand: true })]);
+  check("the off hand can't be cycled while a bow owns both", bp.offHand === "none", bp.offHand);
+
+  // Crafting a weapon into an empty main hand equips it automatically.
+  const fresh1 = fresh(1);
+  const fp = fresh1.players[0];
+  fp.pack.wood = 3;
+  stepTick(fresh1, [I({ makeSpear: true })]);
+  check("a freshly forged spear equips itself into an empty main hand", fp.mainHand === "spear", fp.mainHand);
+
+  // But never overrides a hand that already holds something.
+  const busy = fresh(1);
+  const bsp = busy.players[0];
+  busy.players[0].pack.sword = 30;
+  bsp.mainHand = "sword";
+  bsp.pack.wood = 3;
+  stepTick(busy, [I({ makeSpear: true })]);
+  check("auto-equip never bumps a hand that's already holding something", bsp.mainHand === "sword", bsp.mainHand);
+
+  // A weapon that's broken (or never forged) acts empty in that hand until it exists again — no separate re-equip needed once it does.
+  const broken = fresh(2);
+  const [wielder, dummy] = broken.players;
+  wielder.pack.spear = 0; // labelled but not actually held
+  wielder.mainHand = "spear";
+  dummy.x = wielder.x;
+  dummy.y = wielder.y;
+  const beforeBroken = dummy.health;
+  stepTick(broken, [I({ strike: true }), I()]);
+  check("a hand labelled with a weapon that isn't actually there hits like a bare fist", beforeBroken - dummy.health === 1, `damage=${beforeBroken - dummy.health}`);
+  wielder.pack.spear = 12; // forged again — no re-equip needed, the label was already there
+  const beforeRestored = dummy.health;
+  stepTick(broken, [I({ strike: true }), I()]);
+  check("and it starts working again the moment the weapon actually exists", beforeRestored - dummy.health === 3, `damage=${beforeRestored - dummy.health}`);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

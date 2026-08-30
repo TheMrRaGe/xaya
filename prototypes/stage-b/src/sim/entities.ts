@@ -181,6 +181,18 @@ export type DeathCause =
    */
   | "never made it home";
 
+/**
+ * What a hand can hold, Skyrim-style: pick a weapon per hand rather than
+ * SPACE silently picking the best one you own. `"bow"` is two-handed —
+ * equipping it always empties the other hand, the same way it always
+ * would in real life. Scoped to combat weapons only: knife, axe, gloves,
+ * boots, a fishing line and a pot stay exactly what they already were,
+ * pack counters read automatically wherever they matter, because turning
+ * every tool into hand-equipment would be a much bigger and much less
+ * clearly-asked-for change than "let me choose my weapons."
+ */
+export type HandItem = "none" | "spear" | "sword" | "copperSword" | "bow";
+
 export interface Player {
   id: number; // index into SimState.players, stable for the run
   x: number; // fixed-point world units (TILE per tile)
@@ -241,6 +253,18 @@ export interface Player {
    * lineage isn't answering for its last life's carelessness.
    */
   scoutReports: number;
+  /**
+   * What each hand is holding (see HandItem above). `doStrike` (tick.ts)
+   * reads these instead of picking the best weapon you own automatically
+   * — a broken or never-owned weapon in a hand just acts empty until it
+   * exists again, so re-forging one is enough to make the hand work
+   * again with no separate re-equip step. Cycled with I (main) and J
+   * (off); crafting a new weapon into an empty main hand equips it there
+   * automatically, the one piece of the old auto-pick behaviour kept on
+   * purpose so a fresh soul isn't fighting barehanded by default.
+   */
+  mainHand: HandItem;
+  offHand: HandItem;
 }
 
 /**
@@ -299,6 +323,8 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     boltCooldown: 0,
     healCooldown: 0,
     scoutReports: 0,
+    mainHand: "none",
+    offHand: "none",
   };
 }
 

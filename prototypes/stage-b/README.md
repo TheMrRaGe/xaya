@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (356 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (367 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -88,7 +88,7 @@ is often registered as `text/plain`, and Chrome refuses a
 |---|---|
 | **WASD / arrows** | move |
 | **E** | gather — loot a dead soul's pack first if you're standing over one, then butcher a carcass, chop a tree, chip a rock, pick a bush, or drink from water |
-| **SPACE** | strike — hit the nearest living thing in reach, or, if nothing is that close and a bow is strung and loaded, shoot the nearest thing within a bow's reach instead |
+| **SPACE** | strike with whatever's actually equipped — a melee hand hits the nearest thing in reach, a drawn bow (two-handed) shoots the nearest thing within a bow's reach instead, close range included |
 | **F** | feed the fire you're standing at (1 wood), or build one where there isn't one (5 wood, on grass) |
 | **1** | sharpen a spear (3 wood) — 3 damage a hit instead of 1, for 12 hits |
 | **2** | cook one raw meat (must be at a fire) |
@@ -115,6 +115,8 @@ is often registered as `text/plain`, and Chrome refuses a
 | **U** | at the Bounty Board: post 5 crowns on the worst soul you know of (your own crowns), or, if you're notorious, on the best one (the dead stockpile's crowns instead) |
 | **Z** | cast a bolt at whatever's nearest — free, on a cooldown, and the loudest thing in the Verge |
 | **M** | cast a heal on yourself — same risk, its own cooldown |
+| **I** | cycle the main hand through whatever weapons you actually own — a bow claims the off hand too |
+| **J** | cycle the off hand the same way (one-handers only) — does nothing while a bow already owns both |
 | **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
 
 ## HUD & UI redesign
@@ -653,6 +655,33 @@ plan committed at the repo root's `doc/world/`.
   buys you time; enough of them get away and he knows roughly where you
   are" is the whole ask, built on wiring that already existed everywhere
   except the Scout himself.
+- **Hands, Skyrim-style — SPACE no longer auto-picks your best weapon.**
+  Every weapon used to be a flat priority order (a sword over a copper
+  sword over a spear over a fist); owning a better one silently made a
+  worse one irrelevant, and there was no way to actually choose. `Player`
+  now carries a `mainHand` and an `offHand` (entities.ts's new `HandItem`
+  — `"none" | "spear" | "sword" | "copperSword" | "bow"`), cycled with
+  **I** and **J**, and `doStrike` reads them instead of scanning the pack
+  for the best thing you own. A bow is properly two-handed: equipping it
+  always empties the off hand, and — since there's no separate melee
+  weapon left to prefer once it does — a drawn bow now fires at *any*
+  range, point-blank included, where the old auto-pick always chose
+  melee first and only fell back to a bow when nothing was already close.
+  Two one-handers, one in each hand, is a real dual-wield: the swing
+  lands the main hand's full damage plus half the off hand's, and spends
+  both. Scoped to the four combat weapons only, on purpose — knife, axe,
+  gloves, boots, a fishing line and a pot stay exactly what they already
+  were, pack counters read automatically wherever they mattered, because
+  turning every tool into hand-equipment would have been a much bigger
+  change than "let me choose my weapons." A hand labelled with a weapon
+  that's since broken (or was never forged to begin with) simply swings
+  like a bare fist until that weapon exists again — no separate re-equip
+  step once it does, since the label was never lying, just temporarily
+  empty. One piece of the old convenience survives on purpose: crafting a
+  weapon into an empty main hand equips it there automatically, so a
+  fresh soul isn't fighting barehanded by default just because equipping
+  is a real choice now; it never overrides a hand that already holds
+  something, which is what the cycle keys are for.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a

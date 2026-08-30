@@ -799,9 +799,13 @@ function drawResourceTray(ctx: CanvasRenderingContext2D, viewportH: number, p: P
     ctx.font = "9.5px 'IBM Plex Mono', monospace";
     for (const slot of held) {
       const uses = pack[slot.key] as number;
-      ctx.fillStyle = "#d8cfb8";
-      ctx.fillText(slot.label, cx, y + 13);
-      slimBar(ctx, cx, y + 18, 50, 4, uses / slot.max, "#c8b088");
+      // Only the four weapons are ever hand-equipped (HandItem, entities.ts)
+      // — everything else on this bar is a pack-read tool, exactly as
+      // before, with nothing to mark.
+      const equipped = p.mainHand === slot.key ? "main" : p.offHand === slot.key ? "off" : null;
+      ctx.fillStyle = equipped ? "#e8c878" : "#d8cfb8";
+      ctx.fillText((equipped === "main" ? "▶" : equipped === "off" ? "◀" : "") + slot.label, cx, y + 13);
+      slimBar(ctx, cx, y + 18, 50, 4, uses / slot.max, equipped ? "#e8c878" : "#c8b088");
       cx += 58;
     }
   }

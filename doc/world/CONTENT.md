@@ -458,9 +458,9 @@ maintenance is the war.
   everything else — a second, shorter metal line rather than a second copy
   of the first, §6]`, **fishing line** `[built, 25 casts]`, **pot** `[built,
   15 meals, Verge pottery's first product]`, **bow** `[built, 20 shots — Stage
-  B's first ranged weapon, a Bowyer's stave and string, reached for only when
-  nothing is already in melee range]`; pick, needle, hammer, saw, loom,
-  quern all `[named]`. The built ones each buy a different thing: the knife
+  B's first ranged weapon, a Bowyer's stave and string, two-handed (§5.3)]`;
+  pick, needle, hammer, saw, loom, quern all `[named]`. The built ones each
+  buy a different thing: the knife
   buys *yield* (more off a carcass, and the only way to cut cord), the axe
   buys yield **and quiet**, the snare buys *absence* — the only work that
   pays out while you are somewhere else — the sword buys raw damage, the end
@@ -525,6 +525,41 @@ maintenance is the war.
   a copper seam is a real vein and not a found relic. Still no spending, no
   prestige, no market a crown could be worth something *in* — that needs an
   economy this prototype doesn't have.
+
+### 5.3 Hands `[built]`
+
+Not named anywhere in the corpus under that word — the closest existing
+language is PLAN §19's item schema (material, quality, durability, weight,
+provenance) and §22's "depth from interaction, not from content volume,"
+neither of which speaks to *how a soul actually wields* the things §5.2
+lists. Built on direction rather than a citation, the same way the bow's
+own two-handed shape was: a soul has a `mainHand` and an `offHand`
+(`HandItem` — `"none" | "spear" | "sword" | "copperSword" | "bow"`),
+cycled with **I**/**J**, and only what is actually equipped there fights.
+Owning a better weapon no longer silently retires a worse one the way the
+old flat priority order did — the fix has to be picked, or the fist swings
+instead.
+
+A bow is properly two-handed: equipping it always empties the other hand,
+and since there is then no separate melee weapon to prefer, a drawn bow
+now fires at any range at all, point-blank included — where the old
+auto-pick always tried melee first and only reached for a bow once
+nothing was already close. Two one-handers, one per hand, is a real
+dual-wield: the swing lands the main hand's full damage plus half the off
+hand's, and spends both.
+
+Scoped to the four combat weapons on purpose — knife, axe, gloves, boots,
+a fishing line and a pot stay exactly what they already were, pack
+counters read automatically wherever they mattered (§5.2's own entries
+for each). Turning every tool into hand-equipment would have been a much
+larger and much less clearly-asked-for change than letting a soul choose
+which weapon actually fights. A hand still labelled with a weapon that
+has since broken, or was never forged to begin with, simply acts empty
+until that weapon exists again — no separate re-equip step once it does.
+One piece of the old convenience survives deliberately: crafting a weapon
+into an empty main hand equips it there automatically, so a fresh soul
+is not fighting barehanded by default purely because equipping became a
+real choice; it never overrides a hand already holding something.
 
 ---
 

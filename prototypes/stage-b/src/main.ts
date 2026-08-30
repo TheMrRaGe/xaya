@@ -152,6 +152,8 @@ const VERBS: Record<string, string> = {
   u: "postBounty",
   z: "castBolt",
   m: "castHeal",
+  i: "cycleMainHand",
+  j: "cycleOffHand",
 };
 
 window.addEventListener("keydown", (e) => {
