@@ -214,6 +214,25 @@ const POT_DURABILITY = 15; // meals
 const POT_MEAL_BONUS = 100; // extra satiety per meal cooked with one in hand
 
 /**
+ * Wearables beyond the one cloak (doc/world/CONTENT.md §5.2), both from the
+ * same hide/cordage leatherworking line, each answering a specific need
+ * the way the cloak answers cold rather than being a second cloak.
+ */
+const BOOTS_HIDE_COST = 2;
+const BOOTS_CORDAGE_COST = 1;
+const BOOTS_DURABILITY = 300; // marsh-steps
+/** Added to marsh's speed percent while worn — a player-only modifier layered on top of move.ts's shared terrainSpeedPct, not a change to it. */
+const BOOTS_MARSH_BONUS_PCT = 25;
+
+const GLOVES_HIDE_COST = 2;
+const GLOVES_CORDAGE_COST = 1;
+const GLOVES_DURABILITY = 25; // digs — same order as an axe's chops
+const GLOVES_QUIET_PCT = 70; // percent of the usual noise, same shape as AXE_QUIET
+
+const GLUE_PER_BUTCHER = 1; // connective tissue nobody was carrying meat or hide for
+const PITCH_PER_BURN = 1; // wood tar, the same fire that makes charcoal makes a little of this too
+
+/**
  * Fishing — the Fisher's answer to hunger (doc/world/PLAN.md §17), and the
  * one food chain that needs no fire, no butchering and no waiting elsewhere:
  * just cordage, a shoreline, and held-down patience. It is meant to feel
@@ -303,6 +322,8 @@ export interface Input {
   cycleOffer: boolean; // T — what you would hand over
   give: boolean; // G — hand one over to whoever is standing next to you
   makePot: boolean; // P — clay, at a fire
+  makeBoots: boolean; // O — 2 hide 1 cord
+  makeGloves: boolean; // V — 2 hide 1 cord
 }
 
 export const NO_INPUT: Input = {
@@ -327,6 +348,8 @@ export const NO_INPUT: Input = {
   cycleOffer: false,
   give: false,
   makePot: false,
+  makeBoots: false,
+  makeGloves: false,
 };
 
 export interface DeathEvent {
@@ -407,6 +430,8 @@ export interface SimState {
     firstCopperBar: boolean;
     firstCopperSword: boolean;
     firstPot: boolean;
+    firstBoots: boolean;
+    firstGloves: boolean;
   };
 }
 
@@ -456,6 +481,8 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstCopperBar: false,
       firstCopperSword: false,
       firstPot: false,
+      firstBoots: false,
+      firstGloves: false,
     },
   };
 }
@@ -669,12 +696,23 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     // step — how fast it lets them go, and whether it announces them.
     const onMarsh = world.get(Math.floor(player.x / TILE), Math.floor(player.y / TILE)) === Tile.Marsh;
     const base = input.dx !== 0 && input.dy !== 0 ? PLAYER_SPEED_DIAG : PLAYER_SPEED;
-    const speed = Math.trunc((base * terrainSpeedPct(world, player.x, player.y)) / 100);
+    // Boots are a player-only modifier layered on top of the shared
+    // terrainSpeedPct (move.ts) rather than a change to it — a Lieutenant
+    // or a beast crossing the same marsh still gets the bare 55%.
+    let speedPct = terrainSpeedPct(world, player.x, player.y);
+    if (onMarsh && pack.boots > 0) speedPct = Math.min(100, speedPct + BOOTS_MARSH_BONUS_PCT);
+    const speed = Math.trunc((base * speedPct) / 100);
     const moved = moveWithCollision(world, player.x, player.y, player.x + input.dx * speed, player.y + input.dy * speed);
     player.x = clamp(moved.x, 0, (WORLD_W - 1) * TILE);
     player.y = clamp(moved.y, 0, (WORLD_H - 1) * TILE);
     // Squelching through a marsh carries; standing in one, waiting, does not.
-    if (onMarsh) bumpNoise(state, NOISE_PER_MARSH_STEP, player);
+    if (onMarsh) {
+      bumpNoise(state, NOISE_PER_MARSH_STEP, player);
+      if (pack.boots > 0) {
+        pack.boots--;
+        if (pack.boots === 0) say(state, "The boots finally give out — soaked through and stitched apart at the seam.");
+      }
+    }
   }
 
   const px = tileOfUnits(player.x);
@@ -745,6 +783,8 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   if (input.cycleOffer) cycleOffer(player);
   if (input.give) doGive(state, player);
   if (input.makePot) doMakePot(state, player);
+  if (input.makeBoots) doMakeBoots(state, player);
+  if (input.makeGloves) doMakeGloves(state, player);
 
   return player.health <= 0 ? kill(state, player) : null;
 }
@@ -769,9 +809,13 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     const hide = Math.max(0, stats.hide === 0 ? 0 : stats.hide + extra + blade);
     pack.rawMeat += meat;
     pack.hide += hide;
+    // Connective tissue and scrap, off every carcass regardless of size —
+    // nobody was carrying meat or hide for this part (§15's "a graph with
+    // no waste is a graph where nothing is a bargain").
+    pack.glue += GLUE_PER_BUTCHER;
     carcass.butchered = true;
     carcass.respawnAtTick = state.tick + CREATURE_RESPAWN_TICKS;
-    say(state, `You butcher the ${carcass.kind}: ${meat} meat, ${hide} hide.`);
+    say(state, `You butcher the ${carcass.kind}: ${meat} meat, ${hide} hide, ${GLUE_PER_BUTCHER} glue.`);
     learn(state, player, "butchery", XP.butcher);
     return;
   }
@@ -814,7 +858,7 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     if (t === Tile.Rock) {
       // A rock does not run out. What it costs is being heard.
       pack.stone++;
-      bumpNoise(state, NOISE_PER_CHIP, player);
+      bumpNoise(state, glovedNoise(state, NOISE_PER_CHIP, player), player);
       if (!state.flags.firstStone) {
         state.flags.firstStone = true;
         say(state, "The Grey King: “Stone on stone. I can hear that from the Spire, and so can everything nearer.”");
@@ -825,7 +869,7 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       // Same deal as a rock, one tier up: never runs out, and the loudest
       // thing you can do in the Verge.
       pack.ore++;
-      bumpNoise(state, NOISE_PER_ORE, player);
+      bumpNoise(state, glovedNoise(state, NOISE_PER_ORE, player), player);
       if (!state.flags.firstOre) {
         state.flags.firstOre = true;
         say(state, "The Grey King: “Ore, now. You are digging for something worth taking.”");
@@ -835,7 +879,7 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
     if (t === Tile.Copper) {
       // Same rule as ore, one seam rarer — see world.ts's mineral clusters.
       pack.copper++;
-      bumpNoise(state, NOISE_PER_COPPER, player);
+      bumpNoise(state, glovedNoise(state, NOISE_PER_COPPER, player), player);
       if (!state.flags.firstCopper) {
         state.flags.firstCopper = true;
         say(state, "The Grey King: “Copper. Older than the ore, and it was mine first too.”");
@@ -1050,6 +1094,36 @@ function doMakeCloak(state: SimState, player: Player): void {
   say(state, "A hide cloak. The cold takes half as much now.");
 }
 
+/** O — hide and cordage, no fire needed. The cloak's first sibling: it answers a marsh, not the cold. */
+function doMakeBoots(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.boots > 0 || pack.hide < BOOTS_HIDE_COST || pack.cordage < BOOTS_CORDAGE_COST) return;
+  pack.hide -= BOOTS_HIDE_COST;
+  pack.cordage -= BOOTS_CORDAGE_COST;
+  pack.boots = BOOTS_DURABILITY;
+  learn(state, player, "tailoring", XP.stitch);
+  say(state, "Boots, stitched from hide. A marsh will still slow you — just not as much.");
+  if (!state.flags.firstBoots) {
+    state.flags.firstBoots = true;
+    say(state, "The Grey King: “Dry feet in the Verge. A small mercy. I allow those, occasionally.”");
+  }
+}
+
+/** V — hide and cordage, no fire needed. The cloak's other sibling: quieter hands at the loudest work there is. */
+function doMakeGloves(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.gloves > 0 || pack.hide < GLOVES_HIDE_COST || pack.cordage < GLOVES_CORDAGE_COST) return;
+  pack.hide -= GLOVES_HIDE_COST;
+  pack.cordage -= GLOVES_CORDAGE_COST;
+  pack.gloves = GLOVES_DURABILITY;
+  learn(state, player, "tailoring", XP.stitch);
+  say(state, "Gloves, stitched from hide. Stone and ore ring a little quieter in a padded hand.");
+  if (!state.flags.firstGloves) {
+    state.flags.firstGloves = true;
+    say(state, "The Grey King: “Gloves, for the loudest work in the Verge. Practical. I still hear it.”");
+  }
+}
+
 /** 4 — cooked if you have it, raw if you are desperate. Raw sometimes bites back. */
 function doEat(state: SimState, player: Player): void {
   const pack = player.pack;
@@ -1154,9 +1228,12 @@ function doMakeCharcoal(state: SimState, player: Player): void {
   if (!player.atFire || pack.wood < CHARCOAL_WOOD_COST) return;
   pack.wood -= CHARCOAL_WOOD_COST;
   pack.charcoal += charcoalYield(player.skills);
+  // The same smothered burn that makes charcoal sweats out a little tar —
+  // one fire, two byproducts, no separate step to ask for the second one.
+  pack.pitch += PITCH_PER_BURN;
   bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 6), player); // banking a fire down is quiet work
   learn(state, player, "smithing", XP.char);
-  say(state, "Wood smothered down under ash. What is left burns far hotter than the log did.");
+  say(state, "Wood smothered down under ash. What is left burns far hotter than the log did, and a little tar besides.");
 }
 
 /** 0 — at a fire, ore and charcoal become a bar. The one step no tool skips. */
@@ -1383,6 +1460,19 @@ function learn(state: SimState, player: Player, skill: Skill, xp: number): void 
 /** Noise for an action, reduced by how well the soul does it. */
 function skilledNoise(base: number, player: Player, skill: Skill): number {
   return Math.trunc((base * noiseScale(player.skills, skill)) / 100);
+}
+
+/**
+ * Gloves make Rock, Ore and Copper quieter to work — the same trade an axe
+ * already makes on a chop, aimed at the loudest tile in the Verge instead
+ * of the quietest. Wears one use per dig, same shape as an axe per chop.
+ */
+function glovedNoise(state: SimState, base: number, player: Player): number {
+  const pack = player.pack;
+  if (pack.gloves <= 0) return base;
+  pack.gloves--;
+  if (pack.gloves === 0) say(state, "The gloves finally wear through at the fingers. Stone doesn't care either way.");
+  return Math.trunc((base * GLOVES_QUIET_PCT) / 100);
 }
 
 function bumpNoise(state: SimState, amount: number, source: Player): void {

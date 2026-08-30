@@ -475,6 +475,8 @@ export function drawHud(
     pack.knife > 0 ? `knife ${pack.knife}` : null,
     pack.axe > 0 ? `axe ${pack.axe}` : null,
     pack.pot > 0 ? `pot ${pack.pot}` : null,
+    pack.boots > 0 ? `boots ${pack.boots}` : null,
+    pack.gloves > 0 ? `gloves ${pack.gloves}` : null,
     pack.snare > 0 ? `snare ${pack.snare}` : null,
     pack.fishingLine > 0 ? `line ${pack.fishingLine}` : null,
   ]
@@ -519,7 +521,9 @@ export function drawHud(
       // pack doesn't advertise materials nothing can be done with yet.
       (pack.clay > 0 ? `  clay ${pack.clay}` : "") +
       (pack.copper > 0 ? `  copper ${pack.copper}` : "") +
-      (pack.copperBar > 0 ? `  copper bar ${pack.copperBar}` : ""),
+      (pack.copperBar > 0 ? `  copper bar ${pack.copperBar}` : "") +
+      (pack.glue > 0 ? `  glue ${pack.glue}` : "") +
+      (pack.pitch > 0 ? `  pitch ${pack.pitch}` : ""),
     10,
     hudY + 76,
   );
@@ -564,10 +568,15 @@ export function drawHud(
     10,
     hudY + 196,
   );
+  ctx.fillText(
+    "O boots (2 hide 1 cord): softer marsh · V gloves (2 hide 1 cord): quieter stone, ore, copper",
+    10,
+    hudY + 210,
+  );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 214 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 228 + i * 15));
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {

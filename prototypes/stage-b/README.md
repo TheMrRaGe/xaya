@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (267 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (276 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -429,6 +429,25 @@ plan committed at the repo root's `doc/world/`.
   forge, is ore-and-charcoal first, copper second, an old crown last — a
   found relic is still the fallback of last resort, not the second choice.
   Carrying both swords, the real one is always the one that swings.
+- **The cloak got two siblings, and two fires stopped wasting what they
+  cut.** **Boots** (key **O**, 2 hide 1 cord, no fire needed) soften a
+  marsh's speed penalty without touching `terrainSpeedPct` itself — the
+  bonus is a player-only modifier layered on top of the one rule every
+  mover obeys, so a Lieutenant crossing the same marsh still gets the bare
+  55%. They wear one charge per step actually taken through a marsh, the
+  same shape a cloak already wears by the cold it stops rather than by the
+  clock. **Gloves** (key **V**, same recipe) make Rock, Ore and Copper
+  quieter to work — the same trade an axe already makes on a chop, aimed
+  at the loudest tile in the Verge instead of the quietest — and wear one
+  charge per dig. Both are the hide/cordage leatherworking line's first
+  products beyond the one cloak. Separately: butchering a carcass now
+  always pays a little **glue** alongside the meat and hide, and smothering
+  a fire down to charcoal now always pays a little **pitch** alongside the
+  char — the same work, not a new step to ask for either, closing PLAN
+  §15's "a graph with no waste is a graph where nothing is a bargain" a
+  little further. Neither has anywhere to be spent yet; that's the honest
+  state of it until a Fletcher or something like one exists to want the
+  glue.
 
 ### He used to camp the spawn
 

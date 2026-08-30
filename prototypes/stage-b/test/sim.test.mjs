@@ -1333,5 +1333,101 @@ function check(name, cond, detail = "") {
   );
 }
 
+// --- 43. boots: softer marsh, not fully fast, and worn by the step through it rather than the clock ---
+{
+  const bareMarsh = (() => {
+    const s = fresh();
+    const p = s.players[0];
+    const px = Math.floor(p.x / TILE);
+    const py = Math.floor(p.y / TILE);
+    s.world.set(px, py, Tile.Marsh);
+    s.world.set(px + 1, py, Tile.Grass);
+    const before = p.x;
+    stepTick(s, [I({ dx: 1 })]);
+    return p.x - before;
+  })();
+
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Marsh);
+  s.world.set(px + 1, py, Tile.Grass);
+  p.pack.hide = 2;
+  p.pack.cordage = 1;
+  stepTick(s, [I({ makeBoots: true })]);
+  check("hide and cordage make boots, no fire needed", p.pack.boots > 0, `boots=${p.pack.boots}`);
+
+  const bootsBefore = p.pack.boots;
+  const before = p.x;
+  stepTick(s, [I({ dx: 1 })]);
+  const bootedMarsh = p.x - before;
+  check("boots make a marsh less slow, not fully fast", bootedMarsh > bareMarsh, `bare=${bareMarsh} booted=${bootedMarsh}`);
+  check("and wear by the step through it", p.pack.boots === bootsBefore - 1);
+
+  const beforeGrass = p.pack.boots;
+  s.world.set(Math.floor(p.x / TILE), Math.floor(p.y / TILE), Tile.Grass); // wherever that step landed
+  stepTick(s, [I({ dx: 1 })]);
+  check("but not on plain ground", p.pack.boots === beforeGrass);
+}
+
+// --- 44. gloves: quieter on rock, ore and copper, and worn by the dig ---
+{
+  const bareNoise = (() => {
+    const s = fresh();
+    const p = s.players[0];
+    const px = Math.floor(p.x / TILE);
+    const py = Math.floor(p.y / TILE);
+    s.world.set(px + 1, py, Tile.Rock);
+    const before = s.noise;
+    stepTick(s, [I({ gather: true })]);
+    return s.noise - before;
+  })();
+
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  p.pack.hide = 2;
+  p.pack.cordage = 1;
+  stepTick(s, [I({ makeGloves: true })]);
+  check("hide and cordage make gloves, no fire needed", p.pack.gloves > 0, `gloves=${p.pack.gloves}`);
+
+  const glovesBefore = p.pack.gloves;
+  s.world.set(px + 1, py, Tile.Rock);
+  const before = s.noise;
+  stepTick(s, [I({ gather: true })]);
+  const glovedNoiseAmt = s.noise - before;
+  check("gloves make chipping stone quieter", glovedNoiseAmt < bareNoise, `bare=${bareNoise} gloved=${glovedNoiseAmt}`);
+  check("and wear by the dig", p.pack.gloves === glovesBefore - 1);
+}
+
+// --- 45. glue and pitch: byproducts of work already happening, not a new step to ask for them ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+
+  const deer = s.creatures.find((c) => c.kind === "deer");
+  deer.x = p.x;
+  deer.y = p.y;
+  deer.state = "dead";
+  deer.health = 0;
+  deer.diedAtTick = s.tick;
+  deer.respawnAtTick = 0;
+  deer.butchered = false;
+  stepTick(s, [I({ gather: true })]);
+  check("butchering yields glue alongside meat and hide", p.pack.glue > 0, `glue=${p.pack.glue}`);
+
+  s.world.set(px, py, Tile.Grass);
+  p.pack.wood = 5;
+  stepTick(s, [I({ build: true })]);
+  stepTick(s, IDLE);
+  p.pack.wood = 3;
+  stepTick(s, [I({ makeCharcoal: true })]);
+  check("burning charcoal yields pitch too", p.pack.pitch > 0 && p.pack.charcoal > 0, JSON.stringify(p.pack));
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

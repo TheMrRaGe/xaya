@@ -37,7 +37,9 @@ export type Tradeable =
   | "crowns"
   | "clay"
   | "copper"
-  | "copperBar";
+  | "copperBar"
+  | "glue"
+  | "pitch";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -54,6 +56,8 @@ export const TRADEABLES: readonly Tradeable[] = [
   "clay",
   "copper",
   "copperBar",
+  "glue",
+  "pitch",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -91,16 +95,14 @@ export interface Pack {
   /**
    * Dug from a clay deposit at a riverbank. Ordinary soil, not a vein —
    * §3.1 names it alongside timber as one of the Verge's everyday
-   * materials, not a rare find. Nothing consumes it yet (item 2 of
-   * doc/world/CONTENT.md's worldgen follow-on); it is gatherable and
-   * storable a commit ahead of having somewhere to spend it, the same
-   * order ore/bar/sword shipped in.
+   * materials, not a rare find. Fired into a `pot` at a fire.
    */
   clay: number;
   /**
    * Dug from a copper seam — the rarest outcome of the same mineral
    * clusters that produce Ore (world.ts), because §3.1 names copper, not
-   * iron, as the Verge's own metal. Nothing consumes it yet; see `clay`.
+   * iron, as the Verge's own metal. Smelted alone, no charcoal needed,
+   * into `copperBar`.
    */
   copper: number;
   /**
@@ -109,6 +111,15 @@ export interface Pack {
    * `bar`, since it is a material and not a tool.
    */
   copperBar: number;
+  /**
+   * A byproduct of butchering (doc/world/PLAN.md §15's "a graph with no
+   * waste is a graph where nothing is a bargain") — connective tissue and
+   * scrap nobody was carrying meat or hide for. No chain spends it yet;
+   * §7.2's Fletcher, whenever built, is the obvious first customer.
+   */
+  glue: number;
+  /** A byproduct of smothering wood down to charcoal — wood tar, the same fire that makes one makes a little of the other. No chain spends it yet. */
+  pitch: number;
   /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
@@ -119,6 +130,10 @@ export interface Pack {
   cloak: number; // cold ticks left. Halves what the cold takes
   knife: number; // uses left. More off a carcass, and the only way to cut cordage
   axe: number; // chops left. More wood off a tree, and quieter doing it
+  /** Marsh-steps left. Softens a marsh's speed penalty without touching the shared rule every mover obeys (move.ts's terrainSpeedPct stays untouched — this is a player-only modifier applied on top of it). */
+  boots: number;
+  /** Digs left. Quieter work on Rock, Ore and Copper — the same trade an axe already makes on a chop, aimed at the loudest tile in the Verge instead of the quietest. */
+  gloves: number;
   snare: number; // how many you are carrying, unset
   /** Strikes left. Double the spear's bite, and outlasts it — the whole chain's payoff. */
   sword: number;
@@ -202,10 +217,14 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       clay: 0,
       copper: 0,
       copperBar: 0,
+      glue: 0,
+      pitch: 0,
       spear: 0,
       cloak: 0,
       knife: 0,
       axe: 0,
+      boots: 0,
+      gloves: 0,
       snare: 0,
       sword: 0,
       copperSword: 0,

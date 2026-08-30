@@ -18,7 +18,7 @@ import { TILE_PX, VIEW_W, VIEW_H, ViewState, computeCamera, drawWorld, drawEntit
 import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
 
-const HUD_H = 259; // +14 for the new "B sword / P pot" control line
+const HUD_H = 273; // +14 for the "B sword / P pot" line, +14 more for "O boots / V gloves"
 // The canvas is the camera's window, not the map — VIEW_W/VIEW_H, not
 // WORLD_W/WORLD_H. The Verge can grow behind this without the page's layout
 // ever needing to change again.
@@ -102,6 +102,8 @@ const VERBS: Record<string, string> = {
   t: "cycleOffer",
   g: "give",
   p: "makePot",
+  o: "makeBoots",
+  v: "makeGloves",
 };
 
 window.addEventListener("keydown", (e) => {
