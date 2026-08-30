@@ -115,6 +115,19 @@ export interface Player {
   graceUntil: number;
   alive: boolean;
   lineage: number; // which soul this is — the heir count
+  /**
+   * How the road speaks of you (doc/world/PLAN.md §2A — never "reputation
+   * score" out loud). Starts at zero and only killing another soul moves it,
+   * for now: each kill costs standing and marks you, the same "outlawry"
+   * §25/§28 describe. Fall far enough and the Lieutenant stops hunting you
+   * at all — not mercy, the opposite: past a point you read to him as
+   * already his, per §29's "notorious player-killers... can be plundered
+   * into actual rank." Nothing yet builds it back up (Commons standing,
+   * §3's kindness-side, is unbuilt) and nothing carries it between lives —
+   * this prototype has no account layer for a soul's road to follow it
+   * across a death, so it resets with everything else in the pack (§6.1).
+   */
+  standing: number;
 }
 
 /**
@@ -155,6 +168,7 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     graceUntil,
     alive: true,
     lineage,
+    standing: 0,
   };
 }
 

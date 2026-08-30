@@ -839,5 +839,49 @@ function check(name, cond, detail = "") {
   );
 }
 
+// --- 29. outlawry: a kill costs standing, marks you, and repeat offenders vanish from the hunt ---
+{
+  const s = fresh(4);
+  const [striker, v1, v2, v3] = s.players;
+  striker.pack.sword = 30; // one hit ends a soul outright, so each kill is a single clean tick
+
+  const killOne = (victim) => {
+    victim.x = striker.x;
+    victim.y = striker.y;
+    victim.health = 1;
+    stepTick(s, [I({ strike: true }), I(), I(), I()]);
+  };
+
+  killOne(v1);
+  check("a kill costs standing", striker.standing === -40, `standing=${striker.standing}`);
+  check("and marks the killer", s.marked === striker.id, `marked=${s.marked}`);
+
+  killOne(v2);
+  check("a second kill costs standing again", striker.standing === -80, `standing=${striker.standing}`);
+  check("still marked — not yet notorious", s.marked === striker.id);
+
+  killOne(v3);
+  check("a third kill crosses into notoriety", striker.standing === -120, `standing=${striker.standing}`);
+  check("and he is no longer marked — marking him means nothing now", s.marked !== striker.id, `marked=${s.marked}`);
+}
+
+// --- 30. a notorious soul is invisible to the Lieutenant, not merely unmarked ---
+{
+  const s = fresh(2);
+  const [notorious, bystander] = s.players;
+  notorious.standing = -150;
+  notorious.x = s.lieutenant.x;
+  notorious.y = s.lieutenant.y;
+  bystander.x = s.lieutenant.x + 30 * TILE;
+  bystander.y = s.lieutenant.y;
+  s.marked = notorious.id; // even if something else still points a mark at him
+  stepTick(s, IDLE);
+  check(
+    "standing right next to him, a notorious soul is not hunted",
+    s.lieutenant.state === "patrol" && s.lieutenant.target !== notorious.id,
+    `state=${s.lieutenant.state} target=${s.lieutenant.target}`,
+  );
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

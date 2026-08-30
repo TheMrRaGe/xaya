@@ -681,6 +681,23 @@ skills learned, fires lit, souls alive — and **a death buys the survivors quie
 That is §8.3's Muster logic and §8.4's "be generous to the compliant", already
 working, at the scale of one zone.
 
+**`mark` is no longer only his to choose.** A soul who kills another soul
+marks themself the same tick, standing alongside the Overlord's own
+discretionary use of the action — the first place in the prototype where a
+player's own act reaches directly into his menu rather than only being read
+by it. Killing also costs **standing** (§2A: never "reputation score" out
+loud) — a per-life value, kept only as long as the soul is, since Stage B has
+no account layer for it to survive a death on. Three kills or so and a soul
+crosses into **notorious**: the Lieutenant stops hunting them by mark *or* by
+proximity — §29's "notorious player-killers... can be plundered into actual
+rank" read literally, one Lieutenant deep. This is a narrow slice of §25/§28's
+outlawry, crossed ahead of §44's own Stage C gate on explicit instruction —
+see this document's gap list, below — and it stops well short of that system:
+no bounty payout, no plunder off a body, no Commons-standing counterweight to
+climb back with, no Host rank actually offered to a notorious soul. It answers
+one question narrowly — does killing cost you something — not the larger one
+the full system is for.
+
 ---
 
 ## 9. Magic & the working
@@ -847,13 +864,13 @@ down by a Lieutenant · **killed by another soul**.
 
 The last one lands like the others do: press SPACE near another living, not-
 graced soul and the same strike that would have hit a deer hits them instead
-— whichever is nearer wins, one shared verb, no separate key. What it does
-**not** bring with it: no mark, no bounty, no plunder off the body, no
-consequence at all beyond the obituary. §25/§28's whole outlawry and bounty
-system — the Grey King paying for corpses, a killer visibly taking his coin
-— still hangs entirely off this one cause existing; the cause existing does
-not resolve that system, it only makes the sentence "killed by another soul"
-possible to write on the Barrow-list for the first time.
+— whichever is nearer wins, one shared verb, no separate key. It now carries
+a real, if narrow, consequence — see §8.7 — but still **not** a mark's full
+weight: no bounty payout, no plunder off the body, none of §28's five ways
+to answer a mark. §25/§28's whole outlawry and bounty system — the Grey King
+paying for corpses, a killer visibly taking his coin — is still mostly
+unbuilt; what exists now answers "does killing cost you anything," not
+"does the outlawry economy work."
 
 **Implied but absent:** drowned, bled out (needs Mortal Wound), sickness, the
 Kiln's ashlung, the Weald's air, fell.
@@ -1041,15 +1058,18 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   and this was raised as a gate worth confirming before crossing rather than
   crossing on momentum. The call to cross it now, ahead of Stage C, was made
   explicitly, on the grounds that §44 is a previous agent's cut list, not a
-  standing rule from the person actually directing this project. **What
-  actually landed is narrow: SPACE now can strike another soul, the same one
-  shared verb that already strikes a beast, with its own honest death cause
-  (§11.3).** What did *not* land, and remains exactly as open as before: any
-  mark, any bounty, any plunder off a body, any of §28's "five ways to answer
-  a mark," the Grey King's coin funding it, or the murder-guild economy that
-  whole system was supposed to prove or disprove. Closing this gap answered
-  "can a soul kill another soul," not "does the outlawry economy work" —
-  that second, much larger question is still entirely unbuilt and unasked.
+  standing rule from the person actually directing this project. What landed
+  in two passes: first, SPACE striking another soul at all, with its own
+  honest death cause (§11.3); then a real cost for it — a kill marks the
+  killer and drops their standing, and enough kills makes the Lieutenant
+  stop hunting them altogether (§8.7). What still has *not* landed, and
+  remains exactly as open as before: any bounty payout, any plunder off a
+  body, any of §28's other "five ways to answer a mark," the Grey King's
+  coin actually funding any of it, Commons standing as the counterweight
+  that could climb a soul back out, or the murder-guild economy the whole
+  system was supposed to prove or disprove. This closes "can killing cost
+  you something," not "does the outlawry economy work" — that second,
+  much larger question is still entirely unbuilt and unasked.
 - ~~**The sword chain compresses eight professions into zero new skills.**~~
   — closed: **smithing** is the seventh skill, covering charcoal-burning,
   smelting and forging. It settles a point worth stating plainly, because it

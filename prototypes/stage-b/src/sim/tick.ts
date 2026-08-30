@@ -183,6 +183,21 @@ const FISHING_LINE_DURABILITY = 25; // casts that land a fish
 const FISH_SATIETY = 140; // between raw meat's 120 and a hot meal's 500+
 const NOISE_PER_FISH = 15; // sitting at the water's edge is nearly silent
 
+/**
+ * Outlawry, scoped to what one Lieutenant can actually enforce (§25/§28,
+ * doc/world/PLAN.md §2A: this is "standing," never "reputation score" out
+ * loud). A kill costs standing and marks the killer the same tick — the
+ * Grey King's forces go looking for you, same as an Overlord-chosen mark
+ * already does. Fall far enough and that flips: §29 has notorious
+ * player-killers taking rank in his Host outright, and a soul that far
+ * gone reads to a Lieutenant as already his, not as prey. He stops
+ * looking. Nothing yet earns standing back — that is Commons standing's
+ * job (§3), and nothing here builds it.
+ */
+const STANDING_KILL_PENALTY = 40;
+/** At or below this he stops hunting you at all — roughly three kills. Exported so the HUD can read the same line the sim does. */
+export const NOTORIOUS_STANDING = -100;
+
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
 const REGROW_TICKS = 900; // ~90s
@@ -319,6 +334,7 @@ export interface SimState {
     firstSword: boolean;
     firstFish: boolean;
     firstSoulKill: boolean;
+    firstNotorious: boolean;
   };
 }
 
@@ -359,6 +375,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstSword: false,
       firstFish: false,
       firstSoulKill: false,
+      firstNotorious: false,
     },
   };
 }
@@ -771,6 +788,22 @@ function doStrike(state: SimState, player: Player): void {
         state.flags.firstSoulKill = true;
         say(state, "The Grey King: “There. Now you understand what I have always wanted from this valley.”");
       }
+
+      // Outlawry, such as it is: the killer's standing drops and they are
+      // marked the same tick, unless they have already fallen too far for
+      // marking to mean anything (below).
+      player.standing -= STANDING_KILL_PENALTY;
+      if (player.standing > NOTORIOUS_STANDING) {
+        state.marked = player.id;
+        say(state, `Soul #${player.lineage} is marked. The road will remember this, even if they do not.`);
+      } else if (!state.flags.firstNotorious) {
+        state.flags.firstNotorious = true;
+        if (state.marked === player.id) state.marked = -1;
+        say(
+          state,
+          "The Grey King: “...Enough of them, and you stop being someone I hunt. You become someone I already own.”",
+        );
+      }
     }
     return;
   }
@@ -1124,9 +1157,11 @@ function tickLieutenant(state: SimState): void {
   // With several in the Verge that makes proximity to another player a real
   // risk and a real shield at once, which is the first genuinely social
   // thing in this prototype.
-  // A marked soul is wanted above all others, wherever they are (§3.5).
+  // A marked soul is wanted above all others, wherever they are (§3.5) —
+  // unless they have fallen past NOTORIOUS_STANDING, in which case marking
+  // them means nothing: he does not chase what is already his.
   const markedSoul = state.players[state.marked];
-  if (markedSoul && markedSoul.alive && markedSoul.graceUntil <= state.tick) {
+  if (markedSoul && markedSoul.alive && markedSoul.graceUntil <= state.tick && markedSoul.standing > NOTORIOUS_STANDING) {
     lieutenant.state = "hunt";
     lieutenant.target = markedSoul.id;
   }
@@ -1134,7 +1169,9 @@ function tickLieutenant(state: SimState): void {
   let nearest: Player | null = null;
   let nearestSq = Number.MAX_SAFE_INTEGER;
   for (const p of state.players) {
-    if (!p.alive || p.graceUntil > state.tick) continue;
+    // A notorious soul is invisible to him by proximity too, not only to
+    // marking — the same reason, read twice.
+    if (!p.alive || p.graceUntil > state.tick || p.standing <= NOTORIOUS_STANDING) continue;
     const d = distSq(lieutenant.x, lieutenant.y, p.x, p.y);
     if (d < nearestSq) {
       nearestSq = d;

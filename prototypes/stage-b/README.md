@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (207 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (214 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -312,6 +312,21 @@ plan committed at the repo root's `doc/world/`.
   another soul," not folded into any of the others. This is the one piece
   of work in this whole prototype that jumps its own gate on purpose — see
   the cut-list note below for what did and did not come with it.
+- **And now it costs something: standing** (never "reputation score" out
+  loud — PLAN §2A). A kill marks the killer the same tick — the same
+  mechanism the Overlord already uses to single someone out, now also
+  triggered by what a player does, not only by his choice — and drops their
+  standing by 40. Three kills or so (past -100) and the arithmetic flips:
+  he stops hunting them, by mark *or* by proximity, at all. Not mercy — the
+  opposite. PLAN §29 has notorious player-killers taking rank in his Host
+  outright; a soul that far gone reads to a Lieutenant as already his, so he
+  stops looking. Standing lives on the character, not an account — Stage B
+  has no login layer for it to survive a death on — so it resets exactly
+  like a skill does: die, and the next soul starts clean, same as everything
+  else in the pack. Nothing yet earns it back while you're alive (Commons
+  standing, PLAN §3's kindness side, is unbuilt), and neither bounty payouts
+  nor plunder off a body came with this — see the cut-list note for the rest
+  of what didn't ship.
 - **Giving, and a ledger.** **T** picks what you're offering, **G** hands one
   to the soul beside you. Giving is one-sided on purpose: two people who
   each want what the other has will trade by giving twice, and that is
@@ -399,17 +414,22 @@ it stayed a gap for several rounds of work on purpose. It was raised as a
 gate worth confirming rather than crossing on momentum, and the call to
 cross it now — ahead of Stage C, on the grounds that §44 is a previous
 agent's cut list rather than a standing rule from whoever is actually
-directing this project — was made explicitly. What actually shipped is
-narrow: SPACE now strikes another soul the same way it strikes a beast, with
-its own honest death cause. No mark, no bounty, no plunder, no murder-guild
-economy came with it — that is still exactly as unbuilt as it was, and is a
-much bigger question than whether the verb works.
+directing this project — was made explicitly. It shipped in two passes:
+first SPACE striking another soul at all, with its own honest death cause;
+then a real cost for doing it — a kill marks the killer and drops their
+standing, and enough kills (see the standing bullet above) makes the
+Lieutenant stop hunting them altogether. No bounty payout, no plunder off a
+body, no Commons-standing counterweight to climb back with, and no
+murder-guild economy came with either pass — that is still exactly as
+unbuilt as it was, and is a much bigger question than whether killing costs
+you something.
 
 Explicitly **out**, same as the plan says otherwise: land, guilds, ecology
-population math, the Shards, magic, the mark/bounty economy PvP was meant to
-prove or disprove. The creatures are a fixed roster that respawns on a timer
-somewhere you aren't — deliberately *not* a population model, because that
-is the fun thing to write that later turns out to be why a tick costs 40ms.
+population math, the Shards, magic, the bounty/plunder/Commons-standing
+economy PvP was meant to prove or disprove. The creatures are a fixed
+roster that respawns on a timer somewhere you aren't — deliberately *not*
+a population model, because that is the fun thing to write that later
+turns out to be why a tick costs 40ms.
 
 ## Cost per tick
 
