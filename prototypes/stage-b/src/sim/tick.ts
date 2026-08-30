@@ -318,6 +318,7 @@ export interface SimState {
     firstOre: boolean;
     firstSword: boolean;
     firstFish: boolean;
+    firstSoulKill: boolean;
   };
 }
 
@@ -357,6 +358,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstOre: false,
       firstSword: false,
       firstFish: false,
+      firstSoulKill: false,
     },
   };
 }
@@ -737,8 +739,14 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
 
 /** Space — hit the nearest living thing in reach. Loud, always. */
 function doStrike(state: SimState, player: Player): void {
-  const quarry = nearestCreature(state, player, (c) => c.state !== "dead");
-  if (!quarry) return;
+  // Whichever living thing is nearer gets hit — a beast or another soul.
+  // "The nearest living thing in reach" was always the honest description
+  // of this verb; only a creature could ever answer to it before now.
+  const creatureTarget = nearestCreature(state, player, (c) => c.state !== "dead");
+  const creatureSq = creatureTarget ? distSq(creatureTarget.x, creatureTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  const soulTarget = nearestSoul(state, player);
+  const soulSq = soulTarget ? distSq(soulTarget.x, soulTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  if (!creatureTarget && !soulTarget) return;
 
   const pack = player.pack;
   // The best weapon in hand wins: a sword over a spear over a fist. Nothing
@@ -748,17 +756,29 @@ function doStrike(state: SimState, player: Player): void {
   // the same soul's smithing, not just their hunting, is in the blow.
   const weapon = pack.sword > 0 ? SWORD_DAMAGE + swordBonus(player.skills) : pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE;
   const damage = weapon + strikeBonus(player.skills);
-  const killed = woundCreature(quarry, damage, state.tick, player.id);
   bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
-  learn(state, player, "hunting", killed ? XP.kill : XP.strike);
 
-  if (pack.sword > 0) {
-    pack.sword--;
-    if (pack.sword === 0) say(state, "The sword's edge finally gives out. It was a blade, once.");
-  } else if (pack.spear > 0) {
-    pack.spear--;
-    if (pack.spear === 0) say(state, "A spear splinters on the last blow.");
+  if (soulTarget && soulSq <= creatureSq) {
+    soulTarget.health = clamp(soulTarget.health - damage, 0, HEALTH_MAX);
+    state.lastDamageSource[soulTarget.id] = "killed by another soul";
+    const killed = soulTarget.health <= 0;
+    learn(state, player, "hunting", killed ? XP.kill : XP.strike);
+    spendWeapon(state, pack);
+    if (killed) {
+      player.kills++;
+      say(state, `Soul #${soulTarget.lineage} goes down.`);
+      if (!state.flags.firstSoulKill) {
+        state.flags.firstSoulKill = true;
+        say(state, "The Grey King: “There. Now you understand what I have always wanted from this valley.”");
+      }
+    }
+    return;
   }
+
+  const quarry = creatureTarget!;
+  const killed = woundCreature(quarry, damage, state.tick, player.id);
+  learn(state, player, "hunting", killed ? XP.kill : XP.strike);
+  spendWeapon(state, pack);
 
   if (killed) {
     player.kills++;
@@ -770,6 +790,32 @@ function doStrike(state: SimState, player: Player): void {
   } else if (quarry.kind === "hedge-boar") {
     say(state, "The boar turns on you.");
   }
+}
+
+/** Whatever a strike spends: the sword before the spear, same rule the damage itself follows. */
+function spendWeapon(state: SimState, pack: Player["pack"]): void {
+  if (pack.sword > 0) {
+    pack.sword--;
+    if (pack.sword === 0) say(state, "The sword's edge finally gives out. It was a blade, once.");
+  } else if (pack.spear > 0) {
+    pack.spear--;
+    if (pack.spear === 0) say(state, "A spear splinters on the last blow.");
+  }
+}
+
+/** Another living soul in strike range — never yourself, and never one still beneath the Grey King's notice (§ grace). */
+function nearestSoul(state: SimState, player: Player): Player | null {
+  let best: Player | null = null;
+  let bestSq = STRIKE_RADIUS * STRIKE_RADIUS;
+  for (const other of state.players) {
+    if (other.id === player.id || !other.alive || other.graceUntil > state.tick) continue;
+    const d = distSq(other.x, other.y, player.x, player.y);
+    if (d <= bestSq) {
+      bestSq = d;
+      best = other;
+    }
+  }
+  return best;
 }
 
 /**

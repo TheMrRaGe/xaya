@@ -790,5 +790,54 @@ function check(name, cond, detail = "") {
   check("a mastered fisher does noticeably better", fishChance({ fishing: 10000 })[0] >= 4 + 2 * 9);
 }
 
+// --- 27. a soul can strike another soul, and the cause is honest about it ---
+{
+  const s = fresh(2);
+  const [striker, victim] = s.players;
+  striker.pack.spear = 12;
+  victim.x = striker.x;
+  victim.y = striker.y;
+  const before = victim.health;
+  stepTick(s, [I({ strike: true }), I()]);
+  check("a strike lands on the nearer soul, not just the nearer beast", victim.health < before, `health=${victim.health}`);
+  check("the spear was spent on it, same as any other target", striker.pack.spear === 11);
+
+  victim.health = 2; // close enough to see it through without hundreds of hits
+  const [death] = stepTick(s, [I({ strike: true }), I()]);
+  check("enough of a strike ends a soul, not just a beast", !victim.alive);
+  check("the cause names another soul, not a beast or the cold", death && death.cause === "killed by another soul", JSON.stringify(death));
+  check("the kill is counted for whoever swung", striker.kills === 1, `kills=${striker.kills}`);
+}
+
+// --- 28. a graced soul cannot be struck, and the nearer target always wins ---
+{
+  const s = fresh(2);
+  const [striker, newcomer] = s.players;
+  newcomer.x = striker.x;
+  newcomer.y = striker.y;
+  newcomer.graceUntil = 500;
+  striker.pack.spear = 12;
+  const before = newcomer.health;
+  stepTick(s, [I({ strike: true }), I()]);
+  check("a soul still beneath the Grey King's notice cannot be struck either", newcomer.health === before, `health=${newcomer.health}`);
+
+  const s2 = fresh(2);
+  const [p1, p2] = s2.players;
+  p2.x = p1.x + TILE;
+  p2.y = p1.y;
+  const deer = s2.creatures.find((c) => c.kind === "deer");
+  deer.x = p1.x + Math.trunc(TILE * 0.3);
+  deer.y = p1.y;
+  p1.pack.spear = 12;
+  const deerBefore = deer.health;
+  const p2Before = p2.health;
+  stepTick(s2, [I({ strike: true }), I()]);
+  check(
+    "the nearer target is struck — a beast closer than a soul still wins",
+    deer.health < deerBefore && p2.health === p2Before,
+    `deer=${deer.health} p2=${p2.health}`,
+  );
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

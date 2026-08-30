@@ -96,7 +96,8 @@ export type DeathCause =
   | "froze"
   | "gored by a boar"
   | "savaged by wolves"
-  | "cut down by a Lieutenant";
+  | "cut down by a Lieutenant"
+  | "killed by another soul";
 
 export interface Player {
   id: number; // index into SimState.players, stable for the run

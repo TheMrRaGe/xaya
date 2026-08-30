@@ -843,11 +843,20 @@ walls, other players — never by rule.
 ### 11.3 Death causes in code `[built]`
 
 starved · died of thirst · froze · gored by a boar · savaged by wolves · cut
-down by a Lieutenant.
+down by a Lieutenant · **killed by another soul**.
+
+The last one lands like the others do: press SPACE near another living, not-
+graced soul and the same strike that would have hit a deer hits them instead
+— whichever is nearer wins, one shared verb, no separate key. What it does
+**not** bring with it: no mark, no bounty, no plunder off the body, no
+consequence at all beyond the obituary. §25/§28's whole outlawry and bounty
+system — the Grey King paying for corpses, a killer visibly taking his coin
+— still hangs entirely off this one cause existing; the cause existing does
+not resolve that system, it only makes the sentence "killed by another soul"
+possible to write on the Barrow-list for the first time.
 
 **Implied but absent:** drowned, bled out (needs Mortal Wound), sickness, the
-Kiln's ashlung, the Weald's air, fell, and — the big one — **killed by another
-soul**, which the whole outlawry and bounty system hangs off.
+Kiln's ashlung, the Weald's air, fell.
 
 ---
 
@@ -1026,11 +1035,21 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   distinguished from a stranger's theft of a *kill* is still open.
 - **Terrain beyond the eleven tiles** (§3.5) is implied by every Realm and
   specced nowhere.
-- **Killed-by-another-soul** is absent from the death causes (§11.3), and the
-  entire outlawry, bounty and murder-guild layer hangs off it. Not an
-  oversight to close casually: §44's Stage B cut is explicit that PvP, marks
-  and bounties are Stage C ("does cooperation beat predation with real
-  people"), not a Stage B task — this one stays a gap until that gate opens.
+- ~~**Killed-by-another-soul** is absent from the death causes~~ — closed,
+  deliberately and out of sequence: §44's Stage B cut names PvP, marks and
+  bounties as Stage C ("does cooperation beat predation with real people"),
+  and this was raised as a gate worth confirming before crossing rather than
+  crossing on momentum. The call to cross it now, ahead of Stage C, was made
+  explicitly, on the grounds that §44 is a previous agent's cut list, not a
+  standing rule from the person actually directing this project. **What
+  actually landed is narrow: SPACE now can strike another soul, the same one
+  shared verb that already strikes a beast, with its own honest death cause
+  (§11.3).** What did *not* land, and remains exactly as open as before: any
+  mark, any bounty, any plunder off a body, any of §28's "five ways to answer
+  a mark," the Grey King's coin funding it, or the murder-guild economy that
+  whole system was supposed to prove or disprove. Closing this gap answered
+  "can a soul kill another soul," not "does the outlawry economy work" —
+  that second, much larger question is still entirely unbuilt and unasked.
 - ~~**The sword chain compresses eight professions into zero new skills.**~~
   — closed: **smithing** is the seventh skill, covering charcoal-burning,
   smelting and forging. It settles a point worth stating plainly, because it

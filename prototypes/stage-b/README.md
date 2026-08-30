@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (200 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (207 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -305,6 +305,13 @@ plan committed at the repo root's `doc/world/`.
   which one is driving (DESIGN §6.8). The Lieutenant hunts whichever soul is
   nearest, which makes standing near someone else a risk and a shield at
   once. A boar holds its grudge against whoever swung first.
+- **SPACE can now hit another soul, not only a beast.** Whichever is nearer
+  gets struck — same verb, same weapon-priority rules, same durability wear.
+  A soul still beneath the Grey King's notice (fresh spawn grace) cannot be
+  targeted, and a death this way gets its own honest cause: "killed by
+  another soul," not folded into any of the others. This is the one piece
+  of work in this whole prototype that jumps its own gate on purpose — see
+  the cut-list note below for what did and did not come with it.
 - **Giving, and a ledger.** **T** picks what you're offering, **G** hands one
   to the soul beside you. Giving is one-sided on purpose: two people who
   each want what the other has will trade by giving twice, and that is
@@ -385,11 +392,24 @@ day"), and §17 names both explicitly under the same hunger row as Farmer and
 Hunter. Nothing on the list is contradicted; two more of §17's food
 professions exist than §44 got around to naming.
 
-Explicitly **out**, same as the plan says: land, guilds, ecology population
-math, the Shards, magic, any second player, any server. The creatures are a
-fixed roster that respawns on a timer somewhere you aren't — deliberately
-*not* a population model, because that is the fun thing to write that later
-turns out to be why a tick costs 40ms.
+**One line was crossed outright, not stretched: PvP.** §44 names it, along
+with marks and bounties, as Stage C — "does cooperation beat predation with
+real people" is a question a solo/duo prototype cannot answer either way, so
+it stayed a gap for several rounds of work on purpose. It was raised as a
+gate worth confirming rather than crossing on momentum, and the call to
+cross it now — ahead of Stage C, on the grounds that §44 is a previous
+agent's cut list rather than a standing rule from whoever is actually
+directing this project — was made explicitly. What actually shipped is
+narrow: SPACE now strikes another soul the same way it strikes a beast, with
+its own honest death cause. No mark, no bounty, no plunder, no murder-guild
+economy came with it — that is still exactly as unbuilt as it was, and is a
+much bigger question than whether the verb works.
+
+Explicitly **out**, same as the plan says otherwise: land, guilds, ecology
+population math, the Shards, magic, the mark/bounty economy PvP was meant to
+prove or disprove. The creatures are a fixed roster that respawns on a timer
+somewhere you aren't — deliberately *not* a population model, because that
+is the fun thing to write that later turns out to be why a tick costs 40ms.
 
 ## Cost per tick
 
