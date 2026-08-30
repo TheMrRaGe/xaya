@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (301 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (303 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -490,6 +490,21 @@ plan committed at the repo root's `doc/world/`.
   not just their own, so the death screen is a board the settlement keeps
   rather than one browser's private diary. `data/` is gitignored: it's save
   data, not source.
+- **Offline is safe when camped, exposed in the field** — one of the
+  earliest calls in the plan's own "Decisions locked" table, and until now
+  the prototype didn't honour either half of it: closing the tab, anywhere,
+  quietly erased the soul with no death, no cause, no Barrow-list entry at
+  all. Now `server.mjs`'s socket-close handler checks the one thing Stage B
+  has that stands for a camp — `atFire`, the same flag warmth, cooking and
+  being seen already answer to — before deciding what disconnecting means.
+  Standing at a lit fire: safe, exactly as before, no obituary, because
+  nothing happened. Anywhere else: the sim's own health sweep turns it into
+  a real death on the very next tick — cause `"never made it home"`, a real
+  Barrow-list entry, the Grey King none the wiser it wasn't a normal one.
+  Deliberately instant rather than a lingering unpiloted body left standing
+  to actually be hunted down: Stage B has no accounts, so nobody can ever
+  reconnect to the same soul regardless, and a body nobody will ever answer
+  for again has nothing honest left to do in the meantime.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a

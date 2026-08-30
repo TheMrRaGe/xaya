@@ -470,7 +470,16 @@ maintenance is the war.
   `[built, springs once and is spent]`; kiln, drying rack, tannery, quern, cache,
   shelter, well, granary, wall `[named]`.
   Shelter is load-bearing: **logging off camped is safe, the open field is not**
-  `[plan §25]`.
+  (the plan's own "Decisions locked" table, not a numbered section — corrected
+  from this document's earlier `[plan §25]` citation). No `shelter` object
+  exists yet, so `[built, narrow]`: the server's socket-close handler answers
+  the question with the one thing Stage B has that already means "a camp,"
+  a lit fire — `atFire`, the same flag warmth, cooking and being seen already
+  read. Disconnect at one and the soul is simply gone, no death recorded, same
+  as anyone logging off; disconnect anywhere else and the next tick kills them
+  for real (`"never made it home"`, §11.3), Barrow-list entry and all, in
+  place of the silent, no-cause erasure every disconnect used to get regardless
+  of where it happened.
 - **Consumables** — cooked meals `[built]`, preserved food, medicine, poultices,
   antitoxin for the Weald's air, small beer.
 - **Relics** `[plan §2 via GREYKING.md]` — **warded seedstock, singing blades,
@@ -1022,17 +1031,23 @@ walls, other players — never by rule.
 ### 11.3 Death causes in code `[built]`
 
 starved · died of thirst · froze · gored by a boar · savaged by wolves · cut
-down by a Lieutenant · **killed by another soul**.
+down by a Lieutenant · **killed by another soul** · **never made it home**.
 
-The last one lands like the others do: press SPACE near another living, not-
-graced soul and the same strike that would have hit a deer hits them instead
-— whichever is nearer wins, one shared verb, no separate key. It now carries
-a real, if narrow, consequence — see §8.7 — but still **not** a mark's full
-weight: no bounty payout, no plunder off the body, none of §28's five ways
-to answer a mark. §25/§28's whole outlawry and bounty system — the Grey King
-paying for corpses, a killer visibly taking his coin — is still mostly
-unbuilt; what exists now answers "does killing cost you anything," not
-"does the outlawry economy work."
+The soul-killed one lands like the others do: press SPACE near another
+living, not-graced soul and the same strike that would have hit a deer hits
+them instead — whichever is nearer wins, one shared verb, no separate key.
+It now carries a real, if narrow, consequence — see §8.7 — but still **not**
+a mark's full weight: no bounty payout, no plunder off the body, none of
+§28's five ways to answer a mark. §25/§28's whole outlawry and bounty
+system — the Grey King paying for corpses, a killer visibly taking his
+coin — is still mostly unbuilt; what exists now answers "does killing cost
+you anything," not "does the outlawry economy work."
+
+**"Never made it home" is the offline-safety wager's own cause** (§5.2,
+the plan's "Offline: safe when camped, exposed in the field" decision) — a
+disconnect anywhere but a lit fire, landed the instant it happens rather
+than left to a lingering unpiloted body, since Stage B has no account layer
+for anyone to ever reconnect to that same soul regardless.
 
 **Implied but absent:** drowned, bled out (needs Mortal Wound), sickness, the
 Kiln's ashlung, the Weald's air, fell.

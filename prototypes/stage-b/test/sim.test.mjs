@@ -1603,5 +1603,26 @@ function check(name, cond, detail = "") {
   check("teaching for free raises the teacher's standing", kind.standing === 15, `standing=${kind.standing}`);
 }
 
+// --- 53. offline safety: "never made it home" goes through the same honest pipeline as any other death ---
+{
+  // The actual camped-vs-exposed decision lives in server.mjs's socket
+  // "close" handler, which this suite doesn't reach (no WebSocket layer
+  // here) — what's checked is the sim-side contract that handler relies on:
+  // a soul zeroed out from outside a normal tick still dies for real, with
+  // a real cause and a real Barrow-list entry, rather than being silently
+  // erased the way an abandoned soul used to be regardless of where it was.
+  const s = fresh(1);
+  const p = s.players[0];
+  s.lastDamageSource[p.id] = "never made it home";
+  p.health = 0;
+  const deaths = stepTick(s, [I()]);
+  check(
+    "a soul with nobody driving it, exposed, dies through the ordinary pipeline",
+    deaths.length === 1 && deaths[0].cause === "never made it home",
+    JSON.stringify(deaths),
+  );
+  check("and it actually lands — the soul is gone, not left standing", !p.alive, `alive=${p.alive}`);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

@@ -138,14 +138,29 @@ wss.on("connection", (socket) => {
   socket.on("close", () => {
     sockets.delete(id);
     pending.delete(id);
-    // A soul with nobody driving it is lost rather than left standing in a
-    // field — otherwise every page reload leaves a body in the Verge. The
-    // slot itself is never reused, so ids stay stable for everyone still
-    // playing, and a reconnect is simply a new soul.
+    // A soul with nobody driving it doesn't stay in the Verge — there is no
+    // account layer for a reconnect to resume the same body into, so a new
+    // connection is always a new soul, and the slot itself is never reused.
+    // What happens to the abandoned one is PLAN's "Offline" decision, made
+    // literal with the one thing Stage B has that stands for shelter: a lit
+    // fire (README: "load-bearing three ways — warmth, cooking, and being
+    // seen"; this is the fourth).
     const abandoned = state.players[id];
     if (abandoned && abandoned.alive) {
-      abandoned.alive = false;
-      state.log.push(`Soul #${abandoned.lineage} is gone from the Verge.`);
+      if (abandoned.atFire) {
+        // Safe when camped: no death, no obituary, no Barrow-list entry —
+        // they banked the fire and went home, same as anyone logging off.
+        abandoned.alive = false;
+        state.log.push(`Soul #${abandoned.lineage} banks the fire and turns in for the night.`);
+      } else {
+        // Exposed in the field: the next tick's ordinary health sweep turns
+        // this into a real death — Barrow-list entry and all, same pipeline
+        // as starving or freezing — rather than a silent erasure. Only
+        // stamps the cause if something else isn't already killing them;
+        // a soul already at 0 keeps its real cause.
+        if (abandoned.health > 0) state.lastDamageSource[id] = "never made it home";
+        abandoned.health = 0;
+      }
     }
     console.log(`player ${id} disconnected (${sockets.size} playing)`);
   });

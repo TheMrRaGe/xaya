@@ -157,7 +157,17 @@ export type DeathCause =
   | "gored by a boar"
   | "savaged by wolves"
   | "cut down by a Lieutenant"
-  | "killed by another soul";
+  | "killed by another soul"
+  /**
+   * Disconnected somewhere that wasn't a fire (server.mjs's socket "close"
+   * handler) — the "Offline: Safe when camped, exposed in the field" wager
+   * (PLAN's decisions table) made literal. Deliberately instant rather than
+   * a lingering, unpiloted body left to actually be found: nobody can ever
+   * reconnect to the same soul in Stage B (no accounts, no session), so
+   * there is nothing honest left for that body to do once its player is
+   * gone — the field just collects the debt the fire would have deferred.
+   */
+  | "never made it home";
 
 export interface Player {
   id: number; // index into SimState.players, stable for the run
