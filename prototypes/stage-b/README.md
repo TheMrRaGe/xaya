@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (229 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (234 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -314,7 +314,13 @@ plan committed at the repo root's `doc/world/`.
   path to mean anything. **Ruin** is the odd one out: never depletes, like
   Rock and Ore, but usually pays out nothing but rubble and rarely an old
   crown (PLAN §17A) — the first time that item exists anywhere as more than
-  a name, though nothing yet lets you spend one.
+  a name. It has exactly one use: melt it at a fire (key **0**, the same key
+  smelting already used) when there's no ore and charcoal on hand, and it
+  becomes a bar — PLAN §17A's own line about "smiths who need the metal more
+  than the history," made literal. No smithing is learned doing it; running
+  a crown through a fire isn't a real smelt. Still nothing to spend one on
+  otherwise, no prestige, no market — that needs an economy this prototype
+  doesn't have.
 - **The Verge holds more than one soul.** The tick takes one `Input` per
   player and returns every death that happened in it — the same shape a
   server or a chain would hand it, so nothing above `src/sim/` needs to know

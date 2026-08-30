@@ -150,6 +150,8 @@ const NOISE_PER_CHIP = 260; // hammering stone is the loudest work in the Verge
 const NOISE_PER_ORE = 320; // and a vein is worse — this is the loudest work there is
 const NOISE_PER_RUIN_DIG = 140; // digging through rubble carries, but quieter than stone or ore
 const RUIN_CROWN_CHANCE_PCT = 15; // rubble far more often than a crown
+const CROWN_MELT_COST = 1;
+const CROWN_MELT_YIELD = 1; // no smithing XP for it — running a crown through fire teaches nothing a real smelt does
 
 /**
  * The sword chain (doc/world/PLAN.md §15's worked example, compressed to what
@@ -356,6 +358,7 @@ export interface SimState {
     firstNotorious: boolean;
     firstCommonsStanding: boolean;
     firstCrown: boolean;
+    firstCrownMelted: boolean;
   };
 }
 
@@ -399,6 +402,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstNotorious: false,
       firstCommonsStanding: false,
       firstCrown: false,
+      firstCrownMelted: false,
     },
   };
 }
@@ -1050,13 +1054,32 @@ function doMakeCharcoal(state: SimState, player: Player): void {
 /** 0 — at a fire, ore and charcoal become a bar. The one step no tool skips. */
 function doSmelt(state: SimState, player: Player): void {
   const pack = player.pack;
-  if (!player.atFire || pack.ore < SMELT_ORE_COST || pack.charcoal < SMELT_CHARCOAL_COST) return;
-  pack.ore -= SMELT_ORE_COST;
-  pack.charcoal -= SMELT_CHARCOAL_COST;
-  pack.bar += BAR_YIELD + smeltBonus(player.skills);
-  bumpNoise(state, NOISE_PER_CRAFT, player); // a fire hot enough to run ore is not a quiet fire
-  learn(state, player, "smithing", XP.smelt);
-  say(state, "Ore goes soft, then runs. A bar, dull and heavy, where stone used to be.");
+  if (!player.atFire) return;
+
+  if (pack.ore >= SMELT_ORE_COST && pack.charcoal >= SMELT_CHARCOAL_COST) {
+    pack.ore -= SMELT_ORE_COST;
+    pack.charcoal -= SMELT_CHARCOAL_COST;
+    pack.bar += BAR_YIELD + smeltBonus(player.skills);
+    bumpNoise(state, NOISE_PER_CRAFT, player); // a fire hot enough to run ore is not a quiet fire
+    learn(state, player, "smithing", XP.smelt);
+    say(state, "Ore goes soft, then runs. A bar, dull and heavy, where stone used to be.");
+    return;
+  }
+
+  // No ore in hand, but a crown will do — "some are melted down by smiths
+  // who need the metal more than the history" (doc/world/PLAN.md §17A). The
+  // one thing an old crown is good for until an economy exists to spend one
+  // in.
+  if (pack.crowns >= CROWN_MELT_COST) {
+    pack.crowns -= CROWN_MELT_COST;
+    pack.bar += CROWN_MELT_YIELD;
+    bumpNoise(state, NOISE_PER_CRAFT, player);
+    say(state, "The crown goes into the fire. What comes out, once it cools, is just a bar.");
+    if (!state.flags.firstCrownMelted) {
+      state.flags.firstCrownMelted = true;
+      say(state, "The Grey King: “...You didn't even look at the face on it first.”");
+    }
+  }
 }
 
 /** B — bar, wood and cordage, once each. The sword chain's whole point. */

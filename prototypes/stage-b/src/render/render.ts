@@ -491,7 +491,7 @@ export function drawHud(
     hudY + 154,
   );
   ctx.fillText(
-    "9 charcoal (3w, at fire) · 0 smelt (2 ore 1 char, at fire) · B sword (2 bar 1w 1 cord)",
+    "9 charcoal (3w, at fire) · 0 smelt (2 ore 1 char, or 1 crown, at fire) · B sword (2 bar 1w 1 cord)",
     10,
     hudY + 168,
   );

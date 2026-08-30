@@ -395,10 +395,13 @@ maintenance is the war.
   reaches a player's hands as an object.
 - **Old crowns** `[plan §17A]` — minted under kings who no longer have kingdoms.
   Behave less like money than like relics that happen to be spendable.
-  **In code today** `[built, narrow]`: a rare find in a ruin (§3.4), nothing
-  else — no spending them, no melting them down, no prestige mechanic. A pack
-  slot with a number in it, honestly, until an economy exists for a crown to
-  actually do something in.
+  **In code today** `[built, narrow]`: a rare find in a ruin (§3.4), and one
+  thing to do with one — melt it at a fire for a bar, the fallback when
+  there is no ore and charcoal on hand, per §17A's own "some are melted down
+  by smiths who need the metal more than the history." No smithing skill is
+  earned doing it; running a crown through a fire is not the same craft as
+  a real smelt. Still no spending, no prestige, no market a crown could be
+  worth something *in* — that needs an economy this prototype doesn't have.
 
 ---
 

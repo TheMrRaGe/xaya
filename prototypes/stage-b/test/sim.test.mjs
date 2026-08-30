@@ -1048,5 +1048,40 @@ function check(name, cond, detail = "") {
   check("and the ruin is still there — it never runs out", s.world.get(px + 1, py) === Tile.Ruin);
 }
 
+// --- 36. an old crown melts down to a bar at a fire, when there is nothing better to smelt ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Grass);
+  p.pack.wood = 5;
+  stepTick(s, [I({ build: true })]);
+  stepTick(s, IDLE);
+  check("standing at the fire", p.atFire === true);
+
+  p.pack.crowns = 2;
+  const beforeSmithing = p.skills.smithing;
+  stepTick(s, [I({ smelt: true })]);
+  check("a crown melts into a bar without any ore", p.pack.bar === 1 && p.pack.crowns === 1, JSON.stringify(p.pack));
+  check("but teaches no smithing — it isn't a real smelt", p.skills.smithing === beforeSmithing);
+
+  // Ore and charcoal still win when both are on hand — melting a crown is
+  // the fallback, not the default.
+  p.pack.ore = 2;
+  p.pack.charcoal = 1;
+  stepTick(s, [I({ smelt: true })]);
+  check(
+    "ore and charcoal are used first when both are available",
+    p.pack.bar === 2 && p.pack.crowns === 1 && p.pack.ore === 0,
+    JSON.stringify(p.pack),
+  );
+
+  const noFire = fresh();
+  noFire.players[0].pack.crowns = 3;
+  stepTick(noFire, [I({ smelt: true })]);
+  check("no fire, no melting either", noFire.players[0].pack.crowns === 3);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
