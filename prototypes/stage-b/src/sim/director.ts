@@ -81,6 +81,10 @@ export function pressure(state: DirectorState): number {
     // catch is what it is for, not the tool.
     if (pack.fishingLine > 0) wealth += 10;
     wealth += pack.fish * 2;
+    // Old crowns are prestige as much as purchasing power (§17A) — the
+    // single most expensive thing per unit a soul can carry that isn't a
+    // finished tool.
+    wealth += pack.crowns * 12;
     for (const skill of SKILLS) wealth += level(player.skills[skill]) * 8;
   }
   // A fire is the loudest thing you own, so it is also the most expensive.

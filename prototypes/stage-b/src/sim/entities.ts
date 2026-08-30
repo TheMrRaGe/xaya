@@ -33,7 +33,8 @@ export type Tradeable =
   | "ore"
   | "charcoal"
   | "bar"
-  | "fish";
+  | "fish"
+  | "crowns";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -46,6 +47,7 @@ export const TRADEABLES: readonly Tradeable[] = [
   "charcoal",
   "bar",
   "fish",
+  "crowns",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -73,6 +75,13 @@ export interface Pack {
    * all: a hungry soul with a line and a shoreline never fully starves.
    */
   fish: number;
+  /**
+   * Old crowns, minted under kings who no longer have kingdoms
+   * (doc/world/PLAN.md §17A). Picked out of a ruin's rubble, not earned by
+   * any trade — behaves less like money and more like a relic that happens
+   * to be spendable, in a world with no mint left to make more.
+   */
+  crowns: number;
   /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
@@ -153,6 +162,7 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       charcoal: 0,
       bar: 0,
       fish: 0,
+      crowns: 0,
       spear: 0,
       cloak: 0,
       knife: 0,

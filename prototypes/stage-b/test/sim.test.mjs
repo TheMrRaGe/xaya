@@ -8,7 +8,7 @@
 // you fix something; that is cheaper than remembering.
 import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT } from "../dist/sim/tick.js";
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
-import { Tile } from "../dist/sim/world.js";
+import { Tile, WORLD_W, WORLD_H } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
 import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus, fishChance } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
@@ -927,6 +927,125 @@ function check(name, cond, detail = "") {
   needy.needs.satiety = 80;
   stepTick(s4, [I({ give: true }), I()]);
   check("kindness climbs the same ledger a kill spends", samaritan.standing === -40 + 15, `standing=${samaritan.standing}`);
+}
+
+// --- 32. terrain variety: marsh clings to water, roads cross the map, ruins hold crowns ---
+{
+  const s = fresh();
+  let marsh = 0;
+  let road = 0;
+  let ruin = 0;
+  let marshAwayFromWater = 0;
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      const t = s.world.get(x, y);
+      if (t === Tile.Road) road++;
+      else if (t === Tile.Ruin) ruin++;
+      else if (t === Tile.Marsh) {
+        marsh++;
+        const near =
+          s.world.get(x, y - 1) === Tile.Water ||
+          s.world.get(x, y + 1) === Tile.Water ||
+          s.world.get(x - 1, y) === Tile.Water ||
+          s.world.get(x + 1, y) === Tile.Water;
+        if (!near) marshAwayFromWater++;
+      }
+    }
+  }
+  check("marsh exists", marsh > 0, `marsh=${marsh}`);
+  check("road exists", road > 0, `road=${road}`);
+  check("ruin exists", ruin > 0, `ruin=${ruin}`);
+  check("every marsh tile sits at a river's edge", marshAwayFromWater === 0, `${marshAwayFromWater} tiles of ${marsh} not near water`);
+}
+
+// --- 33. terrain changes how fast everything crosses it: a road speeds up, a marsh slows down ---
+{
+  const grassMove = (() => {
+    const s = fresh();
+    const p = s.players[0];
+    const px = Math.floor(p.x / TILE);
+    const py = Math.floor(p.y / TILE);
+    s.world.set(px, py, Tile.Grass);
+    s.world.set(px + 1, py, Tile.Grass);
+    const before = p.x;
+    stepTick(s, [I({ dx: 1 })]);
+    return p.x - before;
+  })();
+
+  const roadMove = (() => {
+    const s = fresh();
+    const p = s.players[0];
+    const px = Math.floor(p.x / TILE);
+    const py = Math.floor(p.y / TILE);
+    s.world.set(px, py, Tile.Road);
+    s.world.set(px + 1, py, Tile.Grass);
+    const before = p.x;
+    stepTick(s, [I({ dx: 1 })]);
+    return p.x - before;
+  })();
+  check("a road is faster to cross than grass", roadMove > grassMove, `grass=${grassMove} road=${roadMove}`);
+
+  const marshMove = (() => {
+    const s = fresh();
+    const p = s.players[0];
+    const px = Math.floor(p.x / TILE);
+    const py = Math.floor(p.y / TILE);
+    s.world.set(px, py, Tile.Marsh);
+    s.world.set(px + 1, py, Tile.Grass);
+    const before = p.x;
+    stepTick(s, [I({ dx: 1 })]);
+    return p.x - before;
+  })();
+  check("a marsh is slower to cross than grass", marshMove < grassMove, `grass=${grassMove} marsh=${marshMove}`);
+
+  // The same rule applies to a fleeing deer as to the soul chasing it.
+  const s = fresh();
+  const deer = s.creatures.find((c) => c.kind === "deer");
+  const dpx = Math.floor(deer.x / TILE);
+  const dpy = Math.floor(deer.y / TILE);
+  s.world.set(dpx, dpy, Tile.Marsh);
+  s.world.set(dpx + 1, dpy, Tile.Grass);
+  deer.wanderX = deer.x + 5 * TILE;
+  deer.wanderY = deer.y;
+  const beforeDeer = deer.x;
+  stepTick(s, IDLE);
+  const deerMarshMove = deer.x - beforeDeer;
+  check("a beast bogs down in a marsh too, not only a soul", deerMarshMove > 0 && deerMarshMove < STATS.deer.grazeSpeed, `moved ${deerMarshMove}`);
+}
+
+// --- 34. squelching through a marsh carries; standing in one does not ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Marsh);
+  s.world.set(px + 1, py, Tile.Grass);
+
+  const quiet = s.noise;
+  stepTick(s, IDLE);
+  check("standing still in a marsh is quiet", s.noise === quiet, `${quiet} -> ${s.noise}`);
+
+  const before = s.noise;
+  stepTick(s, [I({ dx: 1 })]);
+  check("moving through a marsh carries", s.noise > before, `${before} -> ${s.noise}`);
+}
+
+// --- 35. a ruin never runs out, and usually pays out nothing at all ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px + 1, py, Tile.Ruin);
+
+  let ticks = 0;
+  while (p.pack.crowns === 0 && ticks < 300) {
+    stepTick(s, [I({ gather: true })]);
+    ticks++;
+  }
+  check("digging through a ruin eventually turns up a crown", p.pack.crowns === 1, `after ${ticks} digs`);
+  check("and the ruin is still there — it never runs out", s.world.get(px + 1, py) === Tile.Ruin);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

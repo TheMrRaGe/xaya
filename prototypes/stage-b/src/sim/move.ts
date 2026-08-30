@@ -3,7 +3,7 @@
  * the beasts. Integers only, same as the rest of the sim tier.
  */
 import { TILE, isqrt } from "./fixed.js";
-import { World, isSolid } from "./world.js";
+import { World, Tile, isSolid } from "./world.js";
 
 export interface Point {
   x: number;
@@ -40,4 +40,20 @@ export function walkable(world: World, x: number, y: number): boolean {
   const tx = Math.floor(x / TILE);
   const ty = Math.floor(y / TILE);
   return world.inBounds(tx, ty) && !isSolid(world.get(tx, ty));
+}
+
+/**
+ * How fast the ground under a mover's feet lets them go, as a percent of
+ * whatever speed they would otherwise have. One function, read by the
+ * player, the Lieutenant and every beast alike — a marsh bogs down a
+ * fleeing deer exactly as it bogs down the soul chasing it, and a road
+ * speeds up whichever of them thought to use one. Read from wherever a
+ * mover *is*, not where it is headed, so the tile that actually matters is
+ * the one already under their feet this tick.
+ */
+export function terrainSpeedPct(world: World, x: number, y: number): number {
+  const t = world.get(Math.floor(x / TILE), Math.floor(y / TILE));
+  if (t === Tile.Road) return 130;
+  if (t === Tile.Marsh) return 55;
+  return 100;
 }

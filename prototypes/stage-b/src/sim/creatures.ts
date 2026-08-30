@@ -21,7 +21,7 @@
 import { TILE, clamp, distSq } from "./fixed.js";
 import { Rng } from "./rng.js";
 import { World, WORLD_W, WORLD_H } from "./world.js";
-import { stepToward, stepAway, moveWithCollision, walkable } from "./move.js";
+import { stepToward, stepAway, moveWithCollision, walkable, terrainSpeedPct } from "./move.js";
 import { Skills, trapChance } from "./skills.js";
 
 export type CreatureKind = "deer" | "hedge-boar" | "wolf" | "hare" | "river-goat";
@@ -289,6 +289,9 @@ export function stepCreature(c: Creature, ctx: CreatureCtx): void {
   }
   c.state = state;
 
+  // Same ground rule everything else obeys (§ terrainSpeedPct) — a fleeing
+  // deer bogs down in a marsh exactly as its pursuer would.
+  speed = Math.trunc((speed * terrainSpeedPct(ctx.world, c.x, c.y)) / 100);
   const next = stepToward(c.x, c.y, target.x, target.y, speed);
   const moved = moveWithCollision(ctx.world, c.x, c.y, next.x, next.y);
   c.x = clamp(moved.x, 0, (WORLD_W - 1) * TILE);

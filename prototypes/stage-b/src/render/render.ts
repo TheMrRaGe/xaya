@@ -73,6 +73,9 @@ const COLORS: Record<Tile, string> = {
   [Tile.Rock]: "#6e6e73",
   [Tile.Snare]: "#3a5a34", // grass — a set snare is meant to be easy to lose
   [Tile.Ore]: "#5a5248",
+  [Tile.Marsh]: "#3a4a38",
+  [Tile.Road]: "#8a7a5e",
+  [Tile.Ruin]: "#5c5852",
 };
 
 /** Fuel at which a fire is drawn as embers rather than a blaze. */
@@ -121,6 +124,39 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
         ctx.beginPath();
         ctx.arc(px + TILE_PX * 0.62, py + TILE_PX * 0.6, 3, 0, Math.PI * 2);
         ctx.fill();
+      }
+      if (t === Tile.Marsh) {
+        // A couple of reed tufts and a darker patch of standing water —
+        // enough to read as wet ground rather than a stain on the grass.
+        ctx.fillStyle = "#26362a";
+        ctx.beginPath();
+        ctx.ellipse(px + TILE_PX * 0.5, py + TILE_PX * 0.62, 8, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#5a6a4a";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px + TILE_PX * 0.3, py + TILE_PX * 0.4);
+        ctx.lineTo(px + TILE_PX * 0.28, py + TILE_PX * 0.22);
+        ctx.moveTo(px + TILE_PX * 0.68, py + TILE_PX * 0.44);
+        ctx.lineTo(px + TILE_PX * 0.72, py + TILE_PX * 0.24);
+        ctx.stroke();
+      }
+      if (t === Tile.Road) {
+        // A worn rut down the middle — a path, not a coat of paint.
+        ctx.strokeStyle = "#6e5f46";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(px, py + TILE_PX * 0.5);
+        ctx.lineTo(px + TILE_PX, py + TILE_PX * 0.5);
+        ctx.stroke();
+      }
+      if (t === Tile.Ruin) {
+        // Broken blocks, not a building — a soul finds this, not builds it.
+        ctx.fillStyle = "#8a857c";
+        ctx.fillRect(px + TILE_PX * 0.2, py + TILE_PX * 0.3, 8, 6);
+        ctx.fillRect(px + TILE_PX * 0.55, py + TILE_PX * 0.5, 7, 7);
+        ctx.fillStyle = "#3a3733";
+        ctx.fillRect(px + TILE_PX * 0.2, py + TILE_PX * 0.3, 8, 2);
       }
       if (t === Tile.Snare) {
         // Deliberately faint. A snare you can see from across the map is
@@ -282,6 +318,10 @@ export function drawNight(ctx: CanvasRenderingContext2D, w: number, h: number, t
 /** A muted colour for terrain that isn't open ground — the minimap's only job is "can I walk there," not "what is it." */
 function minimapColor(t: Tile): string {
   if (t === Tile.Water) return "#2a4a6a";
+  // A road is the one terrain feature worth marking distinctly here — the
+  // whole reason it exists is to be findable across a map this size.
+  if (t === Tile.Road) return "#8a7a5e";
+  if (t === Tile.Marsh) return "#28321f";
   if (isSolid(t)) return "#241f1a";
   return "#3a5a34";
 }
@@ -418,7 +458,12 @@ export function drawHud(
   // The sword chain's materials and fish, kept off the line above so that
   // line still reads at a glance for a soul who never touches a vein or
   // a line.
-  ctx.fillText(`ore ${pack.ore}  charcoal ${pack.charcoal}  bar ${pack.bar}  fish ${pack.fish}`, 10, hudY + 76);
+  ctx.fillText(
+    `ore ${pack.ore}  charcoal ${pack.charcoal}  bar ${pack.bar}  fish ${pack.fish}` +
+      (pack.crowns > 0 ? `  crowns ${pack.crowns}` : ""),
+    10,
+    hudY + 76,
+  );
 
   // Tools show what is left in them, because "axe 3" is a decision.
   ctx.fillStyle = "#c8b088";

@@ -24,7 +24,7 @@ import {
   newPlayer,
   newLieutenant,
 } from "./entities.js";
-import { stepToward, moveWithCollision, walkable } from "./move.js";
+import { stepToward, moveWithCollision, walkable, terrainSpeedPct } from "./move.js";
 import { OverlordAction, GRIEF_PER_DEATH, GRIEF_DECAY_EVERY, isColdSnap, isBlighted } from "./director.js";
 import {
   Skill,
@@ -148,6 +148,8 @@ const SNARE_WOOD_COST = 1;
 
 const NOISE_PER_CHIP = 260; // hammering stone is the loudest work in the Verge
 const NOISE_PER_ORE = 320; // and a vein is worse — this is the loudest work there is
+const NOISE_PER_RUIN_DIG = 140; // digging through rubble carries, but quieter than stone or ore
+const RUIN_CROWN_CHANCE_PCT = 15; // rubble far more often than a crown
 
 /**
  * The sword chain (doc/world/PLAN.md §15's worked example, compressed to what
@@ -182,6 +184,7 @@ const FISHING_LINE_WOOD_COST = 1;
 const FISHING_LINE_DURABILITY = 25; // casts that land a fish
 const FISH_SATIETY = 140; // between raw meat's 120 and a hot meal's 500+
 const NOISE_PER_FISH = 15; // sitting at the water's edge is nearly silent
+const NOISE_PER_MARSH_STEP = 4; // squelching carries; only while actually moving through it
 
 /**
  * Outlawry, scoped to what one Lieutenant can actually enforce (§25/§28,
@@ -352,6 +355,7 @@ export interface SimState {
     firstSoulKill: boolean;
     firstNotorious: boolean;
     firstCommonsStanding: boolean;
+    firstCrown: boolean;
   };
 }
 
@@ -394,6 +398,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstSoulKill: false,
       firstNotorious: false,
       firstCommonsStanding: false,
+      firstCrown: false,
     },
   };
 }
@@ -603,10 +608,16 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
 
   // --- movement ---
   if (input.dx !== 0 || input.dy !== 0) {
-    const speed = input.dx !== 0 && input.dy !== 0 ? PLAYER_SPEED_DIAG : PLAYER_SPEED;
+    // The ground under a soul's feet as they push off governs the whole
+    // step — how fast it lets them go, and whether it announces them.
+    const onMarsh = world.get(Math.floor(player.x / TILE), Math.floor(player.y / TILE)) === Tile.Marsh;
+    const base = input.dx !== 0 && input.dy !== 0 ? PLAYER_SPEED_DIAG : PLAYER_SPEED;
+    const speed = Math.trunc((base * terrainSpeedPct(world, player.x, player.y)) / 100);
     const moved = moveWithCollision(world, player.x, player.y, player.x + input.dx * speed, player.y + input.dy * speed);
     player.x = clamp(moved.x, 0, (WORLD_W - 1) * TILE);
     player.y = clamp(moved.y, 0, (WORLD_H - 1) * TILE);
+    // Squelching through a marsh carries; standing in one, waiting, does not.
+    if (onMarsh) bumpNoise(state, NOISE_PER_MARSH_STEP, player);
   }
 
   const px = tileOfUnits(player.x);
@@ -756,6 +767,22 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       if (!state.flags.firstOre) {
         state.flags.firstOre = true;
         say(state, "The Grey King: “Ore, now. You are digging for something worth taking.”");
+      }
+      return;
+    }
+    if (t === Tile.Ruin) {
+      // Never runs out, like Rock and Ore — but a ruin is not a resource,
+      // it is a chance. Most digging turns up nothing at all.
+      bumpNoise(state, NOISE_PER_RUIN_DIG, player);
+      if (state.rng.chance(RUIN_CROWN_CHANCE_PCT, 100)) {
+        pack.crowns++;
+        say(state, "An old crown, out of the rubble. Someone minted this for a kingdom that is gone.");
+        if (!state.flags.firstCrown) {
+          state.flags.firstCrown = true;
+          say(state, "The Grey King: “I remember whose face that was. He thought his mint would outlast me too.”");
+        }
+      } else {
+        say(state, "Rubble, and more rubble. Whatever this room held, it isn't here anymore.");
       }
       return;
     }
@@ -1271,7 +1298,8 @@ function tickLieutenant(state: SimState): void {
     targetY = lieutenant.waypointY;
   }
 
-  const speed = lieutenant.state === "hunt" ? LIEUTENANT_SPEED : LIEUTENANT_PATROL_SPEED;
+  const base = lieutenant.state === "hunt" ? LIEUTENANT_SPEED : LIEUTENANT_PATROL_SPEED;
+  const speed = Math.trunc((base * terrainSpeedPct(world, lieutenant.x, lieutenant.y)) / 100);
   const next = stepToward(lieutenant.x, lieutenant.y, targetX, targetY, speed);
   const moved = moveWithCollision(world, lieutenant.x, lieutenant.y, next.x, next.y);
   lieutenant.x = clamp(moved.x, 0, (WORLD_W - 1) * TILE);

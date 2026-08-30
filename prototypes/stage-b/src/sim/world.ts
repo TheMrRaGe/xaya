@@ -6,6 +6,7 @@
  * population math, no second biome — a grid of tiles and nothing more.
  */
 import { Rng } from "./rng.js";
+import { clamp } from "./fixed.js";
 
 /**
  * Nine times the original Verge's footprint — three screens by three
@@ -46,6 +47,26 @@ export enum Tile {
    * smelted the result — which is the point of putting it last.
    */
   Ore = 10,
+  /**
+   * Wet ground at a river's edge. Slower to cross than grass and louder
+   * while you're crossing it — the one tile that punishes moving through it
+   * rather than gathering from it, which nothing else here does.
+   */
+  Marsh = 11,
+  /**
+   * "Nobody bothered to destroy them" (doc/world/PLAN.md §8). Old-Kingdoms
+   * infrastructure that outlasted the kingdom — faster to cross than grass,
+   * the only tile that rewards moving through it rather than working it,
+   * and the thing that makes a much bigger Verge navigable on foot.
+   */
+  Road = 12,
+  /**
+   * A collapsed keep or holdfast, per §8's carving and §17A's crowns —
+   * "minted under kings who no longer have kingdoms." Never depletes, like
+   * Rock and Ore, but pays out rubble far more often than anything worth
+   * carrying: a chance at an old crown, not a guaranteed one.
+   */
+  Ruin = 13,
 }
 
 /** How long a burnt-out camp is still visible before the grass closes over it. */
@@ -94,6 +115,87 @@ export class World {
         else if (roll < 31) this.set(x, y, Tile.Ore);
       }
     }
+
+    // Marsh forms at a river's edge, not anywhere flat and grassy — a
+    // second pass over what the first one already decided was Water,
+    // rather than another independent roll.
+    for (let y = 0; y < WORLD_H; y++) {
+      for (let x = 0; x < WORLD_W; x++) {
+        if (this.get(x, y) !== Tile.Grass || this.inClearing(x, y)) continue;
+        const nearWater =
+          this.get(x, y - 1) === Tile.Water ||
+          this.get(x, y + 1) === Tile.Water ||
+          this.get(x - 1, y) === Tile.Water ||
+          this.get(x + 1, y) === Tile.Water;
+        if (nearWater && rng.chance(1, 3)) this.set(x, y, Tile.Marsh);
+      }
+    }
+
+    // A road or two, walked as a wandering line rather than scattered like
+    // everything above — the one terrain feature that has to read as a
+    // path to mean anything. It only ever overwrites open ground, and
+    // never the clearing a new soul arrives in.
+    for (let i = 0; i < 2; i++) this.drawRoad(rng);
+
+    // A handful of ruins, each its own single collapsed room rather than
+    // rubble scattered everywhere — rare enough that finding one means
+    // something, per §17A's crowns.
+    for (let i = 0; i < 4; i++) this.placeRuin(rng);
+  }
+
+  private inClearing(x: number, y: number): boolean {
+    return Math.abs(x - 3) <= 1 && Math.abs(y - 3) <= 1;
+  }
+
+  /** A wandering line from one edge of the map to another, laid only over open ground. */
+  private drawRoad(rng: Rng): void {
+    const edgePoint = (): { x: number; y: number } => {
+      switch (rng.nextInt(4)) {
+        case 0:
+          return { x: rng.nextInt(WORLD_W), y: 0 };
+        case 1:
+          return { x: rng.nextInt(WORLD_W), y: WORLD_H - 1 };
+        case 2:
+          return { x: 0, y: rng.nextInt(WORLD_H) };
+        default:
+          return { x: WORLD_W - 1, y: rng.nextInt(WORLD_H) };
+      }
+    };
+    let { x, y } = edgePoint();
+    const end = edgePoint();
+    const maxSteps = (WORLD_W + WORLD_H) * 3;
+
+    for (let step = 0; step < maxSteps && (x !== end.x || y !== end.y); step++) {
+      if (!this.inClearing(x, y)) {
+        const t = this.get(x, y);
+        if (t === Tile.Grass || t === Tile.Bush) this.set(x, y, Tile.Road);
+      }
+      // Mostly toward the target, with just enough waver that it reads as
+      // a road someone actually walked rather than a ruler line.
+      const dx = end.x - x;
+      const dy = end.y - y;
+      if (Math.abs(dx) > Math.abs(dy)) x += dx > 0 ? 1 : -1;
+      else y += dy > 0 ? 1 : -1;
+      if (rng.chance(1, 3)) {
+        if (rng.chance(1, 2)) x += rng.chance(1, 2) ? 1 : -1;
+        else y += rng.chance(1, 2) ? 1 : -1;
+      }
+      x = clamp(x, 0, WORLD_W - 1);
+      y = clamp(y, 0, WORLD_H - 1);
+    }
+  }
+
+  /** One collapsed room, on open ground, never in the arrival clearing. */
+  private placeRuin(rng: Rng): void {
+    for (let attempt = 0; attempt < 64; attempt++) {
+      const x = rng.nextInt(WORLD_W);
+      const y = rng.nextInt(WORLD_H);
+      if (this.inClearing(x, y) || this.get(x, y) !== Tile.Grass) continue;
+      this.set(x, y, Tile.Ruin);
+      return;
+    }
+    // The Verge is small; 64 unlucky rolls means settle for not placing
+    // this one rather than clobbering something that mattered.
   }
 
   /**

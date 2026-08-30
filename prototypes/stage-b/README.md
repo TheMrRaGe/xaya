@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (218 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (229 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -299,6 +299,22 @@ plan committed at the repo root's `doc/world/`.
   (§1), not a new way for him to know where you are, just a reason for him
   to stop touring empty corners. Whether that is *enough* compensation for
   9x the area is a playtest question, tracked open in `doc/world/CONTENT.md`.
+- **Three more tiles, and terrain finally does something.** Grass, trees,
+  water, stone and ore all looked and behaved the same everywhere on the
+  map, which stopped being a footnote the moment the map grew to nine
+  screens. **Marsh** and **Road** are the two ends of one rule — terrain
+  speed, read the same way by a soul, the Lieutenant and every beast, so a
+  marsh bogs down a fleeing deer exactly as it would its pursuer, and a
+  road speeds up whichever of them thought to use one. Marsh only ever
+  forms at a river's edge (a second pass over the map, checking what the
+  first pass already decided was water, not another independent roll);
+  moving through one is louder, standing still in one is not. A road is
+  drawn as a wandering line between two map edges rather than scattered
+  tile by tile — the one terrain feature that had to actually read as a
+  path to mean anything. **Ruin** is the odd one out: never depletes, like
+  Rock and Ore, but usually pays out nothing but rubble and rarely an old
+  crown (PLAN §17A) — the first time that item exists anywhere as more than
+  a name, though nothing yet lets you spend one.
 - **The Verge holds more than one soul.** The tick takes one `Input` per
   player and returns every death that happened in it — the same shape a
   server or a chain would hand it, so nothing above `src/sim/` needs to know
@@ -405,7 +421,7 @@ Per the plan's own named cut list (§44), checked off:
 | In scope | Built |
 |---|---|
 | The Verge, nothing else | ✅ one zone, no Realm gating |
-| A few professions worth of actions | ✅ gather, chip, mine, hunt, fish, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar, fishing line) |
+| A few professions worth of actions | ✅ gather, chip, mine, salvage a ruin, hunt, fish, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar, fishing line) |
 | Three creatures | ✅ and then some — hare, deer, river-goat, hedge-boar, wolf, and the crows. §44 asked for three; the extras came after the gate passed, and each one answers a different question rather than padding a bestiary |
 | Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
 | One Lieutenant, no Muster | ✅ — patched to patrol smarter as the map grew, not to grow a second one |
@@ -449,7 +465,7 @@ The whole sim, worst case — moving, gathering and striking every single
 tick with the full creature roster alive — measured on this machine:
 
 ```
-30.99 µs/tick  ≈  0.03% of one core at 10 Hz
+35.21 µs/tick  ≈  0.035% of one core at 10 Hz
 ```
 
 That is the budget to protect. Everything in `src/sim/` is integer math
@@ -460,15 +476,17 @@ screen — see the camera above — but drawing is O(the 24x16 viewport), not
 O(the map), so it did not get more expensive when the Verge did.)
 
 It was 2.55 µs at six animals and nine verbs, 5.05 µs at twelve animals and
-thirteen verbs, and 30.99 µs now that the Verge is nine times bigger and the
-roster scaled with it to 108. The honest and boring answer is unchanged:
-**the cost is linear in creatures**, because every one of them is stepped
-every tick, and it grew a little less than 9x only because some per-tick
-work (movement, needs, verbs) is bound to player count, not creature count.
-That is fine at 108 and it would be fine at ten times that. It is *not*
-fine at the point someone adds a population model, which is exactly why
-§44 cut one — the roster is fixed and respawns on a timer, and a tick that
-costs milliseconds is what happens if that ever stops being true.
+thirteen verbs, 30.99 µs once the Verge grew nine times bigger and the
+roster scaled with it to 108, and 35.21 µs now that every mover reads the
+ground under it once a tick (terrain speed — marsh, road). The honest and
+boring answer is still unchanged: **the cost is linear in creatures**,
+because every one of them is stepped every tick, and each new mechanic
+that touches every mover or every creature adds a little more of the same
+linear cost rather than a new order of growth. That is fine at 108 and it
+would be fine at ten times that. It is *not* fine at the point someone
+adds a population model, which is exactly why §44 cut one — the roster is
+fixed and respawns on a timer, and a tick that costs milliseconds is what
+happens if that ever stops being true.
 
 ## What to actually test
 

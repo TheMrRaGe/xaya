@@ -263,14 +263,29 @@ Grass · Tree · Stump (harvested, regrows) · Water · Bush · BareBush (picked
 regrows) · Campfire (player-built, burns down) · Ash (a fire that went out;
 grass takes it back) · **Rock** (chip stone off it forever; it never depletes) ·
 **Snare** (set, waiting, and spent once it catches) · **Ore** (same rule as
-Rock — never depletes — but rarer, and the loudest tile in the Verge to work).
+Rock — never depletes — but rarer, and the loudest tile in the Verge to work) ·
+**Marsh** (wet ground at a river's edge — the only tile that punishes moving
+*through* it rather than working it: slower to cross, and squelches while you
+do) · **Road** (§8's "nobody bothered to destroy them" — the mirror of a
+marsh, faster to cross than grass, and the reason a nine-times-bigger Verge is
+still walkable) · **Ruin** (a collapsed room, never depleting like Rock and
+Ore, that usually pays out nothing at all and rarely an old crown, §17A).
+
+Terrain speed is one rule, read the same way by a soul, the Lieutenant and
+every beast: a marsh bogs down a fleeing deer exactly as it would bog down
+whoever is chasing it, and a road speeds up whichever of them thought to use
+one first.
 
 ### 3.5 Terrain the world implies but code lacks
 
 ~~Rock and quarry face, ore seam~~ — closed: an ore vein is built (§3.4).
-Marsh, road `[plan §8 — "nobody bothered to destroy them"]`, ruin, snow, sand,
-tidal flat, cave mouth remain `[named]` at best; each is implied by a Realm in
-§3.1 rather than specced anywhere.
+~~Marsh, road, ruin~~ — closed (§3.4): all three generated deterministically
+rather than scattered independently — marsh only ever appears at a water
+tile's edge, a road is walked as a line between two map edges rather than
+placed tile by tile, and a ruin is a single rare room. Snow, sand, tidal
+flat, cave mouth remain `[named]` at best — each belongs to a Realm that
+isn't the Verge (Rimeholt, the Sunken Reach), so building them here would be
+borrowing another Realm's terrain rather than filling in this one's.
 
 **Terraforming** `[plan §22]` — dig, raise, flatten, tunnel, reshape, and it
 persists. In a world that never resets, the strongest "we were here" mechanic
@@ -380,6 +395,10 @@ maintenance is the war.
   reaches a player's hands as an object.
 - **Old crowns** `[plan §17A]` — minted under kings who no longer have kingdoms.
   Behave less like money than like relics that happen to be spendable.
+  **In code today** `[built, narrow]`: a rare find in a ruin (§3.4), nothing
+  else — no spending them, no melting them down, no prestige mechanic. A pack
+  slot with a number in it, honestly, until an economy exists for a crown to
+  actually do something in.
 
 ---
 
@@ -1063,8 +1082,13 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   a felled deer already works (first to arrive butchers it, not the striker),
   not an oversight. Whether a stranger's theft of a *catch* should ever be
   distinguished from a stranger's theft of a *kill* is still open.
-- **Terrain beyond the eleven tiles** (§3.5) is implied by every Realm and
-  specced nowhere.
+- ~~**Terrain beyond the eleven tiles**~~ — closed: marsh, road and ruin
+  bring it to fourteen (§3.4), each with a reason to exist rather than
+  decoration — marsh and road are the two ends of one rule (terrain speed,
+  read the same by every mover), and a ruin is the first place a crown can
+  be found at all. What is still open: snow, sand, a tidal flat and a cave
+  mouth all belong to Realms that are not the Verge, so they stay `[named]`
+  on purpose rather than being built somewhere they don't fit.
 - ~~**Killed-by-another-soul** is absent from the death causes~~ — closed,
   deliberately and out of sequence: §44's Stage B cut names PvP, marks and
   bounties as Stage C ("does cooperation beat predation with real people"),
