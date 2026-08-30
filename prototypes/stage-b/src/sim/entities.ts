@@ -39,7 +39,9 @@ export type Tradeable =
   | "copper"
   | "copperBar"
   | "glue"
-  | "pitch";
+  | "pitch"
+  /** Countable ammunition, not a wear counter like the bow itself — a Fletcher can resupply a soul who never fletched one. */
+  | "arrow";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -58,6 +60,7 @@ export const TRADEABLES: readonly Tradeable[] = [
   "copperBar",
   "glue",
   "pitch",
+  "arrow",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -114,12 +117,14 @@ export interface Pack {
   /**
    * A byproduct of butchering (doc/world/PLAN.md §15's "a graph with no
    * waste is a graph where nothing is a bargain") — connective tissue and
-   * scrap nobody was carrying meat or hide for. No chain spends it yet;
-   * §7.2's Fletcher, whenever built, is the obvious first customer.
+   * scrap nobody was carrying meat or hide for. Binds a Fletcher's arrows
+   * (below) — the first chain to spend it.
    */
   glue: number;
-  /** A byproduct of smothering wood down to charcoal — wood tar, the same fire that makes one makes a little of the other. No chain spends it yet. */
+  /** A byproduct of smothering wood down to charcoal — wood tar, the same fire that makes one makes a little of the other. Seals a Bowyer's string-wraps (below) — the first chain to spend it. */
   pitch: number;
+  /** Countable, not a wear counter — a Fletcher's arrows (see `bow`), one soul's own or handed over by another's. */
+  arrow: number;
   /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
@@ -148,6 +153,13 @@ export interface Pack {
   fishingLine: number;
   /** Meals left in it. A cooked meal made with a pot in hand is heartier — Verge pottery's first product. */
   pot: number;
+  /**
+   * Shots left, a Bowyer's stave and string. Stage B's first ranged weapon:
+   * doStrike reaches for it only when nothing is already in melee range
+   * (`arrow` above is what it actually spends per shot; this wears the same
+   * way any other tool does).
+   */
+  bow: number;
 }
 
 export type DeathCause =
@@ -239,6 +251,7 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       copperBar: 0,
       glue: 0,
       pitch: 0,
+      arrow: 0,
       spear: 0,
       cloak: 0,
       knife: 0,
@@ -250,6 +263,7 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       copperSword: 0,
       fishingLine: 0,
       pot: 0,
+      bow: 0,
     },
     skills: newSkills(),
     offer: "wood",

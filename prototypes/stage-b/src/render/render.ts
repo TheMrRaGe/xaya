@@ -697,6 +697,7 @@ const TOOL_SLOTS: ReadonlyArray<{ key: keyof Pack; label: string; max: number }>
   { key: "sword", label: "sword", max: 30 },
   { key: "copperSword", label: "cu-sword", max: 18 },
   { key: "spear", label: "spear", max: 12 },
+  { key: "bow", label: "bow", max: 20 },
   { key: "axe", label: "axe", max: 25 },
   { key: "knife", label: "knife", max: 20 },
   { key: "pot", label: "pot", max: 15 },
@@ -956,6 +957,8 @@ const RECIPES: readonly Recipe[] = [
   { name: "Copper sword", key: "B", cost: "2 copper bar 1 wood 1 cord", effect: "4 dmg · 18 hits", afford: (p) => p.copperSword === 0 && p.copperBar >= 2 && p.wood >= 1 && p.cordage >= 1 },
   { name: "Pot", key: "P", cost: "3 clay, at fire", effect: "heartier meals", afford: (p) => p.pot === 0 && p.clay >= 3 },
   { name: "Fishing line", key: "L", cost: "2 cord 1 wood", effect: "no fire needed", afford: (p) => p.fishingLine === 0 && p.cordage >= 2 && p.wood >= 1 },
+  { name: "Bow", key: "R", cost: "3 wood 2 cord 1 pitch", effect: "20 shots · reach, not bite", afford: (p) => p.bow === 0 && p.wood >= 3 && p.cordage >= 2 && p.pitch >= 1 },
+  { name: "Arrows", key: "N", cost: "1 wood 1 glue, needs knife", effect: "2 arrows", afford: (p) => p.knife > 0 && p.wood >= 1 && p.glue >= 1 },
 ];
 
 function drawRecipeCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: Recipe, pack: Pack): void {
@@ -1019,6 +1022,7 @@ const PACK_MATERIALS: ReadonlyArray<{ key: keyof Pack; label: string; color: str
   { key: "crowns", label: "crowns", color: "#e0c060" },
   { key: "glue", label: "glue", color: "#c8b878" },
   { key: "pitch", label: "pitch", color: "#4a3a2a" },
+  { key: "arrow", label: "arrows", color: "#b08a5a" },
   { key: "rawMeat", label: "raw meat", color: "#8a4a3a" },
   { key: "cookedMeat", label: "cooked", color: "#c87d4a" },
   { key: "fish", label: "fish", color: "#8ba8c0" },

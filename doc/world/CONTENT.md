@@ -378,12 +378,14 @@ and ingots, cloth, glass, flour, ash-salt, rendered tallow, glue, pitch.
 **Byproducts and waste** `[plan §15]` give the lower tiers somewhere to go: slag,
 offcuts, bone, spoiled grain. Some feed other chains (bone → glue → fletching),
 some feed decay. **A graph with no waste is a graph where nothing is ever a
-bargain.** **In code today** `[built, narrow]`: **glue**, off every carcass
+bargain.** **In code today** `[built]`: **glue**, off every carcass
 butchered, alongside the meat and hide — no separate bone step, since Stage
 B has no bone material of its own to make one meaningful yet — and
 **pitch**, off every charcoal burn, the same fire sweating out tar as well
-as char. Neither has a chain to be spent in; §7.2's unbuilt Fletcher is the
-obvious first customer for glue.
+as char. Both now have somewhere to go, exactly the "bone → glue →
+fletching" chain named two sentences up: glue binds a **Fletcher**'s
+arrows, pitch seals a **Bowyer**'s string-wraps (§5.2, §6) — the first
+byproducts in the Verge with a real customer rather than a promise of one.
 
 **Food by Realm** `[plan §12]` — river-bread, small beer (safer than the water,
 and everyone knows it), hedge-fruit and hard cheese in the Verge; peat-baked
@@ -447,7 +449,9 @@ maintenance is the war.
   `[built, 18 strikes, between the spear and the real sword in bite and in
   everything else — a second, shorter metal line rather than a second copy
   of the first, §6]`, **fishing line** `[built, 25 casts]`, **pot** `[built,
-  15 meals, Verge pottery's first product]`; pick, needle, hammer, saw, loom,
+  15 meals, Verge pottery's first product]`, **bow** `[built, 20 shots — Stage
+  B's first ranged weapon, a Bowyer's stave and string, reached for only when
+  nothing is already in melee range]`; pick, needle, hammer, saw, loom,
   quern all `[named]`. The built ones each buy a different thing: the knife
   buys *yield* (more off a carcass, and the only way to cut cord), the axe
   buys yield **and quiet**, the snare buys *absence* — the only work that
@@ -456,10 +460,19 @@ maintenance is the war.
   skill adding more on top of whoever merely swings it, the copper sword
   buys the same raw damage *sooner and weaker*, earning no such skill bonus
   of its own, the line buys the one food chain that needs no fire and no
-  butchering at all — cordage and a shoreline, nothing else — and the pot
+  butchering at all — cordage and a shoreline, nothing else — the pot
   buys a heartier meal, spent one charge per meal actually eaten hot rather
   than per meal cooked, since a flat counter of cooked meat has no way to
-  remember which portion ever went near one.
+  remember which portion ever went near one, and the bow buys *reach* rather
+  than more bite (its 2 damage sits under even the spear's 3) — the first
+  tool in the Verge that trades raw damage for distance instead of for
+  quiet or yield.
+- **Ammunition** — **arrow** `[built]`, a Fletcher's product: wood and glue,
+  fletched in a batch of two rather than one at a time (the same shape
+  cordage's "2 cord per hide" already is). Countable and tradeable, unlike
+  every tool above it — a Fletcher can resupply a soul who never fletched
+  one, the same way a Smith's sword can't be handed over but a Miner's ore
+  can.
 - **Wearables** — hide cloak `[built, wears through on the cold it stops]`,
   **boots** `[built, 300 marsh-steps, softens the terrain-speed penalty
   without touching the shared rule every mover obeys]`, **gloves**
@@ -538,7 +551,7 @@ or a cure for the Kiln's ashlung. Capped at the Weald for a reason: it is the
 Realm where the ingredients lie to you, so **every apothecary's reputation is
 built on having survived being wrong.**
 
-**In code today** `[built]`: five chains that cross.
+**In code today** `[built]`: six chains that cross.
 
 - **Food:** kill → butcher → cook at a fire → eat.
 - **Tools:** stone + wood → knife → (hide → cord) → cord + wood → snare → hare
@@ -556,14 +569,24 @@ built on having survived being wrong.**
   it, and weaker for the same reason — §3.1 names copper, not iron, as the
   Verge's own metal, so this sits alongside the ore chain rather than
   replacing it.
+- **The bow**, the first chain built from waste rather than a fresh
+  material: a carcass's glue (already a butchering byproduct) + wood →
+  arrows (a Fletcher's half), and a charcoal burn's pitch (already a
+  byproduct of that) + wood + cord → a bow (a Bowyer's half). Neither half
+  needs the other to be craftable, but a bow with no arrows and arrows with
+  no bow are both inert — the same "no single link substitutes for the
+  chain" property every other entry here already has, just assembled from
+  two professions' offcuts instead of two professions' primary yields.
 
-All five are the first appearance of §15's generative rule in the prototype:
+All six are the first appearance of §15's generative rule in the prototype:
 a snare needs cordage *and* wood, cordage needs hide *and* a knife already in
 hand, hide only comes off an animal someone hunted, a sword needs a vein,
 a fire kept long enough to burn wood down twice over, *and* the cord the
 tools chain already produces, a line needs that same cord plus wood before
-it is worth anything at all, and copper needs its own vein plus that same
-wood and cord a third time over. **No single action or material substitutes
+it is worth anything at all, copper needs its own vein plus that same
+wood and cord a third time over, and the bow needs two separate byproducts
+that come from two unrelated actions (a kill and a burn) neither of which
+was ever performed to get them. **No single action or material substitutes
 for the chain** — that is the property that eventually makes trade
 arithmetic rather than courtesy, once two souls' hours stop yielding the
 same output (§7.4). It is not the same claim as "no soul can do the whole
@@ -573,8 +596,8 @@ fire) → pot, and hide + cord → boots or gloves — the cloak's two siblings,
 each answering a specific need (a marsh, the loudest work there is) the
 way the cloak answers cold, rather than being a second cloak. Butchering
 and a charcoal burn also now each pay out a small guaranteed byproduct
-(glue, pitch) alongside their main yield, with no chain yet to spend
-either in (§4).
+(glue, pitch) alongside their main yield — the bow chain above is where
+both of those actually go (§4).
 
 **Where the built sword chain falls short of §15's rule:** the full version
 gates real steel behind Realm-gated coal and spreads the work across eight
@@ -614,8 +637,10 @@ is *derived* from the survival model, which is why it holds together.
 - **Refining** — Smelter, Tanner, Miller, Charcoaler, Glassblower, Salter,
   Reagent-grinder, Renderer, Distiller.
 - **Crafting** — Blacksmith, Weaponsmith, Armourer, Carpenter, Mason, Tailor,
-  Leatherworker, Fletcher, Jeweller, Scribe, Cartographer, Cook, Brewer,
-  Apothecary, Engineer, Shipwright, Potter, Bowyer, Cooper, Ropewright.
+  Leatherworker, **Fletcher** `[built, §5.2/§6 — arrows, off glue]`,
+  Jeweller, Scribe, Cartographer, Cook, Brewer, Apothecary, Engineer,
+  Shipwright, Potter, **Bowyer** `[built, §5.2/§6 — the bow, off pitch]`,
+  Cooper, Ropewright.
 - **Sustaining** — Physician, Surgeon, Consoler, Teacher, Innkeeper, Courier,
   Caravaneer, Midwife, Grave-teller.
 - **Economic** — Merchant, Broker, Banker, Landlord, Auctioneer, Insurer,
@@ -1248,10 +1273,12 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   are the cloak's two siblings, each from the same hide/cordage line,
   each answering one specific need rather than being a second cloak. Hats,
   and everything Kiln-tier or above (mail, plate), stay `[named]`.
-- ~~**The crafting graph has no waste.**~~ — closed, narrowly: butchering
-  and a charcoal burn each now pay a small guaranteed byproduct (glue,
-  pitch, §4) alongside their main yield. Neither has a chain to be spent
-  in yet — that is the actual gap now, not the byproduct's existence.
+- ~~**The crafting graph has no waste.**~~ — closed: butchering and a
+  charcoal burn each pay a small guaranteed byproduct (glue, pitch, §4)
+  alongside their main yield, and both byproducts now have somewhere to
+  go — a Fletcher's arrows and a Bowyer's bow (§5.2, §6), the exact
+  "bone → glue → fletching" chain §4 names as the model for this whole
+  category, closed rather than merely gestured at.
 - **Meadow has no Beekeeper.** The tile exists and forages like a bush;
   §7.2's Beekeeper profession, and anything resembling honey, is unbuilt.
 - ~~**Killed-by-another-soul** is absent from the death causes~~ — closed,

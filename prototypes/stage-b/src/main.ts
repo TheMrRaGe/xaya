@@ -147,6 +147,8 @@ const VERBS: Record<string, string> = {
   v: "makeGloves",
   h: "talk",
   k: "teach",
+  r: "makeBow",
+  n: "makeArrow",
 };
 
 window.addEventListener("keydown", (e) => {

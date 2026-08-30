@@ -254,6 +254,36 @@ const NOISE_PER_FISH = 15; // sitting at the water's edge is nearly silent
 const NOISE_PER_MARSH_STEP = 4; // squelching carries; only while actually moving through it
 
 /**
+ * The bow — Stage B's first ranged weapon, and the first thing to spend
+ * glue and pitch (doc/world/CONTENT.md §4: "a graph with no waste is a
+ * graph where nothing is a bargain"), which had piled up with nowhere to
+ * go since the wearables pass. Two recipes close two of §7.2's
+ * named-but-unbuilt professions at once: a **Bowyer** builds the bow
+ * (wood, cordage and the pitch that seals the string-wraps), a
+ * **Fletcher** fletches the arrows (wood and the glue that binds feather
+ * to shaft) — the same real-world division of labour the two names imply,
+ * rather than one soul doing both under a single verb.
+ *
+ * No ninth skill for either: crafting neither trains anything (matching
+ * the spear and the knife, not the axe), and a shot that hits still trains
+ * `hunting` same as a melee strike does — a bow is another hunting weapon,
+ * not a new trade to master. What it buys is reach, not extra damage: see
+ * doStrike's melee-first, bow-only-if-nothing's-already-in-arm's-reach
+ * fallback, and BOW_DAMAGE below sitting under even a bare spear's bite.
+ */
+const BOW_WOOD_COST = 3;
+const BOW_CORDAGE_COST = 2; // the string
+const BOW_PITCH_COST = 1; // seals the string-wraps
+const BOW_DURABILITY = 20; // shots
+const BOW_DAMAGE = 2; // less than a spear's 3 — the trade is reach, not bite
+const BOW_RADIUS = TILE * 6; // five tiles past melee's reach
+const NOISE_PER_BOWSHOT = 45; // half a melee strike's — a released arrow, not a grapple
+
+const ARROW_WOOD_COST = 1;
+const ARROW_GLUE_COST = 1;
+const ARROWS_PER_BATCH = 2; // same shape as cordage's 2-per-hide
+
+/**
  * Outlawry, scoped to what one Lieutenant can actually enforce (§25/§28,
  * doc/world/PLAN.md §2A: this is "standing," never "reputation score" out
  * loud). A kill costs standing and marks the killer the same tick — the
@@ -356,6 +386,8 @@ export interface Input {
    * paid apprentice economy, which needs a currency Stage B doesn't have.
    */
   teach: boolean;
+  makeBow: boolean; // R — wood, cordage and pitch, no fire needed
+  makeArrow: boolean; // N — wood and glue, needs a knife in hand, no fire needed
 }
 
 export const NO_INPUT: Input = {
@@ -384,6 +416,8 @@ export const NO_INPUT: Input = {
   makeGloves: false,
   talk: false,
   teach: false,
+  makeBow: false,
+  makeArrow: false,
 };
 
 export interface DeathEvent {
@@ -469,6 +503,7 @@ export interface SimState {
     firstGloves: boolean;
     firstNpcKill: boolean;
     firstTeaching: boolean;
+    firstBow: boolean;
   };
 }
 
@@ -523,6 +558,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstGloves: false,
       firstNpcKill: false,
       firstTeaching: false,
+      firstBow: false,
     },
   };
 }
@@ -853,6 +889,8 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     if (input.makePot) doMakePot(state, player);
     if (input.makeBoots) doMakeBoots(state, player);
     if (input.makeGloves) doMakeGloves(state, player);
+    if (input.makeBow) doMakeBow(state, player);
+    if (input.makeArrow) doMakeArrow(state, player);
   }
 
   // A death still has to land even mid-conversation — starvation and the
@@ -1002,28 +1040,24 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
   }
 }
 
-/** Space — hit the nearest living thing in reach. Loud, always. */
+/**
+ * Space — hit the nearest living thing in reach. Loud, always, whenever it
+ * lands. Tries melee first, at STRIKE_RADIUS; only when nothing at all is
+ * that close does it fall back to a bow shot at BOW_RADIUS, if one is
+ * strung and loaded — a bow is reach a soul reaches for, not a first
+ * choice, so anything already within arm's length is met with whatever's
+ * in the other hand exactly as before.
+ */
 function doStrike(state: SimState, player: Player): void {
-  // Whichever living thing is nearer gets hit — a beast, another soul, or
-  // now a villager. "The nearest living thing in reach" was always the
-  // honest description of this verb.
-  const creatureTarget = nearestCreature(state, player, (c) => c.state !== "dead");
-  const creatureSq = creatureTarget ? distSq(creatureTarget.x, creatureTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
-  const soulTarget = nearestSoul(state, player);
-  const soulSq = soulTarget ? distSq(soulTarget.x, soulTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
-  const npcTarget = nearestNpc(state, player, STRIKE_RADIUS);
-  const npcSq = npcTarget ? distSq(npcTarget.x, npcTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
-  if (!creatureTarget && !soulTarget && !npcTarget) return;
-
   const pack = player.pack;
-  // The best weapon in hand wins: a sword over a copper sword over a spear
-  // over a fist. Nothing is ever discarded to make room, so carrying all
-  // three just means the copper blade is the fallback when the real sword
-  // gives out, and the spear is the fallback under that. A sword you
+  // The best melee weapon in hand wins: a sword over a copper sword over a
+  // spear over a fist. Nothing is ever discarded to make room, so carrying
+  // all three just means the copper blade is the fallback when the real
+  // sword gives out, and the spear is the fallback under that. A sword you
   // smelted and forged yourself hits harder than one merely carried — the
   // same soul's smithing, not just their hunting, is in the blow. Copper
   // carries no such bonus: it is a real blade, just not a mastered one.
-  const weapon =
+  const meleeDamage =
     pack.sword > 0
       ? SWORD_DAMAGE + swordBonus(player.skills)
       : pack.copperSword > 0
@@ -1031,14 +1065,42 @@ function doStrike(state: SimState, player: Player): void {
         : pack.spear > 0
           ? SPEAR_DAMAGE
           : FIST_DAMAGE;
-  const damage = weapon + strikeBonus(player.skills);
-  bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
+  const hit = strikeNearest(state, player, STRIKE_RADIUS, meleeDamage + strikeBonus(player.skills), () => spendWeapon(state, pack));
+  if (hit) {
+    bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
+    return;
+  }
+
+  if (pack.bow < 1 || pack.arrow < 1) return; // nothing in reach, and no reach to spend
+  const shot = strikeNearest(state, player, BOW_RADIUS, BOW_DAMAGE + strikeBonus(player.skills), () => spendArrow(state, pack));
+  if (shot) bumpNoise(state, skilledNoise(NOISE_PER_BOWSHOT, player, "hunting"), player);
+}
+
+/**
+ * Resolve one hit against whichever of a creature, a soul or an NPC is
+ * nearest within `radius` — the shape doStrike's melee pass and its bow
+ * fallback both need, differing only in reach, damage and what the hit
+ * spends. Returns whether anything was actually there to hit, so doStrike
+ * knows whether to bump noise at all (a swing or a shot at nothing makes
+ * none) and whether the bow is worth trying next.
+ */
+function strikeNearest(state: SimState, player: Player, radius: number, damage: number, spend: () => void): boolean {
+  // Whichever living thing is nearer gets hit — a beast, another soul, or
+  // now a villager. "The nearest living thing in reach" was always the
+  // honest description of this verb.
+  const creatureTarget = nearestCreature(state, player, (c) => c.state !== "dead", radius);
+  const creatureSq = creatureTarget ? distSq(creatureTarget.x, creatureTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  const soulTarget = nearestSoul(state, player, radius);
+  const soulSq = soulTarget ? distSq(soulTarget.x, soulTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  const npcTarget = nearestNpc(state, player, radius);
+  const npcSq = npcTarget ? distSq(npcTarget.x, npcTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  if (!creatureTarget && !soulTarget && !npcTarget) return false;
 
   // Whichever of the three is actually nearest gets hit, checked in the
   // same "closer wins" shape the beast-vs-soul choice already used.
   if (npcTarget && npcSq <= creatureSq && npcSq <= soulSq) {
     const killed = woundNpc(npcTarget, damage, state.tick);
-    spendWeapon(state, pack);
+    spend();
     if (killed) {
       player.kills++;
       say(state, `${npcTarget.name} goes down.`);
@@ -1050,7 +1112,7 @@ function doStrike(state: SimState, player: Player): void {
       // who couldn't fight back doesn't, and shouldn't pretend to.
       applyOutlawry(state, player, NPC_KILL_STANDING_PENALTY);
     }
-    return;
+    return true;
   }
 
   if (soulTarget && soulSq <= creatureSq) {
@@ -1058,7 +1120,7 @@ function doStrike(state: SimState, player: Player): void {
     state.lastDamageSource[soulTarget.id] = "killed by another soul";
     const killed = soulTarget.health <= 0;
     learn(state, player, "hunting", killed ? XP.kill : XP.strike);
-    spendWeapon(state, pack);
+    spend();
     if (killed) {
       player.kills++;
       say(state, `Soul #${soulTarget.lineage} goes down.`);
@@ -1068,13 +1130,13 @@ function doStrike(state: SimState, player: Player): void {
       }
       applyOutlawry(state, player, STANDING_KILL_PENALTY);
     }
-    return;
+    return true;
   }
 
   const quarry = creatureTarget!;
   const killed = woundCreature(quarry, damage, state.tick, player.id);
   learn(state, player, "hunting", killed ? XP.kill : XP.strike);
-  spendWeapon(state, pack);
+  spend();
 
   if (killed) {
     player.kills++;
@@ -1086,9 +1148,10 @@ function doStrike(state: SimState, player: Player): void {
   } else if (quarry.kind === "hedge-boar") {
     say(state, "The boar turns on you.");
   }
+  return true;
 }
 
-/** Whatever a strike spends: the same priority the damage itself follows. */
+/** Whatever a melee strike spends: the same priority the damage itself follows. */
 function spendWeapon(state: SimState, pack: Player["pack"]): void {
   if (pack.sword > 0) {
     pack.sword--;
@@ -1102,10 +1165,17 @@ function spendWeapon(state: SimState, pack: Player["pack"]): void {
   }
 }
 
+/** What a bow shot spends: the arrow is gone every time, the bow itself wears the same way any other tool does. */
+function spendArrow(state: SimState, pack: Player["pack"]): void {
+  pack.arrow--;
+  pack.bow--;
+  if (pack.bow === 0) say(state, "The bowstring finally gives out. It is just a stick, now.");
+}
+
 /** Another living soul in strike range — never yourself, and never one still beneath the Grey King's notice (§ grace). */
-function nearestSoul(state: SimState, player: Player): Player | null {
+function nearestSoul(state: SimState, player: Player, radius: number = STRIKE_RADIUS): Player | null {
   let best: Player | null = null;
-  let bestSq = STRIKE_RADIUS * STRIKE_RADIUS;
+  let bestSq = radius * radius;
   for (const other of state.players) {
     if (other.id === player.id || !other.alive || other.graceUntil > state.tick) continue;
     const d = distSq(other.x, other.y, player.x, player.y);
@@ -1199,6 +1269,31 @@ function doMakeGloves(state: SimState, player: Player): void {
     state.flags.firstGloves = true;
     say(state, "The Grey King: “Gloves, for the loudest work in the Verge. Practical. I still hear it.”");
   }
+}
+
+/** R — a Bowyer's half of the pair: wood, cordage and pitch, no fire needed. Reach, not extra bite (see doStrike). */
+function doMakeBow(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.bow > 0 || pack.wood < BOW_WOOD_COST || pack.cordage < BOW_CORDAGE_COST || pack.pitch < BOW_PITCH_COST) return;
+  pack.wood -= BOW_WOOD_COST;
+  pack.cordage -= BOW_CORDAGE_COST;
+  pack.pitch -= BOW_PITCH_COST;
+  pack.bow = BOW_DURABILITY;
+  say(state, "A stave strung and sealed. Something can finally be hit before it gets close.");
+  if (!state.flags.firstBow) {
+    state.flags.firstBow = true;
+    say(state, "The Grey King: “A bow. Now you can be a coward at a distance instead of up close. I don't mind which.”");
+  }
+}
+
+/** N — a Fletcher's half of the pair: wood and glue, needs a knife in hand, no fire. A batch, the same shape cordage already is. */
+function doMakeArrow(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.knife < 1 || pack.wood < ARROW_WOOD_COST || pack.glue < ARROW_GLUE_COST) return;
+  pack.wood -= ARROW_WOOD_COST;
+  pack.glue -= ARROW_GLUE_COST;
+  pack.arrow += ARROWS_PER_BATCH;
+  say(state, `A shaft cut and fletched with glue. ${ARROWS_PER_BATCH} arrows, ready to nock.`);
 }
 
 /** 4 — cooked if you have it, raw if you are desperate. Raw sometimes bites back. */
@@ -1637,9 +1732,9 @@ function doDialogueChoice(state: SimState, player: Player, optionIndex: number):
   if (option.next === null) player.talkingTo = null;
 }
 
-function nearestCreature(state: SimState, player: Player, pick: (c: Creature) => boolean): Creature | null {
+function nearestCreature(state: SimState, player: Player, pick: (c: Creature) => boolean, radius: number = STRIKE_RADIUS): Creature | null {
   let best: Creature | null = null;
-  let bestSq = STRIKE_RADIUS * STRIKE_RADIUS;
+  let bestSq = radius * radius;
   for (const c of state.creatures) {
     if (!pick(c)) continue;
     const d = distSq(c.x, c.y, player.x, player.y);

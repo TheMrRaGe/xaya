@@ -1624,5 +1624,86 @@ function check(name, cond, detail = "") {
   check("and it actually lands — the soul is gone, not left standing", !p.alive, `alive=${p.alive}`);
 }
 
+// --- 54. the bow: a Bowyer's stave and a Fletcher's arrows, reached for only when nothing is already in arm's reach ---
+{
+  // Crafting both halves of the pair.
+  const s = fresh(1);
+  const p = s.players[0];
+  p.pack.wood = 3;
+  p.pack.cordage = 2;
+  p.pack.pitch = 1;
+  stepTick(s, [I({ makeBow: true })]);
+  check("a bow costs wood, cordage and pitch", p.pack.bow === 20 && p.pack.wood === 0 && p.pack.cordage === 0 && p.pack.pitch === 0, JSON.stringify(p.pack));
+
+  const s2 = fresh(1);
+  const p2 = s2.players[0];
+  p2.pack.wood = 1;
+  p2.pack.glue = 1;
+  stepTick(s2, [I({ makeArrow: true })]);
+  check("fletching needs a knife already in hand, same as cordage does", p2.pack.arrow === 0, `arrow=${p2.pack.arrow}`);
+  p2.pack.knife = 1;
+  p2.pack.wood = 1;
+  p2.pack.glue = 1;
+  stepTick(s2, [I({ makeArrow: true })]);
+  check("with a knife, wood and glue fletch a batch of two", p2.pack.arrow === 2 && p2.pack.wood === 0 && p2.pack.glue === 0, JSON.stringify(p2.pack));
+
+  // Melee wins over a bow whenever something is already close enough to hit by hand.
+  const near = fresh(2);
+  const [meleeAttacker, closeTarget] = near.players;
+  meleeAttacker.pack.spear = 10;
+  meleeAttacker.pack.bow = 10;
+  meleeAttacker.pack.arrow = 10;
+  closeTarget.x = meleeAttacker.x;
+  closeTarget.y = meleeAttacker.y;
+  const beforeClose = closeTarget.health;
+  stepTick(near, [I({ strike: true }), I()]);
+  check(
+    "a spear is used on a target already in melee range, not the bow",
+    beforeClose - closeTarget.health === 3 && meleeAttacker.pack.spear === 9 && meleeAttacker.pack.arrow === 10,
+    `damage=${beforeClose - closeTarget.health} spear=${meleeAttacker.pack.spear} arrow=${meleeAttacker.pack.arrow}`,
+  );
+
+  // Nothing in melee range, but the bow reaches a target several tiles off.
+  // Creatures and NPCs are pushed well clear first — BOW_RADIUS is wide
+  // enough to otherwise catch the village or the roster by accident, the
+  // way STRIKE_RADIUS's much tighter 1.2 tiles never could.
+  const far = fresh(2);
+  const [archer, farTarget] = far.players;
+  for (const c of far.creatures) { c.x = archer.x + 20 * TILE; c.y = archer.y; }
+  for (const npc of far.npcs) { npc.x = archer.x + 20 * TILE; npc.y = archer.y; }
+  archer.pack.bow = 10;
+  archer.pack.arrow = 10;
+  farTarget.x = archer.x + 4 * TILE;
+  farTarget.y = archer.y;
+  const beforeFar = farTarget.health;
+  stepTick(far, [I({ strike: true }), I()]);
+  check(
+    "a bow hits a target well outside melee range, and spends an arrow and its own durability",
+    beforeFar - farTarget.health === 2 && archer.pack.arrow === 9 && archer.pack.bow === 9,
+    `damage=${beforeFar - farTarget.health} arrow=${archer.pack.arrow} bow=${archer.pack.bow}`,
+  );
+
+  // The same reach, with no bow at all, does nothing — a bare hand doesn't suddenly have range.
+  const bareHanded = fresh(2);
+  const [nobody, safeTarget] = bareHanded.players;
+  for (const c of bareHanded.creatures) { c.x = nobody.x + 20 * TILE; c.y = nobody.y; }
+  for (const npc of bareHanded.npcs) { npc.x = nobody.x + 20 * TILE; npc.y = nobody.y; }
+  safeTarget.x = nobody.x + 4 * TILE;
+  safeTarget.y = nobody.y;
+  const beforeSafe = safeTarget.health;
+  stepTick(bareHanded, [I({ strike: true }), I()]);
+  check("without a bow, a target out of melee range takes nothing", safeTarget.health === beforeSafe, `health=${safeTarget.health}`);
+
+  // Arrows are ammunition, not a wear counter — a Fletcher can resupply someone else's quiver.
+  const s3 = fresh(2);
+  const [giver, receiver] = s3.players;
+  giver.x = receiver.x;
+  giver.y = receiver.y;
+  giver.pack.arrow = 5;
+  giver.offer = "arrow";
+  stepTick(s3, [I({ give: true }), I()]);
+  check("arrows can be handed to another soul", giver.pack.arrow === 4 && receiver.pack.arrow === 1, JSON.stringify({ giver: giver.pack.arrow, receiver: receiver.pack.arrow }));
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

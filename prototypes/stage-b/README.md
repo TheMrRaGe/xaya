@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (303 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (310 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -88,7 +88,7 @@ is often registered as `text/plain`, and Chrome refuses a
 |---|---|
 | **WASD / arrows** | move |
 | **E** | gather — chop a tree, chip a rock, pick a bush, drink from water, or butcher a carcass you're standing over |
-| **SPACE** | strike — hit the nearest living thing in reach |
+| **SPACE** | strike — hit the nearest living thing in reach, or, if nothing is that close and a bow is strung and loaded, shoot the nearest thing within a bow's reach instead |
 | **F** | feed the fire you're standing at (1 wood), or build one where there isn't one (5 wood, on grass) |
 | **1** | sharpen a spear (3 wood) — 3 damage a hit instead of 1, for 12 hits |
 | **2** | cook one raw meat (must be at a fire) |
@@ -110,6 +110,8 @@ is often registered as `text/plain`, and Chrome refuses a
 | **G** | give one of it to the nearest other soul |
 | **H** | talk to whoever's nearest (a villager, the Teacher); talk again to leave — while a conversation is open, 1-9 pick a reply instead of crafting |
 | **K** | teach whoever's nearest a little of your best skill — free, and it never makes them your equal |
+| **R** | string a bow (3 wood, 2 cord, 1 pitch) — reach, not extra bite |
+| **N** | fletch two arrows (1 wood, 1 glue) — needs a knife in hand |
 | **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
 
 ## HUD & UI redesign
@@ -505,6 +507,24 @@ plan committed at the repo root's `doc/world/`.
   to actually be hunted down: Stage B has no accounts, so nobody can ever
   reconnect to the same soul regardless, and a body nobody will ever answer
   for again has nothing honest left to do in the meantime.
+- **A bow, and Stage B's first ranged weapon.** Two new verbs close two of
+  PLAN §7.2's named-but-unbuilt professions at once, each spending a
+  byproduct that had nowhere to go: **R** strings a bow (wood, cordage and
+  the pitch that seals its string-wraps — a **Bowyer**'s work), **N**
+  fletches a batch of two arrows (wood and the glue that binds feather to
+  shaft — a **Fletcher**'s). SPACE doesn't change: it still hits whatever's
+  nearest in melee reach first, and only reaches for a strung, loaded bow
+  when *nothing at all* is that close — a bow is the thing you fall back
+  on, not a first choice, so anything already in arm's length still meets
+  whatever's in the other hand exactly as before. What it buys is reach
+  (five tiles past melee, `BOW_RADIUS`), not extra bite: its 2 damage sits
+  under even a bare spear's 3. No ninth skill either — a shot that lands
+  still trains `hunting`, the same as any other strike; a bow is one more
+  hunting weapon, not a new trade to master. Arrows are the one thing
+  spent by combat that's actually tradeable (`arrow` joined `Tradeable`,
+  unlike every wear-counter tool before it), so a Fletcher can resupply a
+  soul who never fletched one — the same shape a Miner's ore already has,
+  and a Smith's sword never did.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a
@@ -568,9 +588,8 @@ plan committed at the repo root's `doc/world/`.
   a fire down to charcoal now always pays a little **pitch** alongside the
   char — the same work, not a new step to ask for either, closing PLAN
   §15's "a graph with no waste is a graph where nothing is a bargain" a
-  little further. Neither has anywhere to be spent yet; that's the honest
-  state of it until a Fletcher or something like one exists to want the
-  glue.
+  little further. Neither had anywhere to be spent yet at the time — see
+  below for where that stopped being true.
 - **The Verge has a village now, and someone in it will actually talk to
   you.** PLAN §1A specs the opening this game never built: wash up with
   nothing, get taken in, get watched for a season. Three houses (a
@@ -702,6 +721,15 @@ the exact test §44 used to pick the other ten ("what feeds a person day to
 day"), and §17 names both explicitly under the same hunger row as Farmer and
 Hunter. Nothing on the list is contradicted; two more of §17's food
 professions exist than §44 got around to naming.
+
+Fletcher and Bowyer are not on that list either, and their justification is
+narrower still: PLAN §15 named the "bone → glue → fletching" chain itself,
+as the model for what a byproduct is *for*, before either byproduct existed
+in code. Building glue and pitch without ever giving them a chain to spend
+in would have been the actual scope violation — decoration wearing a
+material's clothes, the same failure mode the HUD redesign's own cut list
+warns against elsewhere in this document. The bow and its arrows are that
+debt being paid, not a new profession invented from nothing.
 
 **A second line was crossed the same deliberate way: the Teacher/apprentice
 bond.** §44's own Stage C list names it explicitly, alongside marks, corpse
