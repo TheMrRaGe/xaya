@@ -356,6 +356,37 @@ const BOARD_RADIUS = TILE * 1.5; // same reach as trading or talking
 const BOUNTY_POST_AMOUNT = 5; // crowns per press — several presses to build a real price, same shape every other verb here has
 
 /**
+ * Magic (doc/world/PLAN.md §9), settled for Stage B: not gone, illegal —
+ * every soul still carries a little of it, and using it is a hanging
+ * offence rather than a physical impossibility. No recipe and no reagent:
+ * the price of a cast is entirely the risk it carries, which is why both
+ * spells cost nothing to learn and nothing to hold, only something to use.
+ *
+ * A bolt reuses doStrike's own strikeNearest at BOLT_RADIUS — same
+ * melee-creature-soul-NPC targeting the bow already shares — so a cast
+ * that kills still trains `hunting` and still costs standing the ordinary
+ * way if the target was another soul; what's new here is on top of that,
+ * not instead of it. Heal has no target and no ordinary consequence to
+ * layer onto — its whole cost is what's below.
+ *
+ * Every cast is the loudest thing in the Verge (louder even than mining,
+ * §1's own "a ward big enough to hold a town is a shout" made numeric) and
+ * carries a real chance — not a certainty, or no hedge-witch would ever
+ * risk it — of a mark landing the same tick, the same applyOutlawry a kill
+ * already uses, at roughly a third of a kill's own cost. Two independent
+ * risks, on purpose: noise brings the Lieutenant eventually; a mark brings
+ * him — or the road's opinion of you — immediately.
+ */
+const BOLT_DAMAGE = 5;
+const BOLT_RADIUS = TILE * 6; // same reach as a bow
+const BOLT_COOLDOWN_TICKS = 30; // 3s between casts
+const HEAL_AMOUNT = 30;
+const HEAL_COOLDOWN_TICKS = 100; // 10s — healing is the stronger of the two
+const NOISE_PER_CAST = 400; // past NOISE_PER_ORE (320) — a working outshouts even a vein
+const MAGIC_MARK_CHANCE: readonly [number, number] = [1, 5]; // one cast in five draws his notice
+const MAGIC_STANDING_PENALTY = 15; // a third of a kill's — being caught working is serious, not fatal
+
+/**
  * Commons standing (doc/world/PLAN.md §3): "kindness needs teeth." Of the
  * acts §3 names — stabilising a stranger, sheltering someone, feeding the
  * starving, teaching for free, paying another's mark, purifying land you do
@@ -440,6 +471,10 @@ export interface Input {
   makeArrow: boolean; // N — wood and glue, needs a knife in hand, no fire needed
   /** U — post crowns to the Bounty Board, at the board itself. See doPostBounty for who it actually funds and who it lands on. */
   postBounty: boolean;
+  /** Z — cast a bolt at whatever's nearest, melee-range first then bow-range, the same targeting doStrike already uses. Free to attempt; not free to be caught doing. */
+  castBolt: boolean;
+  /** M — cast a heal on yourself. Same risk as a bolt, no target. */
+  castHeal: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -471,6 +506,8 @@ export const NO_INPUT: Input = {
   makeBow: false,
   makeArrow: false,
   postBounty: false,
+  castBolt: false,
+  castHeal: false,
 };
 
 export interface DeathEvent {
@@ -598,6 +635,7 @@ export interface SimState {
     firstTeaching: boolean;
     firstBow: boolean;
     firstBounty: boolean;
+    firstMagic: boolean;
   };
 }
 
@@ -658,6 +696,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstTeaching: false,
       firstBow: false,
       firstBounty: false,
+      firstMagic: false,
     },
   };
 }
@@ -885,6 +924,10 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   const { world } = state;
   const pack = player.pack;
 
+  // --- magic cooldowns, ticking down whether or not either verb is pressed ---
+  if (player.boltCooldown > 0) player.boltCooldown--;
+  if (player.healCooldown > 0) player.healCooldown--;
+
   // --- movement ---
   if (input.dx !== 0 || input.dy !== 0) {
     // The ground under a soul's feet as they push off governs the whole
@@ -1005,6 +1048,8 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     if (input.makeBow) doMakeBow(state, player);
     if (input.makeArrow) doMakeArrow(state, player);
     if (input.postBounty) doPostBounty(state, player);
+    if (input.castBolt) doCastBolt(state, player);
+    if (input.castHeal) doCastHeal(state, player);
   }
 
   // A death still has to land even mid-conversation — starvation and the
@@ -1199,6 +1244,36 @@ function doStrike(state: SimState, player: Player): void {
   if (pack.bow < 1 || pack.arrow < 1) return; // nothing in reach, and no reach to spend
   const shot = strikeNearest(state, player, BOW_RADIUS, BOW_DAMAGE + strikeBonus(player.skills), () => spendArrow(state, pack));
   if (shot) bumpNoise(state, skilledNoise(NOISE_PER_BOWSHOT, player, "hunting"), player);
+}
+
+/** After any successful cast — the noise and the risk every working carries (§9), regardless of which spell or what it hit. */
+function afterCast(state: SimState, player: Player): void {
+  bumpNoise(state, NOISE_PER_CAST, player);
+  if (state.rng.chance(...MAGIC_MARK_CHANCE)) {
+    applyOutlawry(state, player, MAGIC_STANDING_PENALTY);
+    if (!state.flags.firstMagic) {
+      state.flags.firstMagic = true;
+      say(state, "The Grey King: “Someone still remembers the words. I made those cost blood for a reason, and I have not forgotten why.”");
+    }
+  }
+}
+
+/** Z — a bolt at whatever's nearest, the same melee-then-bow reach doStrike already uses. No ingredient, no tool — only the risk in afterCast. */
+function doCastBolt(state: SimState, player: Player): void {
+  if (player.boltCooldown > 0) return;
+  const hit = strikeNearest(state, player, BOLT_RADIUS, BOLT_DAMAGE, () => {
+    player.boltCooldown = BOLT_COOLDOWN_TICKS;
+  });
+  if (hit) afterCast(state, player);
+}
+
+/** M — heal yourself. No target, same risk. */
+function doCastHeal(state: SimState, player: Player): void {
+  if (player.healCooldown > 0 || player.health >= HEALTH_MAX) return;
+  player.health = clamp(player.health + HEAL_AMOUNT, 0, HEALTH_MAX);
+  player.healCooldown = HEAL_COOLDOWN_TICKS;
+  say(state, `Soul #${player.lineage} closes a wound that shouldn't have closed that fast.`);
+  afterCast(state, player);
 }
 
 /**

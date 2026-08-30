@@ -150,6 +150,8 @@ const VERBS: Record<string, string> = {
   r: "makeBow",
   n: "makeArrow",
   u: "postBounty",
+  z: "castBolt",
+  m: "castHeal",
 };
 
 window.addEventListener("keydown", (e) => {

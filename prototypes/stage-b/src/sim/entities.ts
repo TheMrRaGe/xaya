@@ -199,15 +199,18 @@ export interface Player {
   lineage: number; // which soul this is — the heir count
   /**
    * How the road speaks of you (doc/world/PLAN.md §2A — never "reputation
-   * score" out loud). Starts at zero and only killing another soul moves it,
-   * for now: each kill costs standing and marks you, the same "outlawry"
-   * §25/§28 describe. Fall far enough and the Lieutenant stops hunting you
-   * at all — not mercy, the opposite: past a point you read to him as
-   * already his, per §29's "notorious player-killers... can be plundered
-   * into actual rank." Nothing yet builds it back up (Commons standing,
-   * §3's kindness-side, is unbuilt) and nothing carries it between lives —
-   * this prototype has no account layer for a soul's road to follow it
-   * across a death, so it resets with everything else in the pack (§6.1).
+   * score" out loud). Starts at zero. Killing another soul or a villager
+   * costs it and marks you (§25/§28's outlawry), and casting a spell risks
+   * it too now (§9, doCastBolt/doCastHeal) — a chance per casting, not a
+   * certainty, that "his captains hunt it" lands on you specifically. Fall
+   * far enough and the Lieutenant stops hunting you at all — not mercy, the
+   * opposite: past a point you read to him as already his, per §29's
+   * "notorious player-killers... can be plundered into actual rank."
+   * Climbs back up through Commons standing (§3: feeding the hungry,
+   * teaching for free) — never past zero on its own, and nothing carries it
+   * between lives — this prototype has no account layer for a soul's road
+   * to follow it across a death, so it resets with everything else in the
+   * pack (§6.1).
    */
   standing: number;
   /**
@@ -220,6 +223,14 @@ export interface Player {
   talkingTo: number | null;
   /** The current node id in that NPC's tree (dialogue.ts), or `null` when not talking. */
   dialogueNode: string | null;
+  /**
+   * Ticks until a bolt or a heal can be cast again (doCastBolt/doCastHeal).
+   * Every soul starts with both — §9's magic is illegal and hunted, not
+   * absent, and everyone still knows a little of it. No ingredient cost and
+   * no crafted focus: the price is the risk each cast carries, not a recipe.
+   */
+  boltCooldown: number;
+  healCooldown: number;
 }
 
 /**
@@ -275,6 +286,8 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     standing: 0,
     talkingTo: null,
     dialogueNode: null,
+    boltCooldown: 0,
+    healCooldown: 0,
   };
 }
 

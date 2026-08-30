@@ -939,6 +939,24 @@ why a new king could change all of it.
   warmth in a cold room. Ordinary people notice. Some are glad. Some go quiet and
   remember which house it was.
 
+**In code today** `[built, narrow]`: two spells, free to every soul from the
+first tick, no reagent and no crafted focus (key **Z** — a bolt, doStrike's own
+melee-then-bow targeting reused at range; key **M** — a heal, no target). PLAN
+already permits this reading — "there are still threads in the world... in
+people born with a knack" says ordinary folk-magic never fully died, only §17/
+§22's "no classes, no starting traits" made the Stage B call to make that knack
+universal rather than a trait some souls roll and others don't, the same
+simplification every other verb in this prototype already makes. **The two
+mechanics §20 promises are both here, made numeric**: "a hedge-witch closing a
+wound is nothing, a ward big enough to hold a town is a shout" is why a cast
+is the single loudest thing in the Verge (past even a vein, §3.4's own
+loudest-tile crown); "his captains hunt it" is a real, if narrow, roll —
+`applyOutlawry`'s same standing/mark mechanism a kill already uses, at a
+third of a kill's cost, a chance per cast rather than a certainty, or no
+hedge-witch in the fiction would ever risk it twice. Nothing about the
+Given (§9.3), the bright trace, or a real Working exists yet — this is the
+smallest slice that makes "magic is illegal, not absent" playable.
+
 ### 9.2 The bet every village makes `[plan §20]`
 
 Magic is the only thing that holds the Grey off a field. It is also the thing

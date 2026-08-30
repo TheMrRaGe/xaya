@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (329 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (339 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -113,6 +113,8 @@ is often registered as `text/plain`, and Chrome refuses a
 | **R** | string a bow (3 wood, 2 cord, 1 pitch) — reach, not extra bite |
 | **N** | fletch two arrows (1 wood, 1 glue) — needs a knife in hand |
 | **U** | at the Bounty Board: post 5 crowns on the worst soul you know of (your own crowns), or, if you're notorious, on the best one (the dead stockpile's crowns instead) |
+| **Z** | cast a bolt at whatever's nearest — free, on a cooldown, and the loudest thing in the Verge |
+| **M** | cast a heal on yourself — same risk, its own cooldown |
 | **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
 
 ## HUD & UI redesign
@@ -568,6 +570,28 @@ plan committed at the repo root's `doc/world/`.
   ledger beyond the post itself, and no refund to whoever posted it,
   matching the "we build the tools for verification and record, not
   protection from bad judgement" line §12 already commits to.
+- **Magic, for every soul, from the first tick.** PLAN §9/§20 was read
+  literally for a while — "all of it is in one man" taken to mean nobody
+  else can work any at all — and that was worded too literally: the plan
+  itself says "there are still threads in the world... in people born with
+  a knack," a hedge-witch closing a wound was always meant to be *possible*,
+  just dangerous. §17/§22's "no classes, no starting traits" made the
+  Stage B call: that knack is universal, not a trait some souls roll and
+  others don't, the same simplification every other verb here already
+  makes. **Z** casts a bolt (doStrike's own melee-then-bow targeting,
+  reused at range — a beast, a soul or an NPC, whichever is nearest);
+  **M** heals yourself. No reagent, no crafted focus, no fire — the price
+  of a cast was never a recipe, it's the risk, and that risk is real: a
+  landed cast is the single loudest thing in the Verge (past even a vein,
+  the previous record-holder), and it carries a genuine chance — not a
+  certainty, or no hedge-witch would ever risk a second one — of a mark
+  landing the same tick, `applyOutlawry`'s own mechanism at a third of a
+  kill's cost. Two independent consequences on purpose: noise brings the
+  Lieutenant *eventually*; a mark brings him, or the road's opinion of
+  you, *immediately*. Nothing about the Given, the bright trace a
+  frequent worker leaves, or a real Working exists yet — this is the
+  smallest slice that makes "illegal, not absent" playable rather than
+  just written down.
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a

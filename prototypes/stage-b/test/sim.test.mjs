@@ -1828,5 +1828,63 @@ function check(name, cond, detail = "") {
   check("a bounty on a soul that starves is forfeited to the stockpile", forfeit.deadStockpile === 30 && forfeit.bounties.length === 0, `stockpile=${forfeit.deadStockpile} bounties=${forfeit.bounties.length}`);
 }
 
+// --- 57. magic: every soul can cast, and every cast is loud and risky rather than costing an ingredient ---
+{
+  // A bolt hits whatever's nearest, on a cooldown, whether that's a beast, a soul or an NPC.
+  const s = fresh(2);
+  const [caster, target] = s.players;
+  target.x = caster.x;
+  target.y = caster.y;
+  const before = target.health;
+  stepTick(s, [I({ castBolt: true }), I()]);
+  check("a bolt hits the nearest soul for BOLT_DAMAGE", before - target.health === 5, `damage=${before - target.health}`);
+  check("and starts its own cooldown", caster.boltCooldown > 0, `cooldown=${caster.boltCooldown}`);
+
+  const again = target.health;
+  stepTick(s, [I({ castBolt: true }), I()]);
+  check("a second cast on cooldown does nothing", target.health === again, `health=${target.health}`);
+
+  // Healing restores health, has its own cooldown, and does nothing at full health.
+  const h = fresh(1);
+  const p = h.players[0];
+  p.health = 50;
+  stepTick(h, [I({ castHeal: true })]);
+  check("a heal restores HEAL_AMOUNT, capped at full health", p.health === 80, `health=${p.health}`);
+  check("and starts its own cooldown, independent of a bolt's", p.healCooldown > 0, `cooldown=${p.healCooldown}`);
+
+  const full = fresh(1);
+  stepTick(full, [I({ castHeal: true })]);
+  check("healing at full health does nothing, and starts no cooldown", full.players[0].health === 100 && full.players[0].healCooldown === 0, JSON.stringify(full.players[0].health));
+
+  // Casting at nothing (no target in reach) costs nothing — no noise, no cooldown, same as swinging at nothing.
+  const alone = fresh(1);
+  for (const c of alone.creatures) { c.x = alone.players[0].x + 20 * TILE; c.y = alone.players[0].y; }
+  for (const npc of alone.npcs) { npc.x = alone.players[0].x + 20 * TILE; npc.y = alone.players[0].y; }
+  stepTick(alone, [I({ castBolt: true })]);
+  check("a bolt at nothing starts no cooldown and makes no noise", alone.players[0].boltCooldown === 0 && alone.noise === 0, `cooldown=${alone.players[0].boltCooldown} noise=${alone.noise}`);
+
+  // A cast that actually lands is loud — the loudest thing in the Verge, on purpose.
+  const loud = fresh(1);
+  loud.players[0].health = 50;
+  stepTick(loud, [I({ castHeal: true })]);
+  check("a landed cast is louder than mining a vein", loud.noise > 320, `noise=${loud.noise}`);
+
+  // Every cast also carries a real chance of a mark — checked statistically, since it's a roll, not a certainty.
+  let markedAtLeastOnce = false;
+  let markedEveryTime = true;
+  const trials = fresh(1);
+  const caster2 = trials.players[0];
+  for (let i = 0; i < 200; i++) {
+    caster2.healCooldown = 0;
+    caster2.health = 50;
+    const standingBefore = caster2.standing;
+    stepTick(trials, [I({ castHeal: true })]);
+    if (caster2.standing < standingBefore) markedAtLeastOnce = true;
+    else markedEveryTime = false;
+  }
+  check("a chance of a mark lands over enough casts", markedAtLeastOnce, "never marked in 200 casts");
+  check("but not on every single one", !markedEveryTime, "marked every one of 200 casts");
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
