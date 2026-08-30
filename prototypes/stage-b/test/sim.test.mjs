@@ -10,7 +10,7 @@ import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT } from
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
-import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus } from "../dist/sim/skills.js";
+import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus, fishChance } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
 
 
@@ -741,6 +741,53 @@ function check(name, cond, detail = "") {
   }
   check("most fresh patrol waypoints land near recently loud ground", nearHotspot > trials * 0.4, `${nearHotspot}/${trials}`);
   check("but not all of them — he still wanders and can still find you elsewhere", nearHotspot < trials * 0.9, `${nearHotspot}/${trials}`);
+}
+
+// --- 26. fishing: no fire, no butchering, just cordage and a shoreline ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px + 1, py, Tile.Water);
+  s.world.set(px, py, Tile.Grass); // stand somewhere dry, not on the water itself
+
+  p.pack.cordage = 3;
+  p.pack.wood = 2;
+  stepTick(s, [I({ makeFishingLine: true })]);
+  check("a line costs cordage and wood, no fire", p.pack.fishingLine === 25 && p.pack.cordage === 1 && p.pack.wood === 1, JSON.stringify(p.pack));
+  check("making a line teaches fishing", p.skills.fishing > 0, `xp=${p.skills.fishing}`);
+
+  const awayFromWater = fresh();
+  awayFromWater.players[0].pack.fishingLine = 10;
+  const wpx = Math.floor(awayFromWater.players[0].x / TILE);
+  const wpy = Math.floor(awayFromWater.players[0].y / TILE);
+  for (const [ddx, ddy] of [[0, 0], [0, -1], [0, 1], [-1, 0], [1, 0]]) awayFromWater.world.set(wpx + ddx, wpy + ddy, Tile.Grass);
+  stepTick(awayFromWater, [I({ fish: true })]);
+  check("no water in reach, no cast", awayFromWater.players[0].pack.fishingLine === 10 && awayFromWater.players[0].pack.fish === 0);
+
+  let ticks = 0;
+  while (p.pack.fish === 0 && ticks < 300) {
+    p.x = px * TILE;
+    p.y = py * TILE;
+    stepTick(s, [I({ fish: true })]);
+    ticks++;
+  }
+  check("a cast at the water's edge eventually lands a fish", p.pack.fish === 1, `after ${ticks} casts`);
+  check("and the line wears with use", p.pack.fishingLine === 24, `line=${p.pack.fishingLine}`);
+  check("a catch teaches fishing on top of making the line", p.skills.fishing > 0);
+
+  // Eating priority: a hot meal beats fish, fish beats raw meat and its sickness risk.
+  p.pack.cookedMeat = 0;
+  p.pack.rawMeat = 3;
+  p.pack.fish = 2;
+  const satietyBefore = (p.needs.satiety = 200);
+  stepTick(s, [I({ eat: true })]);
+  check("fish is eaten before raw meat", p.pack.fish === 1 && p.pack.rawMeat === 3, JSON.stringify(p.pack));
+  check("and it needs no fire to be worth eating", p.needs.satiety > satietyBefore);
+
+  check("a green fisher rarely gets a bite", fishChance({ fishing: 0 })[0] === 4);
+  check("a mastered fisher does noticeably better", fishChance({ fishing: 10000 })[0] >= 4 + 2 * 9);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

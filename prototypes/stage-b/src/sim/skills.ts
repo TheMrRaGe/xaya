@@ -17,7 +17,15 @@
  * what gives their work value.
  */
 
-export type Skill = "woodcraft" | "hunting" | "butchery" | "cooking" | "tailoring" | "trapping" | "smithing";
+export type Skill =
+  | "woodcraft"
+  | "hunting"
+  | "butchery"
+  | "cooking"
+  | "tailoring"
+  | "trapping"
+  | "smithing"
+  | "fishing";
 
 export const SKILLS: readonly Skill[] = [
   "woodcraft",
@@ -27,12 +35,22 @@ export const SKILLS: readonly Skill[] = [
   "tailoring",
   "trapping",
   "smithing",
+  "fishing",
 ];
 
 export type Skills = Record<Skill, number>; // experience, not level
 
 export function newSkills(): Skills {
-  return { woodcraft: 0, hunting: 0, butchery: 0, cooking: 0, tailoring: 0, trapping: 0, smithing: 0 };
+  return {
+    woodcraft: 0,
+    hunting: 0,
+    butchery: 0,
+    cooking: 0,
+    tailoring: 0,
+    trapping: 0,
+    smithing: 0,
+    fishing: 0,
+  };
 }
 
 /** Experience for one use of each verb. */
@@ -48,6 +66,8 @@ export const XP = {
   char: 8, // smothering a fire down to charcoal
   smelt: 15, // running ore
   forge: 40, // a sword — the chain's whole payoff
+  line: 8, // knotting a fishing line
+  catch: 15, // a fish on the line — present effort, unlike a trap's absent one
 } as const;
 
 export const MAX_LEVEL = 9;
@@ -148,6 +168,19 @@ export function swordBonus(skills: Skills): number {
   return Math.trunc(level(skills.smithing) / 3);
 }
 
+/**
+ * A line's odds of a bite this tick, as [numerator, denominator] for
+ * `Rng.chance`. Deliberately slower than a snare (§ trapChance) rather than
+ * faster: trapping pays for hours spent *elsewhere*, and fishing is the one
+ * food source that asks for nothing but hours spent *right here, patiently*
+ * — a fair trade needs the wait to still mean something even once a soul
+ * is good at it. Four in a hundred at nothing, rising to about one in
+ * five at mastery.
+ */
+export function fishChance(skills: Skills): readonly [number, number] {
+  return [4 + level(skills.fishing) * 2, 100];
+}
+
 const TITLES: Record<Skill, string> = {
   woodcraft: "woodcutter",
   hunting: "hunter",
@@ -156,6 +189,7 @@ const TITLES: Record<Skill, string> = {
   tailoring: "tailor",
   trapping: "trapper",
   smithing: "smith",
+  fishing: "fisher",
 };
 
 const RANKS = ["", "a poor", "a passable", "a fair", "a good", "a skilled", "a fine", "an expert", "a master", "a master"];

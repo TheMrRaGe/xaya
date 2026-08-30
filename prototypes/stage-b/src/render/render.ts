@@ -383,6 +383,7 @@ export function drawHud(
     pack.knife > 0 ? `knife ${pack.knife}` : null,
     pack.axe > 0 ? `axe ${pack.axe}` : null,
     pack.snare > 0 ? `snare ${pack.snare}` : null,
+    pack.fishingLine > 0 ? `line ${pack.fishingLine}` : null,
   ]
     .filter(Boolean)
     .join("  ");
@@ -404,9 +405,10 @@ export function drawHud(
     10,
     hudY + 60,
   );
-  // The sword chain's own materials, kept off the line above so that line
-  // still reads at a glance for a soul who never touches a vein.
-  ctx.fillText(`ore ${pack.ore}  charcoal ${pack.charcoal}  bar ${pack.bar}`, 10, hudY + 76);
+  // The sword chain's materials and fish, kept off the line above so that
+  // line still reads at a glance for a soul who never touches a vein or
+  // a line.
+  ctx.fillText(`ore ${pack.ore}  charcoal ${pack.charcoal}  bar ${pack.bar}  fish ${pack.fish}`, 10, hudY + 76);
 
   // Tools show what is left in them, because "axe 3" is a decision.
   ctx.fillStyle = "#c8b088";
@@ -438,10 +440,15 @@ export function drawHud(
     10,
     hudY + 168,
   );
+  ctx.fillText(
+    "L line (2 cord 1w) · C fish, at the water's edge — press again to keep casting",
+    10,
+    hudY + 182,
+  );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 186 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 200 + i * 15));
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {

@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (190 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (200 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -101,7 +101,9 @@ is often registered as `text/plain`, and Chrome refuses a
 | **9** | smother wood into charcoal (3 wood → 1 charcoal at nothing, 2 at mastery, at a fire) |
 | **0** | smelt a bar (2 ore, 1 charcoal, +1 bar at mastery, at a fire) |
 | **B** | forge a sword (2 bar, 1 wood, 1 cord) — double the spear's base damage, for 30 hits, plus a smith's own skill |
-| **T** | cycle what you're offering (wood / stone / cord / raw meat / cooked meat / hide / ore / charcoal / bar) |
+| **L** | knot a fishing line (2 cord, 1 wood) — no fire needed, for 25 casts |
+| **C** | cast at the water's edge with a line in hand — one attempt per press, like every other verb here |
+| **T** | cycle what you're offering (wood / stone / cord / raw meat / cooked meat / hide / ore / charcoal / bar / fish) |
 | **G** | give one of it to the nearest other soul |
 
 ## What's actually happening under the hood
@@ -184,6 +186,18 @@ plan committed at the repo root's `doc/world/`.
   that fails §15's "at least one Realm-gated input" half — there is no
   second Realm yet to gate anything against, which is a scope limit worth
   being honest about rather than a design claim.
+- **Fishing needs no fire, and shares its first ingredient with the tools
+  chain instead of starting one of its own.** Hide → cord (same cord the
+  snare uses) → cord + wood → a fishing line → cast at the water's edge.
+  Nothing about it touches butchering, cooking or a carcass at all — it is
+  the shortest food chain in the game, and the one a soul with nothing but
+  a knife and a shoreline can still lean on. Deliberately slower per attempt
+  than a snare (4 in 100 at nothing, rising to about 1 in 5 at mastery,
+  against the snare's 1-in-3-to-2-in-3): a snare is paid for by hours spent
+  *away* from it, a line by hours spent sitting right there holding it, and
+  the reward should track which currency was actually spent. §44 never
+  names a Fisher — see the cut-list note below — but §17 does, right
+  alongside Farmer and Hunter under the same hunger row.
 - **The snare is the only work that pays while you are somewhere else.**
   Hide → cord (needs a knife) → snare → set it in the grass and walk away.
   It takes hares and nothing bigger, it is nearly silent to set, and it
@@ -357,11 +371,19 @@ Per the plan's own named cut list (§44), checked off:
 | In scope | Built |
 |---|---|
 | The Verge, nothing else | ✅ one zone, no Realm gating |
-| A few professions worth of actions | ✅ gather, chip, mine, hunt, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar) |
+| A few professions worth of actions | ✅ gather, chip, mine, hunt, fish, trap, butcher, cook, craft (spear, sword, cloak, fire, knife, axe, cord, snare, charcoal, bar, fishing line) |
 | Three creatures | ✅ and then some — hare, deer, river-goat, hedge-boar, wolf, and the crows. §44 asked for three; the extras came after the gate passed, and each one answers a different question rather than padding a bestiary |
 | Barter economy | ✅ two people, two keyboards, one Verge, and everything handed over is on a ledger. No currency and no escrow — those are for strangers |
-| One Lieutenant, no Muster | ✅ |
+| One Lieutenant, no Muster | ✅ — patched to patrol smarter as the map grew, not to grow a second one |
 | Permadeath, obituary not full Barrow-list UI | ✅ (a real Barrow-list, just minimal) |
+
+§44 names ten professions in scope (Farmer, Hunter, Miner, Logger,
+Charcoaler, Smelter, Blacksmith, Leatherworker, Tanner, Herbalist) and
+Trapper and Fisher are not on that list — built anyway, because both answer
+the exact test §44 used to pick the other ten ("what feeds a person day to
+day"), and §17 names both explicitly under the same hunger row as Farmer and
+Hunter. Nothing on the list is contradicted; two more of §17's food
+professions exist than §44 got around to naming.
 
 Explicitly **out**, same as the plan says: land, guilds, ecology population
 math, the Shards, magic, any second player, any server. The creatures are a

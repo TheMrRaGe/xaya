@@ -32,7 +32,8 @@ export type Tradeable =
   | "hide"
   | "ore"
   | "charcoal"
-  | "bar";
+  | "bar"
+  | "fish";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -44,6 +45,7 @@ export const TRADEABLES: readonly Tradeable[] = [
   "ore",
   "charcoal",
   "bar",
+  "fish",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -66,6 +68,12 @@ export interface Pack {
   /** What ore becomes once smelted. The last material before the sword itself. */
   bar: number;
   /**
+   * Caught on a line, eaten fresh — no fire, no rot, no sickness roll. The
+   * one food that trades a fire's higher yield for needing nothing else at
+   * all: a hungry soul with a line and a shoreline never fully starves.
+   */
+  fish: number;
+  /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
    * permanent, which is what gives anyone a reason to make one for someone
@@ -78,6 +86,8 @@ export interface Pack {
   snare: number; // how many you are carrying, unset
   /** Strikes left. Double the spear's bite, and outlasts it — the whole chain's payoff. */
   sword: number;
+  /** Casts left. The one tool that asks for nothing but cordage and patience. */
+  fishingLine: number;
 }
 
 export type DeathCause =
@@ -128,12 +138,14 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       ore: 0,
       charcoal: 0,
       bar: 0,
+      fish: 0,
       spear: 0,
       cloak: 0,
       knife: 0,
       axe: 0,
       snare: 0,
       sword: 0,
+      fishingLine: 0,
     },
     skills: newSkills(),
     offer: "wood",

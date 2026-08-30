@@ -41,6 +41,7 @@ import {
   charcoalYield,
   smeltBonus,
   swordBonus,
+  fishChance,
 } from "./skills.js";
 import {
   Creature,
@@ -167,6 +168,21 @@ const SWORD_CORDAGE_COST = 1; // binding the grip
 const SWORD_DAMAGE = 6; // double the spear
 const SWORD_DURABILITY = 30; // and outlasts it by more than double
 
+/**
+ * Fishing — the Fisher's answer to hunger (doc/world/PLAN.md §17), and the
+ * one food chain that needs no fire, no butchering and no waiting elsewhere:
+ * just cordage, a shoreline, and held-down patience. It is meant to feel
+ * slower than the snare per tick spent (fishChance in skills.ts sits well
+ * under trapChance's) because a snare is paid for by hours spent *away*,
+ * and this is paid for by hours spent *here* — the reward should track
+ * which currency was actually spent.
+ */
+const FISHING_LINE_CORDAGE_COST = 2;
+const FISHING_LINE_WOOD_COST = 1;
+const FISHING_LINE_DURABILITY = 25; // casts that land a fish
+const FISH_SATIETY = 140; // between raw meat's 120 and a hot meal's 500+
+const NOISE_PER_FISH = 15; // sitting at the water's edge is nearly silent
+
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
 const REGROW_TICKS = 900; // ~90s
@@ -205,6 +221,8 @@ export interface Input {
   makeCharcoal: boolean; // 9 — at a fire, smother wood down
   smelt: boolean; // 0 — at a fire, ore and charcoal to a bar
   makeSword: boolean; // B — bar, wood and cordage, once each
+  makeFishingLine: boolean; // L — cordage and wood, no fire needed
+  fish: boolean; // C — hold at the water's edge with a line in hand
   cycleOffer: boolean; // T — what you would hand over
   give: boolean; // G — hand one over to whoever is standing next to you
 }
@@ -226,6 +244,8 @@ export const NO_INPUT: Input = {
   makeCharcoal: false,
   smelt: false,
   makeSword: false,
+  makeFishingLine: false,
+  fish: false,
   cycleOffer: false,
   give: false,
 };
@@ -297,6 +317,7 @@ export interface SimState {
     firstSnare: boolean;
     firstOre: boolean;
     firstSword: boolean;
+    firstFish: boolean;
   };
 }
 
@@ -335,6 +356,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstSnare: false,
       firstOre: false,
       firstSword: false,
+      firstFish: false,
     },
   };
 }
@@ -613,6 +635,8 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   if (input.makeCharcoal) doMakeCharcoal(state, player);
   if (input.smelt) doSmelt(state, player);
   if (input.makeSword) doMakeSword(state, player);
+  if (input.makeFishingLine) doMakeFishingLine(state, player);
+  if (input.fish) doFish(state, player, px, py);
   if (input.cycleOffer) cycleOffer(player);
   if (input.give) doGive(state, player);
 
@@ -811,6 +835,14 @@ function doEat(state: SimState, player: Player): void {
     player.needs.warmth = clamp(player.needs.warmth + 80, 0, NEED_MAX);
     return;
   }
+  // Fish needs no fire and carries no sickness roll, so it outranks raw
+  // meat even though a hot meal still beats it — the safe, unglamorous
+  // fallback rather than the best food in the Verge.
+  if (pack.fish > 0) {
+    pack.fish--;
+    player.needs.satiety = clamp(player.needs.satiety + FISH_SATIETY, 0, NEED_MAX);
+    return;
+  }
   if (pack.rawMeat > 0) {
     pack.rawMeat--;
     player.needs.satiety = clamp(player.needs.satiety + 120, 0, NEED_MAX);
@@ -917,6 +949,49 @@ function doMakeSword(state: SimState, player: Player): void {
   if (!state.flags.firstSword) {
     state.flags.firstSword = true;
     say(state, "The Grey King: “...A sword, in the Verge. That took you longer than it should have — and I noticed every hour of it.”");
+  }
+}
+
+/** L — knot cordage and wood into a line. No fire, no tool already in hand, just cordage. */
+function doMakeFishingLine(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (pack.fishingLine > 0 || pack.cordage < FISHING_LINE_CORDAGE_COST || pack.wood < FISHING_LINE_WOOD_COST) return;
+  pack.cordage -= FISHING_LINE_CORDAGE_COST;
+  pack.wood -= FISHING_LINE_WOOD_COST;
+  pack.fishingLine = FISHING_LINE_DURABILITY;
+  learn(state, player, "fishing", XP.line);
+  say(state, "Cordage knotted to a length of wood. Now find the water.");
+}
+
+/**
+ * C — one cast, at the water's edge, with a line in hand. Like every other
+ * verb here it is one attempt per press, not a hold — pressing it again is
+ * how a soul keeps fishing, the same as pressing E again keeps a tree
+ * coming down.
+ */
+function doFish(state: SimState, player: Player, px: number, py: number): void {
+  const { world } = state;
+  const pack = player.pack;
+  if (pack.fishingLine < 1) return;
+  const atWater =
+    world.get(px, py) === Tile.Water ||
+    world.get(px - 1, py) === Tile.Water ||
+    world.get(px + 1, py) === Tile.Water ||
+    world.get(px, py - 1) === Tile.Water ||
+    world.get(px, py + 1) === Tile.Water;
+  if (!atWater) return;
+
+  bumpNoise(state, NOISE_PER_FISH, player);
+  const [num, den] = fishChance(player.skills);
+  if (!state.rng.chance(num, den)) return;
+
+  pack.fishingLine--;
+  pack.fish++;
+  learn(state, player, "fishing", XP.catch);
+  say(state, "A tug on the line. Fish, this time.");
+  if (!state.flags.firstFish) {
+    state.flags.firstFish = true;
+    say(state, "The Grey King: “Patient, at the water. I have men who have waited longer for less.”");
   }
 }
 

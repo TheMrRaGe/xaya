@@ -310,8 +310,8 @@ carried water in the Kiln; in Rimeholt, anything fat — rendered tallow eaten
 plain, without embarrassment, because the cold takes what it wants.
 
 **In code today:** wood, **stone**, **cordage**, raw meat, cooked meat, hide,
-**ore, charcoal, bar** `[built]` — plus water and berries consumed straight off
-the tile rather than carried.
+**ore, charcoal, bar, fish** `[built]` — plus water and berries consumed
+straight off the tile rather than carried.
 
 Stone is worth calling out because it inverts how every other material here
 behaves. A tree runs out and regrows on a timer; a rock outcrop never runs out
@@ -355,13 +355,15 @@ maintenance is the war.
 
 - **Tools** — spear `[built, 12 strikes]`, knife `[built, 20 butcherings]`, axe
   `[built, 25 chops]`, snare `[built]`, **sword** `[built, 30 strikes, double the
-  spear's base bite and sharper still in a smith's own hand]`; pick, needle,
-  fishing line, hammer, saw, loom, quern all `[named]`. The built ones each buy
-  a different thing: the knife buys *yield* (more off a carcass, and the only
-  way to cut cord), the axe buys yield **and quiet**, the snare buys *absence*
-  — the only work that pays out while you are somewhere else — and the sword
-  buys raw damage, the end of a chain rather than a shortcut through one (§6),
-  with the smith's own skill adding more on top of whoever merely swings it.
+  spear's base bite and sharper still in a smith's own hand]`, **fishing line**
+  `[built, 25 casts]`; pick, needle, hammer, saw, loom, quern all `[named]`. The
+  built ones each buy a different thing: the knife buys *yield* (more off a
+  carcass, and the only way to cut cord), the axe buys yield **and quiet**, the
+  snare buys *absence* — the only work that pays out while you are somewhere
+  else — the sword buys raw damage, the end of a chain rather than a shortcut
+  through one (§6), with the smith's own skill adding more on top of whoever
+  merely swings it, and the line buys the one food chain that needs no fire
+  and no butchering at all — cordage and a shoreline, nothing else.
 - **Wearables** — hide cloak `[built, wears through on the cold it stops]`,
   boots, gloves, hats, mail and plate at the Kiln tier and above `[named]`.
 - **Placed and built** — campfire `[built, burns fuel and leaves ash]`, set snare
@@ -417,24 +419,30 @@ or a cure for the Kiln's ashlung. Capped at the Weald for a reason: it is the
 Realm where the ingredients lie to you, so **every apothecary's reputation is
 built on having survived being wrong.**
 
-**In code today** `[built]`: three chains that cross.
+**In code today** `[built]`: four chains that cross.
 
 - **Food:** kill → butcher → cook at a fire → eat.
 - **Tools:** stone + wood → knife → (hide → cord) → cord + wood → snare → hare
   → back into the food chain.
 - **The sword**, compressed to what one soul can do alone: ore + (wood → char­coal,
   at a fire) → bar (smelted at a fire) → bar + wood + cord → sword.
+- **The line**: hide → cord (needs a knife, same as the snare) → cord + wood →
+  fishing line → fish, straight back into satiety with no fire and no
+  butchering step at all — the shortest chain in the prototype, and the only
+  food source that shares its first ingredient with the tools chain rather
+  than needing its own.
 
-All three are the first appearance of §15's generative rule in the prototype:
+All four are the first appearance of §15's generative rule in the prototype:
 a snare needs cordage *and* wood, cordage needs hide *and* a knife already in
-hand, hide only comes off an animal someone hunted, and a sword needs a vein,
+hand, hide only comes off an animal someone hunted, a sword needs a vein,
 a fire kept long enough to burn wood down twice over, *and* the cord the
-tools chain already produces. **No single action or material substitutes for
-the chain** — that is the property that eventually makes trade arithmetic
-rather than courtesy, once two souls' hours stop yielding the same output
-(§7.4). It is not the same claim as "no soul can do the whole chain alone,"
-which was never the rule — see §7.4's note on what a skill actually gates.
-Plus wood → spear, hide → cloak, wood → fire.
+tools chain already produces, and a line needs that same cord plus wood
+before it is worth anything at all. **No single action or material
+substitutes for the chain** — that is the property that eventually makes
+trade arithmetic rather than courtesy, once two souls' hours stop yielding
+the same output (§7.4). It is not the same claim as "no soul can do the
+whole chain alone," which was never the rule — see §7.4's note on what a
+skill actually gates. Plus wood → spear, hide → cloak, wood → fire.
 
 **Where the built sword chain falls short of §15's rule:** the full version
 gates real steel behind Realm-gated coal and spreads the work across eight
@@ -515,16 +523,19 @@ A master Smith who has never left the Moorfen is not a bad Smith — they are th
 best Smith the world currently has access to. Nobody's work is obsolete; it is
 *ceilinged*, and the ceiling only moves when the whole world moves it together.
 
-**In code today** `[built]`: seven skills — woodcraft, hunting, butchery, cooking,
-tailoring, trapping, smithing — earned by doing, dying with the character, and
-**quiet**: a practised hand makes less noise, so competence and safety are the
-same stat. Trapping and smithing are the two exceptions, and each earns
-something noise never could: trapping raises the catch chance of whatever a
-soul's snares spring (the only skill that pays out while its owner is
-somewhere else); smithing raises how much charcoal a burn yields, how much
-bar a smelt yields, and how hard a self-forged sword hits.
+**In code today** `[built]`: eight skills — woodcraft, hunting, butchery,
+cooking, tailoring, trapping, smithing, fishing — earned by doing, dying with
+the character, and **quiet**: a practised hand makes less noise, so competence
+and safety are the same stat. Trapping, smithing and fishing are the three
+exceptions, and each earns something noise never could: trapping raises the
+catch chance of whatever a soul's snares spring (the only skill that pays out
+while its owner is somewhere else); smithing raises how much charcoal a burn
+yields, how much bar a smelt yields, and how hard a self-forged sword hits;
+fishing raises the odds of a bite, deliberately slower to reward than
+trapping's — a snare is paid for by hours spent *away*, a line by hours spent
+*right here*, and the reward should track which currency was actually spent.
 
-None of the seven ever *gates* an action — every one of them is attemptable
+None of the eight ever *gates* an action — every one of them is attemptable
 at zero, the way §17/§22's "no classes, no starting traits" already promises.
 What skill buys is always *quality*, never *access*: this is also why a
 skilled generalist really can supply an entire chain alone (§6), and why
@@ -533,7 +544,13 @@ made doing so worth having practised.
 
 **Stage B's cut list** `[plan §44]` names ten professions in scope: Farmer,
 Hunter, Miner, Logger, Charcoaler, Smelter, Blacksmith, Leatherworker, Tanner,
-Herbalist — the sword chain plus what feeds a person day to day.
+Herbalist — the sword chain plus what feeds a person day to day. Trapper and
+Fisher are not on that list and are built anyway — both stated here rather
+than left to look like an oversight, because both answer the exact same
+"feeds a person day to day" test the named ten were chosen by (§17's Hunger
+row names both explicitly), just by a different verb than Farmer or Hunter.
+Nothing on the list is contradicted; two more of §17's food professions
+simply exist now than §44 got around to naming.
 
 ---
 

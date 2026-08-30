@@ -77,6 +77,10 @@ export function pressure(state: DirectorState): number {
     // in hand is the most expensive single thing a soul can carry.
     wealth += pack.ore + pack.charcoal * 3 + pack.bar * 10;
     if (pack.sword > 0) wealth += 40;
+    // A line costs almost nothing to own, same reasoning as a snare — the
+    // catch is what it is for, not the tool.
+    if (pack.fishingLine > 0) wealth += 10;
+    wealth += pack.fish * 2;
     for (const skill of SKILLS) wealth += level(player.skills[skill]) * 8;
   }
   // A fire is the loudest thing you own, so it is also the most expensive.
