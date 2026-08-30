@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (292 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (297 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -477,6 +477,16 @@ plan committed at the repo root's `doc/world/`.
   (`src/sim/dialogue.ts`) the sim used to decide what a reply does, so
   there's no separate channel that could ever say something the sim
   didn't mean.
+- **And now a villager can be struck and killed.** The same SPACE that
+  hits a beast or another soul, whichever of the three is actually
+  nearest. It costs the killer 60 standing — half again what killing a
+  player costs — and no `hunting` skill XP at all, on purpose: a real hunt
+  teaches something, and killing someone who couldn't fight back doesn't,
+  so it shouldn't pretend to. This is the "expelled from normal towns"
+  half of the standing design finally landing somewhere real, rather than
+  only as a colder greeting in a conversation. NPCs rot and respawn the
+  same way a carcass does, just slower — a bad decision costs the village
+  someone for a while, not forever.
 
 ### He used to camp the spawn
 

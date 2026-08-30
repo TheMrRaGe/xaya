@@ -57,7 +57,7 @@ import {
   WOLF_BITE_DAMAGE,
   WOLF_BITE_COOLDOWN,
 } from "./creatures.js";
-import { Npc, spawnNpcs, stepNpc } from "./npc.js";
+import { Npc, spawnNpcs, stepNpc, woundNpc } from "./npc.js";
 import { DIALOGUE_TREES, ROOT_NODE } from "./dialogue.js";
 
 export const TICK_HZ = 10;
@@ -263,6 +263,13 @@ const NOISE_PER_MARSH_STEP = 4; // squelching carries; only while actually movin
  * job (§3), and nothing here builds it.
  */
 const STANDING_KILL_PENALTY = 40;
+/**
+ * Worse than killing another soul — one and a half times the cost. The
+ * standing design's "expelled from normal towns" idea was always meant to
+ * answer to the people a normal town actually is, and a villager cannot
+ * fight back the way another player can.
+ */
+const NPC_KILL_STANDING_PENALTY = 60;
 /** At or below this he stops hunting you at all — roughly three kills. Exported so the HUD can read the same line the sim does. */
 export const NOTORIOUS_STANDING = -100;
 
@@ -443,6 +450,7 @@ export interface SimState {
     firstPot: boolean;
     firstBoots: boolean;
     firstGloves: boolean;
+    firstNpcKill: boolean;
   };
 }
 
@@ -495,6 +503,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstPot: false,
       firstBoots: false,
       firstGloves: false,
+      firstNpcKill: false,
     },
   };
 }
@@ -975,14 +984,16 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
 
 /** Space — hit the nearest living thing in reach. Loud, always. */
 function doStrike(state: SimState, player: Player): void {
-  // Whichever living thing is nearer gets hit — a beast or another soul.
-  // "The nearest living thing in reach" was always the honest description
-  // of this verb; only a creature could ever answer to it before now.
+  // Whichever living thing is nearer gets hit — a beast, another soul, or
+  // now a villager. "The nearest living thing in reach" was always the
+  // honest description of this verb.
   const creatureTarget = nearestCreature(state, player, (c) => c.state !== "dead");
   const creatureSq = creatureTarget ? distSq(creatureTarget.x, creatureTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
   const soulTarget = nearestSoul(state, player);
   const soulSq = soulTarget ? distSq(soulTarget.x, soulTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
-  if (!creatureTarget && !soulTarget) return;
+  const npcTarget = nearestNpc(state, player, STRIKE_RADIUS);
+  const npcSq = npcTarget ? distSq(npcTarget.x, npcTarget.y, player.x, player.y) : Number.MAX_SAFE_INTEGER;
+  if (!creatureTarget && !soulTarget && !npcTarget) return;
 
   const pack = player.pack;
   // The best weapon in hand wins: a sword over a copper sword over a spear
@@ -1003,6 +1014,25 @@ function doStrike(state: SimState, player: Player): void {
   const damage = weapon + strikeBonus(player.skills);
   bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
 
+  // Whichever of the three is actually nearest gets hit, checked in the
+  // same "closer wins" shape the beast-vs-soul choice already used.
+  if (npcTarget && npcSq <= creatureSq && npcSq <= soulSq) {
+    const killed = woundNpc(npcTarget, damage, state.tick);
+    spendWeapon(state, pack);
+    if (killed) {
+      player.kills++;
+      say(state, `${npcTarget.name} goes down.`);
+      if (!state.flags.firstNpcKill) {
+        state.flags.firstNpcKill = true;
+        say(state, "The Grey King: “One of the harmless ones. That costs more than coin, where you're going to feel it.”");
+      }
+      // No hunting XP here — a real hunt teaches something; killing someone
+      // who couldn't fight back doesn't, and shouldn't pretend to.
+      applyOutlawry(state, player, NPC_KILL_STANDING_PENALTY);
+    }
+    return;
+  }
+
   if (soulTarget && soulSq <= creatureSq) {
     soulTarget.health = clamp(soulTarget.health - damage, 0, HEALTH_MAX);
     state.lastDamageSource[soulTarget.id] = "killed by another soul";
@@ -1016,22 +1046,7 @@ function doStrike(state: SimState, player: Player): void {
         state.flags.firstSoulKill = true;
         say(state, "The Grey King: “There. Now you understand what I have always wanted from this valley.”");
       }
-
-      // Outlawry, such as it is: the killer's standing drops and they are
-      // marked the same tick, unless they have already fallen too far for
-      // marking to mean anything (below).
-      player.standing -= STANDING_KILL_PENALTY;
-      if (player.standing > NOTORIOUS_STANDING) {
-        state.marked = player.id;
-        say(state, `Soul #${player.lineage} is marked. The road will remember this, even if they do not.`);
-      } else if (!state.flags.firstNotorious) {
-        state.flags.firstNotorious = true;
-        if (state.marked === player.id) state.marked = -1;
-        say(
-          state,
-          "The Grey King: “...Enough of them, and you stop being someone I hunt. You become someone I already own.”",
-        );
-      }
+      applyOutlawry(state, player, STANDING_KILL_PENALTY);
     }
     return;
   }
@@ -1479,9 +1494,9 @@ function doGive(state: SimState, player: Player): void {
   }
 }
 
-function nearestNpc(state: SimState, player: Player): Npc | null {
+function nearestNpc(state: SimState, player: Player, radius: number): Npc | null {
   let best: Npc | null = null;
-  let bestSq = TALK_RADIUS * TALK_RADIUS;
+  let bestSq = radius * radius;
   for (const npc of state.npcs) {
     if (!npc.alive) continue;
     const d = distSq(npc.x, npc.y, player.x, player.y);
@@ -1491,6 +1506,25 @@ function nearestNpc(state: SimState, player: Player): Npc | null {
     }
   }
   return best;
+}
+
+/**
+ * Killing another soul or a villager both cost standing and mark the
+ * killer the same way — a shared consequence, not a shared crime. The
+ * only difference is how much (see the two call sites): the standing
+ * design's "expelled from normal towns" idea was always meant to answer
+ * to the people a normal town actually is.
+ */
+function applyOutlawry(state: SimState, player: Player, penalty: number): void {
+  player.standing -= penalty;
+  if (player.standing > NOTORIOUS_STANDING) {
+    state.marked = player.id;
+    say(state, `Soul #${player.lineage} is marked. The road will remember this, even if they do not.`);
+  } else if (!state.flags.firstNotorious) {
+    state.flags.firstNotorious = true;
+    if (state.marked === player.id) state.marked = -1;
+    say(state, "The Grey King: “...Enough of them, and you stop being someone I hunt. You become someone I already own.”");
+  }
 }
 
 /**
@@ -1513,7 +1547,7 @@ function doTalk(state: SimState, player: Player): void {
     player.dialogueNode = null;
     return;
   }
-  const npc = nearestNpc(state, player);
+  const npc = nearestNpc(state, player, TALK_RADIUS);
   if (!npc) return;
   player.talkingTo = npc.id;
   player.dialogueNode = pickRoot(npc, player);

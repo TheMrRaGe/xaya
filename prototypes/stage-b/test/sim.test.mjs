@@ -1515,5 +1515,44 @@ function check(name, cond, detail = "") {
   check("the Teacher talks to a notorious soul the same as anyone", tp.dialogueNode === "root");
 }
 
+// --- 50. NPCs can be struck and killed, and it costs more standing than killing a player does ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const teacher = s.npcs.find((n) => n.role === "teacher");
+  p.x = teacher.x;
+  p.y = teacher.y;
+  p.pack.sword = 10;
+
+  let ticks = 0;
+  while (teacher.alive && ticks < 20) {
+    stepTick(s, [I({ strike: true })]);
+    ticks++;
+  }
+  check("an NPC can be struck down", !teacher.alive, `still alive after ${ticks} strikes`);
+  check("it costs more standing than killing a player (60, not 40)", p.standing === -60, `standing=${p.standing}`);
+  check("and marks the killer, the same as any other kill", s.marked === p.id);
+  check("but teaches no hunting — there was nothing to hunt", p.skills.hunting === 0, `hunting xp=${p.skills.hunting}`);
+}
+
+// --- 51. an NPC closer than a beast or another soul is the one that gets struck ---
+{
+  const s = fresh(2);
+  const [p, other] = s.players;
+  const villager = s.npcs.find((n) => n.role === "villager");
+  p.pack.sword = 5;
+  villager.x = p.x;
+  villager.y = p.y;
+  other.x = p.x + 5 * TILE; // far enough not to compete
+  other.y = p.y;
+  for (const c of s.creatures) {
+    c.x = p.x + 5 * TILE;
+    c.y = p.y;
+  }
+  const before = villager.health;
+  stepTick(s, [I({ strike: true }), I()]);
+  check("the nearer villager is struck over a farther beast or soul", villager.health < before, `health=${villager.health}`);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

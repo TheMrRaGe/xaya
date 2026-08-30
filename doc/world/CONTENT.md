@@ -203,6 +203,14 @@ where every bandit monologues, and it bounds the inference bill.
   channel to keep in sync, and no way for the wire to say something the sim
   didn't mean.
 
+  **An NPC can be struck and killed** — the same SPACE that hits a beast or
+  another soul, whichever of the three is actually nearest. Doing so costs
+  the killer **60 standing, not 40** — half again what killing a player
+  costs, and no `hunting` skill XP at all, deliberately: a real hunt
+  teaches something, and killing someone who could not fight back does
+  not, so it shouldn't pretend to. This is the "expelled from normal
+  towns" half of the standing design finally landing somewhere real,
+  rather than only as a colder greeting in a conversation.
 ---
 
 ## 3. Realms & terrain
@@ -1255,12 +1263,10 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   whether that is *enough* compensation for 9x the area, which is a playtest
   question rather than a code one.
 - ~~**The arrival custom (§1A) has no one to perform it.**~~ — closed: the
-  village, the Teacher and her tutorial conversation exist (§2.5). Still
-  open: an NPC cannot yet be struck or killed at all, so the "expelled from
-  normal towns" half of the standing design has nowhere to land except a
-  villager's own colder greeting — a real but narrow answer, not the full
-  one. Making NPCs strikeable, and pricing a villager's death in standing,
-  is the next small pass.
+  village, the Teacher and her tutorial conversation exist (§2.5), and an
+  NPC can now be struck and killed, at 60 standing rather than 40 and no
+  hunting XP — the "expelled from normal towns" half of the standing
+  design landing somewhere real, not only as a colder greeting.
 - **Dialogue trees are shallow and hand-authored on purpose**, and stay
   that way — §27's "intelligence is deliberately scarce" applies to a
   villager at least as much as to a Lieutenant. Nothing here should be
