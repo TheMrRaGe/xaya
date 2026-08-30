@@ -68,6 +68,14 @@ export const XP = {
   forge: 40, // a sword — the chain's whole payoff
   line: 8, // knotting a fishing line
   catch: 15, // a fish on the line — present effort, unlike a trap's absent one
+  /**
+   * Copper needs no charcoal burn to run, which is most of why it is
+   * "reachable earlier" (doc/world/CONTENT.md) rather than merely rarer —
+   * a genuine smelt and a genuine forge, just a shorter one, so it earns
+   * real smithing on the way to a weaker blade rather than none at all.
+   */
+  copperSmelt: 8,
+  copperForge: 20,
 } as const;
 
 export const MAX_LEVEL = 9;

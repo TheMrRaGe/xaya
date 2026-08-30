@@ -353,13 +353,13 @@ carried water in the Kiln; in Rimeholt, anything fat — rendered tallow eaten
 plain, without embarrassment, because the cold takes what it wants.
 
 **In code today:** wood, **stone**, **cordage**, raw meat, cooked meat, hide,
-**ore, charcoal, bar, fish, clay, copper** `[built]` — plus water and
-berries consumed straight off the tile rather than carried. Clay and
-copper close the last two names in §3.1's Verge material row ("soil,
-timber, clay, copper") that had no source at all before this pass; neither
-has a chain to spend it in yet (§15's gap list) — gatherable and storable
-a commit ahead of having somewhere to go, the same order ore/bar/sword
-shipped in.
+**ore, charcoal, bar, fish, clay, copper, copper bar** `[built]` — plus
+water and berries consumed straight off the tile rather than carried.
+Clay and copper close the last two names in §3.1's Verge material row
+("soil, timber, clay, copper") that had no source at all until recently;
+both now have somewhere to go — a fired pot for clay, a second and shorter
+metal line for copper (§5.2, §6) — closing the gap the tile itself opened
+one pass earlier.
 
 Stone is worth calling out because it inverts how every other material here
 behaves. A tree runs out and regrows on a timer; a rock outcrop never runs out
@@ -403,15 +403,23 @@ maintenance is the war.
 
 - **Tools** — spear `[built, 12 strikes]`, knife `[built, 20 butcherings]`, axe
   `[built, 25 chops]`, snare `[built]`, **sword** `[built, 30 strikes, double the
-  spear's base bite and sharper still in a smith's own hand]`, **fishing line**
-  `[built, 25 casts]`; pick, needle, hammer, saw, loom, quern all `[named]`. The
-  built ones each buy a different thing: the knife buys *yield* (more off a
-  carcass, and the only way to cut cord), the axe buys yield **and quiet**, the
-  snare buys *absence* — the only work that pays out while you are somewhere
-  else — the sword buys raw damage, the end of a chain rather than a shortcut
-  through one (§6), with the smith's own skill adding more on top of whoever
-  merely swings it, and the line buys the one food chain that needs no fire
-  and no butchering at all — cordage and a shoreline, nothing else.
+  spear's base bite and sharper still in a smith's own hand]`, **copper sword**
+  `[built, 18 strikes, between the spear and the real sword in bite and in
+  everything else — a second, shorter metal line rather than a second copy
+  of the first, §6]`, **fishing line** `[built, 25 casts]`, **pot** `[built,
+  15 meals, Verge pottery's first product]`; pick, needle, hammer, saw, loom,
+  quern all `[named]`. The built ones each buy a different thing: the knife
+  buys *yield* (more off a carcass, and the only way to cut cord), the axe
+  buys yield **and quiet**, the snare buys *absence* — the only work that
+  pays out while you are somewhere else — the sword buys raw damage, the end
+  of a chain rather than a shortcut through one (§6), with the smith's own
+  skill adding more on top of whoever merely swings it, the copper sword
+  buys the same raw damage *sooner and weaker*, earning no such skill bonus
+  of its own, the line buys the one food chain that needs no fire and no
+  butchering at all — cordage and a shoreline, nothing else — and the pot
+  buys a heartier meal, spent one charge per meal actually eaten hot rather
+  than per meal cooked, since a flat counter of cooked meat has no way to
+  remember which portion ever went near one.
 - **Wearables** — hide cloak `[built, wears through on the cold it stops]`,
   boots, gloves, hats, mail and plate at the Kiln tier and above `[named]`.
 - **Placed and built** — campfire `[built, burns fuel and leaves ash]`, set snare
@@ -429,12 +437,15 @@ maintenance is the war.
 - **Old crowns** `[plan §17A]` — minted under kings who no longer have kingdoms.
   Behave less like money than like relics that happen to be spendable.
   **In code today** `[built, narrow]`: a rare find in a ruin (§3.4), and one
-  thing to do with one — melt it at a fire for a bar, the fallback when
-  there is no ore and charcoal on hand, per §17A's own "some are melted down
-  by smiths who need the metal more than the history." No smithing skill is
-  earned doing it; running a crown through a fire is not the same craft as
-  a real smelt. Still no spending, no prestige, no market a crown could be
-  worth something *in* — that needs an economy this prototype doesn't have.
+  thing to do with one — melt it at a fire for a bar, the last resort at the
+  smelting fire, tried only when there is neither ore and charcoal nor
+  copper on hand, per §17A's own "some are melted down by smiths who need
+  the metal more than the history." No smithing skill is earned doing it;
+  running a crown through a fire is not the same craft as a real smelt —
+  copper, one step up in the same priority order, *does* earn it, because
+  a copper seam is a real vein and not a found relic. Still no spending, no
+  prestige, no market a crown could be worth something *in* — that needs an
+  economy this prototype doesn't have.
 
 ---
 
@@ -474,7 +485,7 @@ or a cure for the Kiln's ashlung. Capped at the Weald for a reason: it is the
 Realm where the ingredients lie to you, so **every apothecary's reputation is
 built on having survived being wrong.**
 
-**In code today** `[built]`: four chains that cross.
+**In code today** `[built]`: five chains that cross.
 
 - **Food:** kill → butcher → cook at a fire → eat.
 - **Tools:** stone + wood → knife → (hide → cord) → cord + wood → snare → hare
@@ -486,18 +497,26 @@ built on having survived being wrong.**
   butchering step at all — the shortest chain in the prototype, and the only
   food source that shares its first ingredient with the tools chain rather
   than needing its own.
+- **Copper**, the sword's second and shorter cousin: copper (smelted alone,
+  no charcoal, at a fire) → copper bar → copper bar + wood + cord → copper
+  sword. One fewer input than the real sword, reachable sooner because of
+  it, and weaker for the same reason — §3.1 names copper, not iron, as the
+  Verge's own metal, so this sits alongside the ore chain rather than
+  replacing it.
 
-All four are the first appearance of §15's generative rule in the prototype:
+All five are the first appearance of §15's generative rule in the prototype:
 a snare needs cordage *and* wood, cordage needs hide *and* a knife already in
 hand, hide only comes off an animal someone hunted, a sword needs a vein,
 a fire kept long enough to burn wood down twice over, *and* the cord the
-tools chain already produces, and a line needs that same cord plus wood
-before it is worth anything at all. **No single action or material
-substitutes for the chain** — that is the property that eventually makes
-trade arithmetic rather than courtesy, once two souls' hours stop yielding
-the same output (§7.4). It is not the same claim as "no soul can do the
-whole chain alone," which was never the rule — see §7.4's note on what a
-skill actually gates. Plus wood → spear, hide → cloak, wood → fire.
+tools chain already produces, a line needs that same cord plus wood before
+it is worth anything at all, and copper needs its own vein plus that same
+wood and cord a third time over. **No single action or material substitutes
+for the chain** — that is the property that eventually makes trade
+arithmetic rather than courtesy, once two souls' hours stop yielding the
+same output (§7.4). It is not the same claim as "no soul can do the whole
+chain alone," which was never the rule — see §7.4's note on what a skill
+actually gates. Plus wood → spear, hide → cloak, wood → fire, clay (at a
+fire) → pot.
 
 **Where the built sword chain falls short of §15's rule:** the full version
 gates real steel behind Realm-gated coal and spreads the work across eight
@@ -1131,11 +1150,11 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   sequence of deterministic passes keyed off a river placed first, rather
   than every tile rolling independently (§3.4) — the map reads as a valley
   instead of a grid of dice rolls.
-- **Clay and copper have no chain.** Both are gatherable and storable
-  (§4/§3.4) with nothing yet to make from them — pottery for clay, a
-  second and cheaper metal line for copper, per §3.1's Verge material row.
-  The next pass in this arc (doc/world/CONTENT.md's own worldgen
-  follow-on) is exactly this.
+- ~~**Clay and copper have no chain.**~~ — closed: clay fires into a pot
+  (§5.2) and copper smelts and forges into a shorter, weaker parallel to
+  the sword (§6) — both per §3.1's Verge material row. Wearables beyond
+  the one cloak, and the byproducts §15/CONTENT.md §4 name (glue, pitch),
+  are still open — the next pass in this arc.
 - **Meadow has no Beekeeper.** The tile exists and forages like a bush;
   §7.2's Beekeeper profession, and anything resembling honey, is unbuilt.
 - ~~**Killed-by-another-soul** is absent from the death causes~~ — closed,

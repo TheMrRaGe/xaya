@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (254 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (267 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -408,6 +408,27 @@ plan committed at the repo root's `doc/world/`.
   stand's dense core rather than a new biome: more wood per felling than a
   lone tree, louder to take, and it grows back into itself, not into a
   lone tree.
+- **Clay and copper stopped being dead ends.** Both existed as diggable
+  tiles and pack counters with nowhere to go; this is where they go.
+  **Pottery:** clay, fired at a hearth, into a pot (key **P**) — no bonus
+  to what a meal is made of, only to how far it goes, so it is spent one
+  charge per hot meal actually *eaten* rather than per meal cooked. That
+  distinction isn't pedantry: `cookedMeat` is one flat counter with no way
+  to remember which portion of it ever went near a pot, so "a working pot
+  in your pack right now" is the only honest rule available, and it's the
+  one built. **Copper:** a second, shorter metal line, not a second copy
+  of the first. Key **0** now smelts copper alone, with no charcoal, if
+  there's no ore and charcoal together — a real smelt, earning real
+  smithing, just a shorter one, which is most of why PLAN §3.1 naming
+  copper (not iron) as the Verge's own metal reads as "reachable earlier"
+  rather than merely rarer. Key **B** forges a copper bar into a copper
+  sword the same way it forges an iron one, when there's no iron bar to
+  hand — 4 damage and 18 strikes against the real sword's 6 and 30, no
+  smithing bonus of its own, sitting between the spear and the sword in a
+  fight and in everything else. Priority, both at the fire and at the
+  forge, is ore-and-charcoal first, copper second, an old crown last — a
+  found relic is still the fallback of last resort, not the second choice.
+  Carrying both swords, the real one is always the one that swings.
 
 ### He used to camp the spawn
 

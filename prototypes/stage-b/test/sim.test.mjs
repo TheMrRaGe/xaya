@@ -1208,5 +1208,130 @@ function check(name, cond, detail = "") {
   );
 }
 
+// --- 40. pottery: clay and a fire make a pot; a hot meal eaten from one goes further, and it wears by the meal, not the cook ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px, py, Tile.Grass);
+  p.pack.wood = 5;
+  stepTick(s, [I({ build: true })]);
+  stepTick(s, IDLE);
+  check("standing at the fire", p.atFire === true);
+
+  stepTick(s, [I({ makePot: true })]);
+  check("no clay, no pot", p.pack.pot === 0);
+
+  p.pack.clay = 3;
+  stepTick(s, [I({ makePot: true })]);
+  check("clay and a fire make a pot", p.pack.pot > 0, `pot=${p.pack.pot}`);
+  check("and the clay is spent", p.pack.clay === 0);
+
+  const noPot = fresh();
+  const withPot = fresh();
+  noPot.players[0].pack.cookedMeat = 1;
+  noPot.players[0].needs.satiety = 0;
+  withPot.players[0].pack.cookedMeat = 1;
+  withPot.players[0].pack.pot = 5;
+  withPot.players[0].needs.satiety = 0;
+  stepTick(noPot, [I({ eat: true })]);
+  stepTick(withPot, [I({ eat: true })]);
+  check(
+    "a hot meal eaten from a pot satisfies more than one eaten without",
+    withPot.players[0].needs.satiety > noPot.players[0].needs.satiety,
+    `without=${noPot.players[0].needs.satiety} with=${withPot.players[0].needs.satiety}`,
+  );
+  check("and the pot wears by the meal eaten, not the meal cooked", withPot.players[0].pack.pot === 4);
+}
+
+// --- 41. copper: a second, shorter metal line — smelts alone with no charcoal, forges weaker and sooner than the real sword ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  s.world.set(Math.floor(p.x / TILE), Math.floor(p.y / TILE), Tile.Grass);
+  p.pack.wood = 5;
+  stepTick(s, [I({ build: true })]);
+  stepTick(s, IDLE);
+
+  p.pack.copper = 3;
+  stepTick(s, [I({ smelt: true })]);
+  check("copper smelts alone, no charcoal needed", p.pack.copperBar === 1 && p.pack.copper === 0, JSON.stringify(p.pack));
+
+  p.pack.copperBar = 2;
+  p.pack.wood = 1;
+  p.pack.cordage = 1;
+  stepTick(s, [I({ makeSword: true })]);
+  check("a copper bar, wood and cord forge a copper sword", p.pack.copperSword > 0, `copperSword=${p.pack.copperSword}`);
+
+  // Ore and charcoal still win over copper when both are on hand — copper
+  // is the second choice at the fire, not the first.
+  const s2 = fresh();
+  const p2 = s2.players[0];
+  s2.world.set(Math.floor(p2.x / TILE), Math.floor(p2.y / TILE), Tile.Grass);
+  p2.pack.wood = 5;
+  stepTick(s2, [I({ build: true })]);
+  stepTick(s2, IDLE);
+  p2.pack.ore = 2;
+  p2.pack.charcoal = 1;
+  p2.pack.copper = 3;
+  stepTick(s2, [I({ smelt: true })]);
+  check(
+    "ore and charcoal still win over copper when both are on hand",
+    p2.pack.bar === 1 && p2.pack.copper === 3 && p2.pack.copperBar === 0,
+    JSON.stringify(p2.pack),
+  );
+
+  // And the real sword still wins over copper at the forge, the same way.
+  const s3 = fresh();
+  const p3 = s3.players[0];
+  s3.world.set(Math.floor(p3.x / TILE), Math.floor(p3.y / TILE), Tile.Grass);
+  p3.pack.wood = 5;
+  stepTick(s3, [I({ build: true })]);
+  stepTick(s3, IDLE);
+  p3.pack.bar = 2;
+  p3.pack.copperBar = 2;
+  p3.pack.wood = 2;
+  p3.pack.cordage = 2;
+  stepTick(s3, [I({ makeSword: true })]);
+  check(
+    "the real sword still wins over copper when both bars are on hand",
+    p3.pack.sword > 0 && p3.pack.copperSword === 0 && p3.pack.copperBar === 2,
+    JSON.stringify(p3.pack),
+  );
+}
+
+// --- 42. in a fight, the real sword beats a copper one, which beats a spear — and carrying all three spends the best one first ---
+{
+  const damageDoneWith = (gear) => {
+    const s = fresh(2);
+    const [attacker, target] = s.players;
+    Object.assign(attacker.pack, gear);
+    target.x = attacker.x;
+    target.y = attacker.y;
+    const before = target.health;
+    stepTick(s, [I({ strike: true }), I()]);
+    return before - target.health;
+  };
+  const spearDamage = damageDoneWith({ spear: 10 });
+  const copperDamage = damageDoneWith({ copperSword: 10 });
+  const swordDamage = damageDoneWith({ sword: 10 });
+  check("a copper sword hits harder than a spear", copperDamage > spearDamage, `copper=${copperDamage} spear=${spearDamage}`);
+  check("and softer than the real sword", copperDamage < swordDamage, `copper=${copperDamage} sword=${swordDamage}`);
+
+  const both = fresh(2);
+  const [bothAttacker, bothTarget] = both.players;
+  bothAttacker.pack.sword = 10;
+  bothAttacker.pack.copperSword = 10;
+  bothTarget.x = bothAttacker.x;
+  bothTarget.y = bothAttacker.y;
+  stepTick(both, [I({ strike: true }), I()]);
+  check(
+    "carrying both, the real sword is spent first",
+    bothAttacker.pack.sword === 9 && bothAttacker.pack.copperSword === 10,
+    JSON.stringify(bothAttacker.pack),
+  );
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

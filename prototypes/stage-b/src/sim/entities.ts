@@ -36,7 +36,8 @@ export type Tradeable =
   | "fish"
   | "crowns"
   | "clay"
-  | "copper";
+  | "copper"
+  | "copperBar";
 
 export const TRADEABLES: readonly Tradeable[] = [
   "wood",
@@ -52,6 +53,7 @@ export const TRADEABLES: readonly Tradeable[] = [
   "crowns",
   "clay",
   "copper",
+  "copperBar",
 ];
 
 /** What a soul has on it. All of it is lost on death — nothing carries forward (§6.1). */
@@ -102,6 +104,12 @@ export interface Pack {
    */
   copper: number;
   /**
+   * What copper becomes at a fire — no charcoal needed, unlike a real
+   * smelt (doc/world/CONTENT.md: "reachable earlier"). Tradeable like
+   * `bar`, since it is a material and not a tool.
+   */
+  copperBar: number;
+  /**
    * Tools are counters, not flags: a spear holds so many strikes and a
    * cloak so many cold ticks, then it is gone. Nothing you make is
    * permanent, which is what gives anyone a reason to make one for someone
@@ -114,8 +122,17 @@ export interface Pack {
   snare: number; // how many you are carrying, unset
   /** Strikes left. Double the spear's bite, and outlasts it — the whole chain's payoff. */
   sword: number;
+  /**
+   * Strikes left, on a shorter and cheaper chain than the real sword:
+   * copper, run alone with no charcoal, then forged the same way. Weaker
+   * and less durable than `sword`, and reachable before it — a real tier
+   * to climb rather than one binary unlock (doc/world/CONTENT.md).
+   */
+  copperSword: number;
   /** Casts left. The one tool that asks for nothing but cordage and patience. */
   fishingLine: number;
+  /** Meals left in it. A cooked meal made with a pot in hand is heartier — Verge pottery's first product. */
+  pot: number;
 }
 
 export type DeathCause =
@@ -184,13 +201,16 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
       crowns: 0,
       clay: 0,
       copper: 0,
+      copperBar: 0,
       spear: 0,
       cloak: 0,
       knife: 0,
       axe: 0,
       snare: 0,
       sword: 0,
+      copperSword: 0,
       fishingLine: 0,
+      pot: 0,
     },
     skills: newSkills(),
     offer: "wood",

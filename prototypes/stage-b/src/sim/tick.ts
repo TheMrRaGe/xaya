@@ -187,6 +187,33 @@ const SWORD_DAMAGE = 6; // double the spear
 const SWORD_DURABILITY = 30; // and outlasts it by more than double
 
 /**
+ * Copper — a second, shorter metal line rather than a second version of the
+ * same one (doc/world/CONTENT.md, closing §3.1's "soil, timber, clay,
+ * copper": the Verge's own metal is copper, not iron). It smelts alone,
+ * with no charcoal, which is most of why it is *reachable earlier* than
+ * the real sword rather than merely a rarer find (world.ts's mineral
+ * clusters make copper rarer than ore, not more common) — and it forges
+ * into a real but weaker blade, sitting between the spear and the sword
+ * rather than obsoleting either.
+ */
+const COPPER_SMELT_COST = 3; // copper alone, no charcoal
+const COPPER_BAR_YIELD = 1;
+const COPPER_SWORD_BAR_COST = 2; // same shape as the real sword's recipe
+const COPPER_SWORD_WOOD_COST = 1;
+const COPPER_SWORD_CORDAGE_COST = 1;
+const COPPER_SWORD_DAMAGE = 4; // between the spear's 3 and the sword's 6
+const COPPER_SWORD_DURABILITY = 18; // between the spear's 12 and the sword's 30
+
+/**
+ * Verge pottery's first product (doc/world/CONTENT.md): a fired clay
+ * vessel, worth more to a Cook than to anyone else. Clay alone, no wood —
+ * this is shaped and fired, not hafted.
+ */
+const POT_CLAY_COST = 3;
+const POT_DURABILITY = 15; // meals
+const POT_MEAL_BONUS = 100; // extra satiety per meal cooked with one in hand
+
+/**
  * Fishing — the Fisher's answer to hunger (doc/world/PLAN.md §17), and the
  * one food chain that needs no fire, no butchering and no waiting elsewhere:
  * just cordage, a shoreline, and held-down patience. It is meant to feel
@@ -275,6 +302,7 @@ export interface Input {
   fish: boolean; // C — hold at the water's edge with a line in hand
   cycleOffer: boolean; // T — what you would hand over
   give: boolean; // G — hand one over to whoever is standing next to you
+  makePot: boolean; // P — clay, at a fire
 }
 
 export const NO_INPUT: Input = {
@@ -298,6 +326,7 @@ export const NO_INPUT: Input = {
   fish: false,
   cycleOffer: false,
   give: false,
+  makePot: false,
 };
 
 export interface DeathEvent {
@@ -375,6 +404,9 @@ export interface SimState {
     firstCrownMelted: boolean;
     firstClay: boolean;
     firstCopper: boolean;
+    firstCopperBar: boolean;
+    firstCopperSword: boolean;
+    firstPot: boolean;
   };
 }
 
@@ -421,6 +453,9 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstCrownMelted: false,
       firstClay: false,
       firstCopper: false,
+      firstCopperBar: false,
+      firstCopperSword: false,
+      firstPot: false,
     },
   };
 }
@@ -709,6 +744,7 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   if (input.fish) doFish(state, player, px, py);
   if (input.cycleOffer) cycleOffer(player);
   if (input.give) doGive(state, player);
+  if (input.makePot) doMakePot(state, player);
 
   return player.health <= 0 ? kill(state, player) : null;
 }
@@ -863,12 +899,21 @@ function doStrike(state: SimState, player: Player): void {
   if (!creatureTarget && !soulTarget) return;
 
   const pack = player.pack;
-  // The best weapon in hand wins: a sword over a spear over a fist. Nothing
-  // is ever discarded to make room, so carrying both just means the spear
-  // is the one you fall back on when the sword finally gives out. A sword
-  // you smelted and forged yourself hits harder than one merely carried —
-  // the same soul's smithing, not just their hunting, is in the blow.
-  const weapon = pack.sword > 0 ? SWORD_DAMAGE + swordBonus(player.skills) : pack.spear > 0 ? SPEAR_DAMAGE : FIST_DAMAGE;
+  // The best weapon in hand wins: a sword over a copper sword over a spear
+  // over a fist. Nothing is ever discarded to make room, so carrying all
+  // three just means the copper blade is the fallback when the real sword
+  // gives out, and the spear is the fallback under that. A sword you
+  // smelted and forged yourself hits harder than one merely carried — the
+  // same soul's smithing, not just their hunting, is in the blow. Copper
+  // carries no such bonus: it is a real blade, just not a mastered one.
+  const weapon =
+    pack.sword > 0
+      ? SWORD_DAMAGE + swordBonus(player.skills)
+      : pack.copperSword > 0
+        ? COPPER_SWORD_DAMAGE
+        : pack.spear > 0
+          ? SPEAR_DAMAGE
+          : FIST_DAMAGE;
   const damage = weapon + strikeBonus(player.skills);
   bumpNoise(state, skilledNoise(NOISE_PER_STRIKE, player, "hunting"), player);
 
@@ -922,11 +967,14 @@ function doStrike(state: SimState, player: Player): void {
   }
 }
 
-/** Whatever a strike spends: the sword before the spear, same rule the damage itself follows. */
+/** Whatever a strike spends: the same priority the damage itself follows. */
 function spendWeapon(state: SimState, pack: Player["pack"]): void {
   if (pack.sword > 0) {
     pack.sword--;
     if (pack.sword === 0) say(state, "The sword's edge finally gives out. It was a blade, once.");
+  } else if (pack.copperSword > 0) {
+    pack.copperSword--;
+    if (pack.copperSword === 0) say(state, "The copper blade bends, then snaps. Soft metal was always going to give out first.");
   } else if (pack.spear > 0) {
     pack.spear--;
     if (pack.spear === 0) say(state, "A spear splinters on the last blow.");
@@ -1007,7 +1055,19 @@ function doEat(state: SimState, player: Player): void {
   const pack = player.pack;
   if (pack.cookedMeat > 0) {
     pack.cookedMeat--;
-    player.needs.satiety = clamp(player.needs.satiety + mealValue(player.skills), 0, NEED_MAX);
+    // A pot doesn't change what the meal is made of — it changes how far it
+    // goes, the same shape an axe already makes on a chop. Read here rather
+    // than at the moment of cooking: `cookedMeat` is one flat counter, with
+    // no way to remember which portion was ever near a pot, so the honest
+    // rule is "a working pot in your pack right now", spent one use per meal
+    // actually eaten hot.
+    let bonus = 0;
+    if (pack.pot > 0) {
+      pack.pot--;
+      bonus = POT_MEAL_BONUS;
+      if (pack.pot === 0) say(state, "The pot finally cracks from the fire. Verge clay was never going to last forever.");
+    }
+    player.needs.satiety = clamp(player.needs.satiety + mealValue(player.skills) + bonus, 0, NEED_MAX);
     player.needs.warmth = clamp(player.needs.warmth + 80, 0, NEED_MAX);
     return;
   }
@@ -1114,10 +1174,26 @@ function doSmelt(state: SimState, player: Player): void {
     return;
   }
 
-  // No ore in hand, but a crown will do — "some are melted down by smiths
-  // who need the metal more than the history" (doc/world/PLAN.md §17A). The
-  // one thing an old crown is good for until an economy exists to spend one
-  // in.
+  // No ore and charcoal together, but copper needs no charcoal at all — a
+  // real smelt, just a shorter one, which is most of why it is reachable
+  // earlier than the real bar rather than only a rarer find.
+  if (pack.copper >= COPPER_SMELT_COST) {
+    pack.copper -= COPPER_SMELT_COST;
+    pack.copperBar += COPPER_BAR_YIELD;
+    bumpNoise(state, NOISE_PER_CRAFT, player);
+    learn(state, player, "smithing", XP.copperSmelt);
+    say(state, "Copper runs soft and fast, and needs no charcoal to do it. A duller bar than iron, but a bar.");
+    if (!state.flags.firstCopperBar) {
+      state.flags.firstCopperBar = true;
+      say(state, "The Grey King: “Older than the ore, and it still answers a fire. Some things never stop being useful.”");
+    }
+    return;
+  }
+
+  // No ore, no copper, but a crown will do — "some are melted down by
+  // smiths who need the metal more than the history" (doc/world/PLAN.md
+  // §17A). The one thing an old crown is good for until an economy exists
+  // to spend one in — the last resort, not the second choice.
   if (pack.crowns >= CROWN_MELT_COST) {
     pack.crowns -= CROWN_MELT_COST;
     pack.bar += CROWN_MELT_YIELD;
@@ -1130,20 +1206,60 @@ function doSmelt(state: SimState, player: Player): void {
   }
 }
 
-/** B — bar, wood and cordage, once each. The sword chain's whole point. */
+/** P — clay, fired at a hearth, into a pot. Verge pottery's first product. */
+function doMakePot(state: SimState, player: Player): void {
+  const pack = player.pack;
+  if (!player.atFire || pack.pot > 0 || pack.clay < POT_CLAY_COST) return;
+  pack.clay -= POT_CLAY_COST;
+  pack.pot = POT_DURABILITY;
+  bumpNoise(state, Math.trunc(NOISE_PER_CRAFT / 4), player);
+  say(state, "A pot, shaped and fired. Meat cooked in it goes further than meat cooked on a stick.");
+  if (!state.flags.firstPot) {
+    state.flags.firstPot = true;
+    say(state, "The Grey King: “Pottery. The Old Kingdoms had furnaces for this. You have a campfire and clay.”");
+  }
+}
+
+/**
+ * B — bar, wood and cordage, once each. The sword chain's whole point.
+ * Falls back to a copper bar, the same shape, when there is no iron bar to
+ * hand — a weaker, shorter-lived blade, reachable sooner (doc/world/CONTENT.md).
+ */
 function doMakeSword(state: SimState, player: Player): void {
   const pack = player.pack;
-  if (pack.sword > 0 || pack.bar < SWORD_BAR_COST || pack.wood < SWORD_WOOD_COST || pack.cordage < SWORD_CORDAGE_COST) return;
-  pack.bar -= SWORD_BAR_COST;
-  pack.wood -= SWORD_WOOD_COST;
-  pack.cordage -= SWORD_CORDAGE_COST;
-  pack.sword = SWORD_DURABILITY;
-  bumpNoise(state, NOISE_PER_CRAFT, player);
-  learn(state, player, "smithing", XP.forge);
-  say(state, "A blade, hafted and bound. Everything else you have made was a stopgap until this.");
-  if (!state.flags.firstSword) {
-    state.flags.firstSword = true;
-    say(state, "The Grey King: “...A sword, in the Verge. That took you longer than it should have — and I noticed every hour of it.”");
+  if (pack.sword > 0) return; // already carrying the real thing; nothing this key does improves on it
+  if (pack.bar >= SWORD_BAR_COST && pack.wood >= SWORD_WOOD_COST && pack.cordage >= SWORD_CORDAGE_COST) {
+    pack.bar -= SWORD_BAR_COST;
+    pack.wood -= SWORD_WOOD_COST;
+    pack.cordage -= SWORD_CORDAGE_COST;
+    pack.sword = SWORD_DURABILITY;
+    bumpNoise(state, NOISE_PER_CRAFT, player);
+    learn(state, player, "smithing", XP.forge);
+    say(state, "A blade, hafted and bound. Everything else you have made was a stopgap until this.");
+    if (!state.flags.firstSword) {
+      state.flags.firstSword = true;
+      say(state, "The Grey King: “...A sword, in the Verge. That took you longer than it should have — and I noticed every hour of it.”");
+    }
+    return;
+  }
+
+  if (
+    pack.copperSword === 0 &&
+    pack.copperBar >= COPPER_SWORD_BAR_COST &&
+    pack.wood >= COPPER_SWORD_WOOD_COST &&
+    pack.cordage >= COPPER_SWORD_CORDAGE_COST
+  ) {
+    pack.copperBar -= COPPER_SWORD_BAR_COST;
+    pack.wood -= COPPER_SWORD_WOOD_COST;
+    pack.cordage -= COPPER_SWORD_CORDAGE_COST;
+    pack.copperSword = COPPER_SWORD_DURABILITY;
+    bumpNoise(state, NOISE_PER_CRAFT, player);
+    learn(state, player, "smithing", XP.copperForge);
+    say(state, "A blade of copper, hafted and bound. Softer than iron, and it came together far sooner.");
+    if (!state.flags.firstCopperSword) {
+      state.flags.firstCopperSword = true;
+      say(state, "The Grey King: “Copper before iron. Someone remembers the old order of things, even without meaning to.”");
+    }
   }
 }
 

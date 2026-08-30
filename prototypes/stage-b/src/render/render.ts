@@ -336,12 +336,14 @@ export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, lo
       ctx.fillText(`#${player.lineage}`, toPx(player.x, camera.x) + TILE_PX / 2, toPx(player.y, camera.y) + TILE_PX / 2 - 12);
       ctx.textAlign = "left";
     }
-    if (player.pack.sword > 0 || player.pack.spear > 0) {
+    if (player.pack.sword > 0 || player.pack.copperSword > 0 || player.pack.spear > 0) {
       // A stick held out to one side — enough to tell at a glance whether
-      // that soul is the sort that can fight back yet, and a sword reads as
-      // the same gesture in a colour that says it is no longer a stick.
-      ctx.strokeStyle = player.pack.sword > 0 ? "#d8d8e0" : "#c8b088";
-      ctx.lineWidth = player.pack.sword > 0 ? 3 : 2;
+      // that soul is the sort that can fight back yet, a sword reads as the
+      // same gesture in a colour that says it is no longer a stick, and
+      // copper gets its own colour rather than borrowing iron's — a real
+      // blade, just not the same one.
+      ctx.strokeStyle = player.pack.sword > 0 ? "#d8d8e0" : player.pack.copperSword > 0 ? "#c87d4a" : "#c8b088";
+      ctx.lineWidth = player.pack.sword > 0 ? 3 : player.pack.copperSword > 0 ? 3 : 2;
       ctx.beginPath();
       ctx.moveTo(toPx(player.x, camera.x) + TILE_PX / 2 + 8, toPx(player.y, camera.y) + TILE_PX / 2 - 8);
       ctx.lineTo(toPx(player.x, camera.x) + TILE_PX / 2 + 16, toPx(player.y, camera.y) + TILE_PX / 2 + 6);
@@ -467,10 +469,12 @@ export function drawHud(
   // "spear" is not.
   const kit = [
     pack.spear > 0 ? `spear ${pack.spear}` : null,
+    pack.copperSword > 0 ? `copper sword ${pack.copperSword}` : null,
     pack.sword > 0 ? `sword ${pack.sword}` : null,
     pack.cloak > 0 ? `cloak ${pack.cloak}` : null,
     pack.knife > 0 ? `knife ${pack.knife}` : null,
     pack.axe > 0 ? `axe ${pack.axe}` : null,
+    pack.pot > 0 ? `pot ${pack.pot}` : null,
     pack.snare > 0 ? `snare ${pack.snare}` : null,
     pack.fishingLine > 0 ? `line ${pack.fishingLine}` : null,
   ]
@@ -514,7 +518,8 @@ export function drawHud(
       // follow-on) — shown only once carried, same as crowns, so an empty
       // pack doesn't advertise materials nothing can be done with yet.
       (pack.clay > 0 ? `  clay ${pack.clay}` : "") +
-      (pack.copper > 0 ? `  copper ${pack.copper}` : ""),
+      (pack.copper > 0 ? `  copper ${pack.copper}` : "") +
+      (pack.copperBar > 0 ? `  copper bar ${pack.copperBar}` : ""),
     10,
     hudY + 76,
   );
@@ -545,19 +550,24 @@ export function drawHud(
     hudY + 154,
   );
   ctx.fillText(
-    "9 charcoal (3w, at fire) · 0 smelt (2 ore 1 char, or 1 crown, at fire) · B sword (2 bar 1w 1 cord)",
+    "9 charcoal (3w, at fire) · 0 smelt (2 ore 1 char, or 3 copper, or 1 crown — at fire)",
     10,
     hudY + 168,
   );
   ctx.fillText(
-    "L line (2 cord 1w) · C fish, at the water's edge — press again to keep casting",
+    "B sword (2 bar 1w 1 cord, or 2 copper bar 1w 1 cord — weaker) · P pot (3 clay, at fire)",
     10,
     hudY + 182,
+  );
+  ctx.fillText(
+    "L line (2 cord 1w) · C fish, at the water's edge — press again to keep casting",
+    10,
+    hudY + 196,
   );
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 200 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 214 + i * 15));
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {
