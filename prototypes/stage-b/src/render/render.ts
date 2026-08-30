@@ -15,6 +15,8 @@ import { World, WORLD_W, WORLD_H, Tile, isSolid } from "../sim/world.js";
 import { isNight, CROW_THRESHOLD, NOTORIOUS_STANDING, DeathEvent } from "../sim/tick.js";
 import { Player, Lieutenant, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
+import { Npc } from "../sim/npc.js";
+import { DIALOGUE_TREES } from "../sim/dialogue.js";
 import { SKILLS, level } from "../sim/skills.js";
 
 export const TILE_PX = 32;
@@ -55,6 +57,7 @@ export interface ViewState {
   players: (Player | null)[];
   lieutenant: Lieutenant | null;
   creatures: Creature[];
+  npcs: Npc[];
   noise: number;
   crowX: number;
   crowY: number;
@@ -80,6 +83,7 @@ const COLORS: Record<Tile, string> = {
   [Tile.Copper]: "#5a5248", // same rock-dark base as Ore; the flecks below tell them apart
   [Tile.Meadow]: "#5a7a3a",
   [Tile.Thicket]: "#16290f", // darker than Tree — a stand's core, not its fringe
+  [Tile.House]: "#3a5a34", // grass — the roof drawn below is what actually reads
 };
 
 /** Fuel at which a fire is drawn as embers rather than a blaze. */
@@ -127,6 +131,19 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: World, tick: num
         ctx.fill();
         ctx.beginPath();
         ctx.arc(px + TILE_PX * 0.62, py + TILE_PX * 0.6, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (t === Tile.House) {
+        // A wall and a roof, nothing more — a landmark, not a building
+        // system. Distinct from Ruin's broken blocks: this one is whole.
+        ctx.fillStyle = "#8a6a45";
+        ctx.fillRect(px + TILE_PX * 0.15, py + TILE_PX * 0.35, TILE_PX * 0.7, TILE_PX * 0.55);
+        ctx.fillStyle = "#5c3d24";
+        ctx.beginPath();
+        ctx.moveTo(px + TILE_PX * 0.08, py + TILE_PX * 0.38);
+        ctx.lineTo(px + TILE_PX * 0.5, py + TILE_PX * 0.08);
+        ctx.lineTo(px + TILE_PX * 0.92, py + TILE_PX * 0.38);
+        ctx.closePath();
         ctx.fill();
       }
       if (t === Tile.Copper) {
@@ -316,8 +333,21 @@ function drawCrows(ctx: CanvasRenderingContext2D, state: ViewState, camera: Came
 /** Souls are told apart by colour; the one you are driving is the pale one. */
 const SOUL_COLORS = ["#e8e0c8", "#88c0e8", "#c8a0e0", "#a0e0a8"];
 
+/** The Teacher gets her own colour; every other villager shares one — they are people, not a bestiary entry each. */
+function drawNpc(ctx: CanvasRenderingContext2D, npc: Npc, camera: Camera): void {
+  if (!npc.alive) return;
+  const fill = npc.role === "teacher" ? "#d8b878" : "#a89878";
+  dot(ctx, npc.x, npc.y, 7, fill, camera);
+  ctx.fillStyle = "#cfc7b0";
+  ctx.font = "10px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(npc.name, toPx(npc.x, camera.x) + TILE_PX / 2, toPx(npc.y, camera.y) + TILE_PX / 2 - 12);
+  ctx.textAlign = "left";
+}
+
 export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, localId: number, camera: Camera): void {
   for (const c of state.creatures) drawCreature(ctx, c, camera);
+  for (const n of state.npcs) drawNpc(ctx, n, camera);
   drawCrows(ctx, state, camera);
 
   for (const player of state.players) {
@@ -573,10 +603,75 @@ export function drawHud(
     10,
     hudY + 210,
   );
+  ctx.fillText("H talk to whoever is nearest — 1-9 pick a reply while a conversation is open", 10, hudY + 224);
 
   const logLines = state.log.slice(-2);
   ctx.fillStyle = "#d8c8a0";
-  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 228 + i * 15));
+  logLines.forEach((line, i) => ctx.fillText(line, 10, hudY + 242 + i * 15));
+}
+
+/** Canvas has no word-wrap of its own; dialogue text is long enough to need one. */
+function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number): number {
+  const words = text.split(" ");
+  let line = "";
+  let cy = y;
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(test).width > maxWidth) {
+      ctx.fillText(line, x, cy);
+      line = word;
+      cy += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, cy);
+  return cy + lineHeight;
+}
+
+/**
+ * The conversation tree (dialogue.ts), drawn over the viewport. Only the
+ * node id travels the wire (Player.dialogueNode) — the text itself is
+ * looked up here, from the same static module the sim used to decide what
+ * a choice does, so nothing about a conversation's content is ever sent
+ * twice or drifts between what the sim meant and what the screen shows.
+ */
+export function drawDialogue(ctx: CanvasRenderingContext2D, state: ViewState, localId: number, viewportW: number): void {
+  const player = state.players[localId];
+  if (!player || !player.alive || player.talkingTo === null || player.dialogueNode === null) return;
+  const npc = state.npcs.find((n) => n.id === player.talkingTo);
+  if (!npc) return;
+  const node = DIALOGUE_TREES[npc.role]?.[player.dialogueNode];
+  if (!node) return;
+
+  const boxX = 40;
+  const boxY = 30;
+  const boxW = viewportW - 80;
+  const boxH = 170;
+
+  ctx.fillStyle = "rgba(10, 8, 6, 0.92)";
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+  ctx.strokeStyle = "#8a7a5a";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#d8b878";
+  ctx.font = "13px monospace";
+  ctx.fillText(npc.name, boxX + 14, boxY + 22);
+
+  ctx.fillStyle = "#e8e0c8";
+  ctx.font = "12px monospace";
+  const afterText = wrapText(ctx, node.text, boxX + 14, boxY + 44, boxW - 28, 16);
+
+  ctx.fillStyle = "#9ab08a";
+  ctx.font = "11px monospace";
+  const optionsY = Math.max(afterText + 8, boxY + boxH - 16 * node.options.length - 10);
+  if (node.options.length === 0) {
+    ctx.fillText("They have nothing more to say. [H to leave]", boxX + 14, boxY + boxH - 14);
+  } else {
+    node.options.forEach((opt, i) => ctx.fillText(`${i + 1}. ${opt.label}`, boxX + 14, optionsY + i * 16));
+  }
 }
 
 export function drawDeathScreen(ctx: CanvasRenderingContext2D, w: number, h: number, o: DeathEvent, barrowList: DeathEvent[]): void {

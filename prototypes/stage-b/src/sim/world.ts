@@ -104,6 +104,14 @@ export enum Tile {
    * back as itself (see `harvest`) — a stand's core stays a core.
    */
   Thicket = 17,
+  /**
+   * A house in the village every soul washes up near (doc/world/PLAN.md
+   * §1A: "they take you in, they feed you, and they watch you for a
+   * season"). Solid, and purely a landmark — nothing to gather, nothing to
+   * build; the village itself is placed once, by `placeVillage`, not grown
+   * or rolled for like everything else in this file.
+   */
+  House = 18,
 }
 
 /** How long a burnt-out camp is still visible before the grass closes over it. */
@@ -117,9 +125,18 @@ export function isSolid(t: Tile): boolean {
     t === Tile.Rock ||
     t === Tile.Ore ||
     t === Tile.Copper ||
-    t === Tile.Thicket
+    t === Tile.Thicket ||
+    t === Tile.House
   );
 }
+
+/**
+ * The village center, in tiles — where the arrival custom actually happens
+ * (doc/world/PLAN.md §1A). Exported so NPC placement (npc.ts) shares the
+ * one number rather than duplicating it.
+ */
+export const VILLAGE_X = 5;
+export const VILLAGE_Y = 8;
 
 export interface Resource {
   tile: Tile; // Stump or BareBush — what it reverts from
@@ -161,6 +178,11 @@ export class World {
     // below — never an independent roll.
     this.growRiverbank(rng);
 
+    // The village is placed, not grown or rolled for — a handful of houses
+    // belong exactly where the arrival custom says they do (§1A), not
+    // wherever a cluster happened to seed.
+    this.placeVillage();
+
     // A road or two, walked as a wandering line rather than scattered like
     // everything above — the one terrain feature that has to read as a
     // path to mean anything. It only ever overwrites open ground, and
@@ -174,8 +196,32 @@ export class World {
     for (let i = 0; i < 4; i++) this.placeRuin(rng);
   }
 
+  /**
+   * The one rectangle every generation pass in this file leaves alone: the
+   * arrival tile at (3, 3) — and everything up to four static spawns might
+   * land on, per entities.ts's `(3 + id*2, 3)` formula — plus the village
+   * itself, south of it, so a house is never rolled over by a pass that
+   * runs first. Wider than a new soul strictly needs so the village has
+   * room to exist as more than a single tile.
+   */
   private inClearing(x: number, y: number): boolean {
-    return Math.abs(x - 3) <= 1 && Math.abs(y - 3) <= 1;
+    return x >= 0 && x <= 10 && y >= 1 && y <= 10;
+  }
+
+  /**
+   * A hamlet, not a town (§8: "a hamlet of eight people is invisible") —
+   * three houses, hand-placed rather than grown, around VILLAGE_X/Y. This
+   * is the one feature in this file that is placed outright instead of
+   * rolled or clustered, because a village is a specific fact about the
+   * world, not a probability.
+   */
+  private placeVillage(): void {
+    const houses: ReadonlyArray<readonly [number, number]> = [
+      [VILLAGE_X - 1, VILLAGE_Y],
+      [VILLAGE_X + 1, VILLAGE_Y],
+      [VILLAGE_X, VILLAGE_Y + 1],
+    ];
+    for (const [x, y] of houses) this.set(x, y, Tile.House);
   }
 
   /** One wandering river, walked edge to edge like a road but laid first, in Water. */

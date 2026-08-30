@@ -27,6 +27,7 @@ import { SimState } from "../sim/tick.js";
 import { World, Tile } from "../sim/world.js";
 import { Player, Lieutenant } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
+import { Npc } from "../sim/npc.js";
 
 /**
  * Comfortably past the camera's far edge (render.ts's viewport is 24x16
@@ -44,6 +45,8 @@ export interface Snapshot {
   /** `null` when he is nowhere near enough to be seen. */
   lieutenant: Lieutenant | null;
   creatures: Creature[];
+  /** Fogged the same as creatures — a villager is a body like any other, not a fixture of the terrain. */
+  npcs: Npc[];
   noise: number;
   noiseX: number;
   noiseY: number;
@@ -68,6 +71,7 @@ export function snapshot(state: SimState, viewerId: number): Snapshot {
     players: state.players.map((p) => (p.id === viewerId || (p.alive && visible(p.x, p.y)) ? p : null)),
     lieutenant: visible(state.lieutenant.x, state.lieutenant.y) ? state.lieutenant : null,
     creatures: state.creatures.filter((c) => visible(c.x, c.y)),
+    npcs: state.npcs.filter((n) => visible(n.x, n.y)),
     noise: state.noise,
     noiseX: state.noiseX,
     noiseY: state.noiseY,

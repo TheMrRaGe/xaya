@@ -14,11 +14,11 @@
  * hurt, and do you start again anyway?
  */
 import { World } from "./sim/world.js";
-import { TILE_PX, VIEW_W, VIEW_H, ViewState, computeCamera, drawWorld, drawEntities, drawNight, drawMinimap, drawHud, drawDeathScreen } from "./render/render.js";
+import { TILE_PX, VIEW_W, VIEW_H, ViewState, computeCamera, drawWorld, drawEntities, drawNight, drawMinimap, drawHud, drawDialogue, drawDeathScreen } from "./render/render.js";
 import { Snapshot } from "./net/snapshot.js";
 import { DeathEvent } from "./sim/tick.js";
 
-const HUD_H = 273; // +14 for the "B sword / P pot" line, +14 more for "O boots / V gloves"
+const HUD_H = 287; // +14 for "B sword / P pot", +14 for "O boots / V gloves", +14 for "H talk"
 // The canvas is the camera's window, not the map — VIEW_W/VIEW_H, not
 // WORLD_W/WORLD_H. The Verge can grow behind this without the page's layout
 // ever needing to change again.
@@ -104,6 +104,7 @@ const VERBS: Record<string, string> = {
   p: "makePot",
   o: "makeBoots",
   v: "makeGloves",
+  h: "talk",
 };
 
 window.addEventListener("keydown", (e) => {
@@ -187,6 +188,7 @@ function frame(): void {
   drawNight(ctx, VIEW_W * TILE_PX, VIEW_H * TILE_PX, snap.tick);
   drawMinimap(ctx, world, snap.players, myId, canvas.width);
   if (me) drawHud(ctx, view, me, VIEW_H * TILE_PX, canvas.width, HUD_H);
+  drawDialogue(ctx, view, myId, canvas.width);
   if (lastDeath) drawDeathScreen(ctx, canvas.width, canvas.height, lastDeath, barrowList);
   if (connection) drawWaiting(connection);
 }

@@ -117,6 +117,25 @@ const fresh = (n = 2) => newSim(0xc0ffee, Array.from({ length: n }, (_, i) => ne
   check("and so is where the crows are", a.crowX === b.crowX && a.crowY === b.crowY);
 }
 
+// --- NPCs are filtered the same way creatures are ---
+{
+  const s = fresh(1);
+  const p = s.players[0];
+  for (const n of s.npcs) {
+    n.x = p.x;
+    n.y = p.y;
+  }
+  const allNear = snapshot(s, 0);
+  check("every villager near you is sent", allNear.npcs.length === s.npcs.length, `${allNear.npcs.length}/${s.npcs.length}`);
+
+  for (const n of s.npcs) {
+    n.x = p.x + VISIBILITY_RADIUS * 4;
+    n.y = p.y;
+  }
+  const allFar = snapshot(s, 0);
+  check("and none of them are once they are all far away", allFar.npcs.length === 0, `${allFar.npcs.length} left`);
+}
+
 // --- a live tick doesn't choke on any of this ---
 {
   const s = fresh(3);

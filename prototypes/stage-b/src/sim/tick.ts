@@ -57,6 +57,8 @@ import {
   WOLF_BITE_DAMAGE,
   WOLF_BITE_COOLDOWN,
 } from "./creatures.js";
+import { Npc, spawnNpcs, stepNpc } from "./npc.js";
+import { DIALOGUE_TREES, ROOT_NODE } from "./dialogue.js";
 
 export const TICK_HZ = 10;
 
@@ -93,6 +95,7 @@ const LIEUTENANT_DAMAGE_PER_TICK = 4;
 const CONTACT_RADIUS = TILE * 0.6;
 const STRIKE_RADIUS = TILE * 1.2; // how close to hit, or to butcher
 const TRADE_RADIUS = TILE * 1.5; // how close to hand something over
+const TALK_RADIUS = TILE * 1.5; // same reach as trading
 const FIRE_RADIUS = TILE * 2;
 const BASE_DETECTION_RADIUS = TILE * 4;
 const NIGHT_DETECTION_BONUS = TILE * 2;
@@ -324,6 +327,12 @@ export interface Input {
   makePot: boolean; // P — clay, at a fire
   makeBoots: boolean; // O — 2 hide 1 cord
   makeGloves: boolean; // V — 2 hide 1 cord
+  /**
+   * H — talk to whoever is nearest, or close the conversation you're
+   * already in. While talking, the numbered keys (1-9) below stop
+   * crafting and pick a reply instead — see stepPlayer.
+   */
+  talk: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -350,6 +359,7 @@ export const NO_INPUT: Input = {
   makePot: false,
   makeBoots: false,
   makeGloves: false,
+  talk: false,
 };
 
 export interface DeathEvent {
@@ -394,6 +404,7 @@ export interface SimState {
   players: Player[];
   lieutenant: Lieutenant;
   creatures: Creature[];
+  npcs: Npc[];
   trades: TradeRecord[];
   incidents: Incident[];
   noise: number;
@@ -446,6 +457,7 @@ export function newSim(seed: number, players: Player[]): SimState {
     players,
     lieutenant,
     creatures: spawnCreatures(world, rng, players),
+    npcs: spawnNpcs(),
     trades: [],
     incidents: [],
     noise: 0,
@@ -624,6 +636,9 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
     c.goreCooldown = c.kind === "hedge-boar" ? BOAR_GORE_COOLDOWN : WOLF_BITE_COOLDOWN;
   }
 
+  // --- the village ---
+  for (const npc of state.npcs) stepNpc(npc, world, state.rng, state.tick);
+
   // A trapline pays out whether or not anyone is standing there.
   for (const catch_ of checkSnares(state.creatures, ctx)) {
     world.clearSnare(catch_.idx);
@@ -658,6 +673,9 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
 
 function kill(state: SimState, player: Player): DeathEvent {
   player.alive = false;
+  // A conversation doesn't survive the soul having it.
+  player.talkingTo = null;
+  player.dialogueNode = null;
   const cause = state.lastDamageSource[player.id] ?? "starved";
   say(state, `Soul #${player.lineage} is dead — ${cause}.`);
 
@@ -763,29 +781,53 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     say(state, "A piece of raw meat has turned. Cook it next time.");
   }
 
-  // --- the verbs ---
-  if (input.gather) doGather(state, player, px, py);
-  if (input.strike) doStrike(state, player);
-  if (input.build) doBuild(state, player, px, py);
-  if (input.makeSpear) doMakeSpear(state, player);
-  if (input.cook) doCook(state, player);
-  if (input.makeCloak) doMakeCloak(state, player);
-  if (input.eat) doEat(state, player);
-  if (input.makeKnife) doMakeKnife(state, player);
-  if (input.makeAxe) doMakeAxe(state, player);
-  if (input.makeCordage) doMakeCordage(state, player);
-  if (input.setSnare) doSetSnare(state, player, px, py);
-  if (input.makeCharcoal) doMakeCharcoal(state, player);
-  if (input.smelt) doSmelt(state, player);
-  if (input.makeSword) doMakeSword(state, player);
-  if (input.makeFishingLine) doMakeFishingLine(state, player);
-  if (input.fish) doFish(state, player, px, py);
-  if (input.cycleOffer) cycleOffer(player);
-  if (input.give) doGive(state, player);
-  if (input.makePot) doMakePot(state, player);
-  if (input.makeBoots) doMakeBoots(state, player);
-  if (input.makeGloves) doMakeGloves(state, player);
+  // --- talking, which takes over the numbered keys while it's happening ---
+  if (input.talk) doTalk(state, player);
 
+  if (player.talkingTo !== null) {
+    // A conversation borrows the same nine keys crafting already uses —
+    // one more context-sensitive verb, the same shape E/gather already is
+    // — rather than adding a second numbered row nobody could remember.
+    const replies: boolean[] = [
+      input.makeSpear,
+      input.cook,
+      input.makeCloak,
+      input.eat,
+      input.makeKnife,
+      input.makeAxe,
+      input.makeCordage,
+      input.setSnare,
+      input.makeCharcoal,
+    ];
+    const chosen = replies.findIndex((pressed) => pressed);
+    if (chosen >= 0) doDialogueChoice(state, player, chosen);
+  } else {
+    // --- the verbs ---
+    if (input.gather) doGather(state, player, px, py);
+    if (input.strike) doStrike(state, player);
+    if (input.build) doBuild(state, player, px, py);
+    if (input.makeSpear) doMakeSpear(state, player);
+    if (input.cook) doCook(state, player);
+    if (input.makeCloak) doMakeCloak(state, player);
+    if (input.eat) doEat(state, player);
+    if (input.makeKnife) doMakeKnife(state, player);
+    if (input.makeAxe) doMakeAxe(state, player);
+    if (input.makeCordage) doMakeCordage(state, player);
+    if (input.setSnare) doSetSnare(state, player, px, py);
+    if (input.makeCharcoal) doMakeCharcoal(state, player);
+    if (input.smelt) doSmelt(state, player);
+    if (input.makeSword) doMakeSword(state, player);
+    if (input.makeFishingLine) doMakeFishingLine(state, player);
+    if (input.fish) doFish(state, player, px, py);
+    if (input.cycleOffer) cycleOffer(player);
+    if (input.give) doGive(state, player);
+    if (input.makePot) doMakePot(state, player);
+    if (input.makeBoots) doMakeBoots(state, player);
+    if (input.makeGloves) doMakeGloves(state, player);
+  }
+
+  // A death still has to land even mid-conversation — starvation and the
+  // Lieutenant's contact damage above don't pause for a chat.
   return player.health <= 0 ? kill(state, player) : null;
 }
 
@@ -1435,6 +1477,66 @@ function doGive(state: SimState, player: Player): void {
       say(state, "The Grey King: “...Feeding each other. I would almost call it a strategy, if it were not so small.”");
     }
   }
+}
+
+function nearestNpc(state: SimState, player: Player): Npc | null {
+  let best: Npc | null = null;
+  let bestSq = TALK_RADIUS * TALK_RADIUS;
+  for (const npc of state.npcs) {
+    if (!npc.alive) continue;
+    const d = distSq(npc.x, npc.y, player.x, player.y);
+    if (d <= bestSq) {
+      bestSq = d;
+      best = npc;
+    }
+  }
+  return best;
+}
+
+/**
+ * Which node a conversation opens on. The Teacher always starts the same
+ * lesson; a villager's greeting is where "how the road speaks of you"
+ * (§2A) actually shows up in play — chosen once, here, rather than the
+ * static tree in dialogue.ts knowing anything about a live player.
+ */
+function pickRoot(npc: Npc, player: Player): string {
+  if (npc.role === "teacher") return ROOT_NODE;
+  if (player.standing <= NOTORIOUS_STANDING) return "refuse";
+  if (player.standing < 0) return "wary";
+  return ROOT_NODE;
+}
+
+/** H — talk to whoever is nearest, or close the conversation you're already in. */
+function doTalk(state: SimState, player: Player): void {
+  if (player.talkingTo !== null) {
+    player.talkingTo = null;
+    player.dialogueNode = null;
+    return;
+  }
+  const npc = nearestNpc(state, player);
+  if (!npc) return;
+  player.talkingTo = npc.id;
+  player.dialogueNode = pickRoot(npc, player);
+}
+
+/**
+ * A numbered key, pressed mid-conversation: pick that reply, or do nothing
+ * if the current node doesn't have one. dialogue.ts stays plain content —
+ * this is the only place a choice actually moves anything.
+ */
+function doDialogueChoice(state: SimState, player: Player, optionIndex: number): void {
+  if (player.talkingTo === null || player.dialogueNode === null) return;
+  const npc = state.npcs.find((n) => n.id === player.talkingTo);
+  if (!npc || !npc.alive) {
+    player.talkingTo = null;
+    player.dialogueNode = null;
+    return;
+  }
+  const node = DIALOGUE_TREES[npc.role]?.[player.dialogueNode];
+  const option = node?.options[optionIndex];
+  if (!option) return;
+  player.dialogueNode = option.next;
+  if (option.next === null) player.talkingTo = null;
 }
 
 function nearestCreature(state: SimState, player: Player, pick: (c: Creature) => boolean): Creature | null {

@@ -188,6 +188,16 @@ export interface Player {
    * across a death, so it resets with everything else in the pack (§6.1).
    */
   standing: number;
+  /**
+   * Which NPC this soul is mid-conversation with, or `null`. Dialogue text
+   * itself lives in dialogue.ts, shared unchanged between the sim (which
+   * only needs to know which node a choice moves to) and the client
+   * (which looks the node up to draw it) — nothing about a conversation
+   * needs to travel the wire except these two small fields.
+   */
+  talkingTo: number | null;
+  /** The current node id in that NPC's tree (dialogue.ts), or `null` when not talking. */
+  dialogueNode: string | null;
 }
 
 /**
@@ -239,6 +249,8 @@ export function newPlayer(lineage: number, id = 0, x = (3 + id * 2) * TILE, y = 
     alive: true,
     lineage,
     standing: 0,
+    talkingTo: null,
+    dialogueNode: null,
   };
 }
 

@@ -1429,5 +1429,91 @@ function check(name, cond, detail = "") {
   check("burning charcoal yields pitch too", p.pack.pitch > 0 && p.pack.charcoal > 0, JSON.stringify(p.pack));
 }
 
+// --- 46. the village: houses stand exactly where they're placed, and NPCs live among them ---
+{
+  const s = fresh();
+  check(
+    "three houses stand in the village",
+    s.world.get(4, 8) === Tile.House && s.world.get(6, 8) === Tile.House && s.world.get(5, 9) === Tile.House,
+    `(4,8)=${s.world.get(4, 8)} (6,8)=${s.world.get(6, 8)} (5,9)=${s.world.get(5, 9)}`,
+  );
+  check("a Teacher and villagers populate it", s.npcs.some((n) => n.role === "teacher") && s.npcs.some((n) => n.role === "villager"));
+  check("everyone starts alive", s.npcs.every((n) => n.alive));
+}
+
+// --- 47. talking: H opens the nearest conversation at the tree's root, and closes it on a second press ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const teacher = s.npcs.find((n) => n.role === "teacher");
+  p.x = teacher.x;
+  p.y = teacher.y;
+  stepTick(s, [I({ talk: true })]);
+  check("H opens a conversation with whoever is nearest", p.talkingTo === teacher.id, `talkingTo=${p.talkingTo}`);
+  check("starting at the tree's root", p.dialogueNode === "root");
+
+  stepTick(s, [I({ talk: true })]);
+  check("H again closes it", p.talkingTo === null && p.dialogueNode === null);
+}
+
+// --- 48. dialogue choices move the conversation, and while it's open the numbered keys stop crafting ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const teacher = s.npcs.find((n) => n.role === "teacher");
+  p.x = teacher.x;
+  p.y = teacher.y;
+  stepTick(s, [I({ talk: true })]);
+
+  p.pack.wood = 5; // enough that makeSpear would otherwise succeed
+  stepTick(s, [I({ makeSpear: true })]); // root's option 1: "No. Show me." -> "fire"
+  check("picking a reply moves to the node it points at", p.dialogueNode === "fire");
+  check("and does not also craft — the key was spent on the conversation", p.pack.spear === 0, `spear=${p.pack.spear}`);
+
+  stepTick(s, [I({ makeSpear: true })]); // "fire" node's only reply -> "food"
+  check("a conversation can go more than one node deep", p.dialogueNode === "food");
+
+  stepTick(s, [I({ makeSpear: true })]); // "food" node's option 1 -> null
+  check("a reply that leads nowhere ends the conversation", p.talkingTo === null && p.dialogueNode === null);
+}
+
+// --- 49. how the road speaks of you decides which villager you get, before a word is said ---
+{
+  const neutral = fresh();
+  const np = neutral.players[0];
+  const nv = neutral.npcs.find((n) => n.role === "villager");
+  np.x = nv.x;
+  np.y = nv.y;
+  stepTick(neutral, [I({ talk: true })]);
+  check("a neutral soul gets the ordinary greeting", np.dialogueNode === "root");
+
+  const wary = fresh();
+  const wp = wary.players[0];
+  const wv = wary.npcs.find((n) => n.role === "villager");
+  wp.x = wv.x;
+  wp.y = wv.y;
+  wp.standing = -10;
+  stepTick(wary, [I({ talk: true })]);
+  check("a soul with a mark on their name gets a warier one", wp.dialogueNode === "wary");
+
+  const notorious = fresh();
+  const np2 = notorious.players[0];
+  const nv2 = notorious.npcs.find((n) => n.role === "villager");
+  np2.x = nv2.x;
+  np2.y = nv2.y;
+  np2.standing = -150;
+  stepTick(notorious, [I({ talk: true })]);
+  check("a notorious soul is refused outright", np2.dialogueNode === "refuse");
+
+  const withTeacher = fresh();
+  const tp = withTeacher.players[0];
+  const teacherNpc = withTeacher.npcs.find((n) => n.role === "teacher");
+  tp.x = teacherNpc.x;
+  tp.y = teacherNpc.y;
+  tp.standing = -150;
+  stepTick(withTeacher, [I({ talk: true })]);
+  check("the Teacher talks to a notorious soul the same as anyone", tp.dialogueNode === "root");
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

@@ -179,6 +179,29 @@ where every bandit monologues, and it bounds the inference bill.
 - **The washed-up** `[plan §1A]` — how every player enters. The northern current
   carries things down from his keep, and not only driftwood, so the valley has a
   custom: they take you in, feed you, and **watch you for a season.**
+- **The village** `[built]` — the custom above, finally with someone to perform
+  it. Three houses (landmarks, not a building system) and four NPCs: **the
+  Teacher** and three named villagers, wandering a bounded patch of ground
+  rather than standing as fixtures. Pure code throughout — §27's Intelligence
+  Tiers reserve a live model for Captains and Wardens and give even a
+  Lieutenant only "light template"; a villager is well below that. Talk to
+  whoever is nearest (key H) and a **conversation tree** opens — hand-authored,
+  static content (`src/sim/dialogue.ts`), not generated. The Teacher's tree is
+  the actual tutorial §1A calls for ("somebody has to teach you to lay a fire
+  — that first lesson is the tutorial"), and it teaches nothing mechanically:
+  no free skill, no free XP, because §17/§22's "every soul arrives at zero and
+  learns only by doing" would be contradicted by a conversation that quietly
+  handed out a shortcut. What it hands over is words — in-fiction instructions
+  for keys that already work. A villager's tree instead answers the standing
+  question in the one place Stage B has anything resembling a town: which
+  greeting you get is chosen once, when the conversation opens, by how the
+  road speaks of you (§2A) — ordinary, wary, or (past `NOTORIOUS_STANDING`)
+  refused outright before a word is exchanged. Nothing about a conversation's
+  *content* crosses the network; only the current node's id does, and the
+  client looks the actual text up from the same static tree the sim used to
+  decide what a reply does — so there is no separate "what did they say"
+  channel to keep in sync, and no way for the wire to say something the sim
+  didn't mean.
 
 ---
 
@@ -290,7 +313,10 @@ gap list) · **Meadow** (a wildflower patch, foraged for a satiety gain
 like a bush and never stripped bare — feeds Beekeeper, §7.2's
 named-but-unbuilt profession, whenever that is built) · **Thicket** (a
 woodland stand's dense core rather than a separate biome: more wood per
-felling than a lone Tree, louder to take, regrows into itself).
+felling than a lone Tree, louder to take, regrows into itself) ·
+**House** (a village landmark, solid, nothing to gather — placed outright
+at world-gen time, §2.5, not grown or rolled for like everything else
+here).
 
 Terrain speed is one rule, read the same way by a soul, the Lieutenant and
 every beast: a marsh bogs down a fleeing deer exactly as it would bog down
@@ -592,7 +618,10 @@ ascent.
 - **Teacher** — knowledge is soulbound but degrades through death `[plan §25]`.
   Masters transfer mastery to apprentices. **This is how society rebuilds after a
   mass-casualty event**, and it keeps veterans valuable after their character is
-  gone. Also the first profession a new player ever meets `[plan §1A]`.
+  gone. Also the first profession a new player ever meets `[plan §1A]` —
+  **half built**: an actual Teacher NPC and her tutorial conversation exist
+  (§2.5), but she teaches a new soul, not an apprentice, and no
+  master-to-apprentice mastery transfer of any kind exists yet.
 - **Landlord** — land survives death, making it the world's only asset class that
   does not die with you `[plan §23B]`.
 - **Grave-teller** — someone has to know the Barrow-lists cold: who died where,
@@ -1153,12 +1182,13 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   not an oversight. Whether a stranger's theft of a *catch* should ever be
   distinguished from a stranger's theft of a *kill* is still open.
 - ~~**Terrain beyond the eleven tiles**~~ — closed: marsh, road, ruin, clay,
-  copper, meadow and thicket bring it to eighteen (§3.4), each with a
-  reason to exist rather than decoration — marsh and road are the two ends
-  of one rule (terrain speed, read the same by every mover), a ruin is the
-  first place a crown can be found at all, and clay/copper close the last
-  two Verge materials §3.1 named with nothing to gather them from. What is
-  still open: snow, sand, a tidal flat and a cave mouth all belong to
+  copper, meadow, thicket and House bring it to nineteen (§3.4), each with
+  a reason to exist rather than decoration — marsh and road are the two
+  ends of one rule (terrain speed, read the same by every mover), a ruin is
+  the first place a crown can be found at all, clay/copper close the last
+  two Verge materials §3.1 named with nothing to gather them from, and
+  House is the one tile placed outright rather than rolled or grown. What
+  is still open: snow, sand, a tidal flat and a cave mouth all belong to
   Realms that are not the Verge, so they stay `[named]` on purpose rather
   than being built somewhere they don't fit.
 - ~~**Independent per-tile worldgen**~~ — closed: placement is now a
@@ -1224,6 +1254,24 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   already do (§1), not a new information leak. What this does not settle:
   whether that is *enough* compensation for 9x the area, which is a playtest
   question rather than a code one.
+- ~~**The arrival custom (§1A) has no one to perform it.**~~ — closed: the
+  village, the Teacher and her tutorial conversation exist (§2.5). Still
+  open: an NPC cannot yet be struck or killed at all, so the "expelled from
+  normal towns" half of the standing design has nowhere to land except a
+  villager's own colder greeting — a real but narrow answer, not the full
+  one. Making NPCs strikeable, and pricing a villager's death in standing,
+  is the next small pass.
+- **Dialogue trees are shallow and hand-authored on purpose**, and stay
+  that way — §27's "intelligence is deliberately scarce" applies to a
+  villager at least as much as to a Lieutenant. Nothing here should be
+  read as a step toward a villager that improvises; that capability, if it
+  ever exists, belongs to the Grey King's own voice work, at a much higher
+  tier, not to four people in a hamlet.
+- **No apprentice or mastery-transfer mechanic.** The Teacher teaches a new
+  soul how the game's own verbs work, in words, with no mechanical effect
+  (§2.5, §7.3) — §18's actual apprentice-yield economy, and §25's mastery
+  degrading-through-death system it depends on, are both still entirely
+  unbuilt.
 
 ---
 

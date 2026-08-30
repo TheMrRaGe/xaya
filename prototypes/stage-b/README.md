@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (276 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (292 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -448,6 +448,35 @@ plan committed at the repo root's `doc/world/`.
   little further. Neither has anywhere to be spent yet; that's the honest
   state of it until a Fletcher or something like one exists to want the
   glue.
+- **The Verge has a village now, and someone in it will actually talk to
+  you.** PLAN §1A specs the opening this game never built: wash up with
+  nothing, get taken in, get watched for a season. Three houses (a
+  landmark, not a building system) stand where §1A's custom actually
+  happens, and four NPCs live around them — the Teacher and three named
+  villagers, wandering a bounded patch of ground on plain code, no model
+  call anywhere near them (§27's Intelligence Tiers reserve that for
+  Captains and Wardens; even a Lieutenant only gets "light template").
+  Press **H** near whoever's closest to start talking; while a
+  conversation is open, the same **1-9** keys that craft everything else
+  pick a reply instead — one more context-sensitive verb, the same shape
+  E/gather already is, rather than a second row of keys to memorize. The
+  Teacher's tree is the actual tutorial §1A calls for, and it teaches
+  nothing mechanically: no free skill, no free XP, because skills.ts is
+  explicit that every soul learns only by doing, and a conversation that
+  quietly handed out a shortcut would contradict the one file most
+  responsible for saying so — what it hands over is in-fiction
+  instructions for keys that already work. A villager's tree instead
+  answers the "expelled from normal towns" half of the standing design, in
+  the one place this prototype has anything resembling a town: which
+  greeting you get is chosen once, when the conversation opens, by how the
+  road speaks of you — ordinary, wary, or, past the same notorious
+  threshold that already turns the Lieutenant away, refused outright
+  before a word is exchanged. Conversation content never crosses the
+  network — only the current node's id does (two small fields on `Player`)
+  — the client looks the actual text up from the same static tree
+  (`src/sim/dialogue.ts`) the sim used to decide what a reply does, so
+  there's no separate channel that could ever say something the sim
+  didn't mean.
 
 ### He used to camp the spawn
 
