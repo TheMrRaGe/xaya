@@ -39,18 +39,21 @@ export enum Tile {
   Campfire = 6, // player-built, and burns down
   Ash = 7, // a fire that went out; grass takes it back
   /**
-   * A rock outcrop. Unlike a tree it does not run out — you chip stone off
-   * it and it is still a rock — so stone is never scarce. What it costs is
-   * attention: hammering stone is the loudest work in the Verge, which puts
-   * it on the same thesis as everything else here rather than on a
-   * respawn timer.
+   * A rock outcrop — a handful of hits before it's worked out (`VEIN_HEALTH`),
+   * same shape as a Tree: chip it down, it becomes `DepletedRock`, and it
+   * comes back on a timer. Used to never deplete at all ("you chip stone off
+   * it and it is still a rock"); reversed on explicit direction so a single
+   * outcrop can't be stood at and pressed forever — see `DepletedRock` and
+   * `chipVein` for the actual mechanic. What it still costs, on top of that
+   * now: attention — hammering stone is the loudest work in the Verge.
    */
   Rock = 8,
   /** A set snare, waiting. Catches what walks onto it, then it is spent. */
   Snare = 9,
   /**
-   * A vein of ore. Same rule as Rock — it never runs out — but rarer and
-   * louder to work, because it sits at the top of the one crafting chain
+   * A vein of ore — the same "a handful of hits, then it's worked out and
+   * needs a real wait" as Rock now, just fewer hits and rarer to find in
+   * the first place, because it sits at the top of the one crafting chain
    * doc/world/PLAN.md §15 actually names for Stage B: ore + charcoal → bar →
    * sword. A rock outcrop gets you a knife in an afternoon; a vein gets you
    * a sword after you have also kept a fire, cut wood down to charcoal, and
@@ -75,24 +78,28 @@ export enum Tile {
   Road = 12,
   /**
    * A collapsed keep or holdfast, per §8's carving and §17A's crowns —
-   * "minted under kings who no longer have kingdoms." Never depletes, like
-   * Rock and Ore, but pays out rubble far more often than anything worth
-   * carrying: a chance at an old crown, not a guaranteed one.
+   * "minted under kings who no longer have kingdoms." Never depletes —
+   * unlike Rock and Ore now, a ruin is rubble already, not a vein with
+   * anything left in it to work out — but pays out rubble far more often
+   * than anything worth carrying: a chance at an old crown, not a
+   * guaranteed one.
    */
   Ruin = 13,
   /**
    * Open clay along a riverbank — soil, not a vein. Per §3.1's Verge
    * material row ("soil, timber, clay, copper") this is as ordinary a
-   * material as wood, so unlike Rock/Ore it is common and quiet rather
-   * than rare and loud. Never depletes; a riverbank does not run out of
-   * clay any faster than an outcrop runs out of stone.
+   * material as wood, so unlike Rock/Ore it stays common and quiet rather
+   * than rare and loud, and it stays undepletable too — a riverbank does
+   * not run out of clay the way a worked outcrop now runs out of stone.
    */
   Clay = 14,
   /**
    * A seam of copper, generated as the rarest outcome of the same mineral
    * clusters that produce Rock and Ore (rarer than Ore, per §3.1 naming
    * copper rather than iron as the Verge's own metal). Its chain is item
-   * 2's job; this tile only makes it possible to dig one up.
+   * 2's job; this tile only makes it possible to dig one up. Depletes the
+   * fastest of the three worked minerals (`VEIN_HEALTH`) — the rarest find
+   * is also the one worth the least standing at.
    */
   Copper = 15,
   /** A wildflower patch. Common, quiet, and Verge foraging in its own right — never depletes. */
@@ -112,6 +119,16 @@ export enum Tile {
    * or rolled for like everything else in this file.
    */
   House = 18,
+  /**
+   * A worked-out Rock outcrop, Ore vein or Copper seam — the same shape a
+   * felled Tree becomes a Stump, but these three stay solid rather than
+   * opening up: a mined face is still a wall of rock, just an empty one.
+   * Regrows into whatever it was (`chipVein`/`tickRegrowth`), the same
+   * generic resource-regrowth Stump and BareBush already use.
+   */
+  DepletedRock = 19,
+  DepletedOre = 20,
+  DepletedCopper = 21,
 }
 
 /** How long a burnt-out camp is still visible before the grass closes over it. */
@@ -126,7 +143,12 @@ export function isSolid(t: Tile): boolean {
     t === Tile.Ore ||
     t === Tile.Copper ||
     t === Tile.Thicket ||
-    t === Tile.House
+    t === Tile.House ||
+    // Worked out, not gone — a mined face is still a wall of rock, unlike a
+    // felled Tree's Stump, which is why these stay solid instead of opening up.
+    t === Tile.DepletedRock ||
+    t === Tile.DepletedOre ||
+    t === Tile.DepletedCopper
   );
 }
 
@@ -144,6 +166,23 @@ export interface Resource {
   readyAtTick: number;
 }
 
+/**
+ * Hits before a vein gives out (`chipVein`) — a real, if modest, health bar
+ * rather than the endless single tile it used to be. Copper depletes
+ * fastest: the rarest find is also the one least worth camping.
+ */
+export const VEIN_HEALTH: Partial<Record<Tile, number>> = {
+  [Tile.Rock]: 6,
+  [Tile.Ore]: 4,
+  [Tile.Copper]: 3,
+};
+
+const DEPLETED_FORM: Partial<Record<Tile, Tile>> = {
+  [Tile.Rock]: Tile.DepletedRock,
+  [Tile.Ore]: Tile.DepletedOre,
+  [Tile.Copper]: Tile.DepletedCopper,
+};
+
 export class World {
   readonly tiles: Tile[];
   readonly resources: Map<number, Resource> = new Map();
@@ -156,6 +195,15 @@ export class World {
    * is locked either); it only decides whose trapping gets better at it.
    */
   readonly snares: Map<number, number> = new Map();
+  /**
+   * Hits already taken by a Rock, Ore or Copper tile that hasn't given out
+   * yet, by tile index. Absent means full health (nobody's touched it, or
+   * it already regrew) — server-side bookkeeping only, the same way
+   * `resources`'s regrowth timers never travel to a client either; the
+   * tile's own appearance in the next snapshot is the only signal a viewer
+   * needs.
+   */
+  readonly veinHealth: Map<number, number> = new Map();
 
   constructor(seed: number) {
     const rng = new Rng(seed);
@@ -497,6 +545,31 @@ export class World {
       return true;
     }
     return false;
+  }
+
+  /**
+   * One hit against a Rock, Ore or Copper tile at (x, y). Every hit still
+   * pays out to the caller regardless — this only tracks whether the vein
+   * itself has anything left. Returns `"worked"` for an ordinary hit,
+   * `"exhausted"` for the hit that empties it (the caller's cue for a
+   * different line — "the vein gives out" rather than the usual noise),
+   * or `null` if there's nothing chippable at (x, y) at all.
+   */
+  chipVein(x: number, y: number, currentTick: number, regrowTicks: number): "worked" | "exhausted" | null {
+    const t = this.get(x, y);
+    const max = VEIN_HEALTH[t];
+    if (max === undefined) return null;
+    const idx = this.index(x, y);
+    const remaining = (this.veinHealth.get(idx) ?? max) - 1;
+    if (remaining <= 0) {
+      this.veinHealth.delete(idx);
+      const depleted = DEPLETED_FORM[t]!;
+      this.set(x, y, depleted);
+      this.resources.set(idx, { tile: depleted, regrowTo: t, readyAtTick: currentTick + regrowTicks });
+      return "exhausted";
+    }
+    this.veinHealth.set(idx, remaining);
+    return "worked";
   }
 
   lightFire(x: number, y: number, fuel: number): void {

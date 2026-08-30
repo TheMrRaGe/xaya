@@ -462,6 +462,17 @@ const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 const REGROW_TICKS = 900; // ~90s
 
 /**
+ * How long a worked-out Rock, Ore or Copper tile stays a DepletedX before
+ * it's minable again — longer than a tree's own 90s (§VEIN_HEALTH in
+ * world.ts: a vein used to never run out at all, so any real wait is new,
+ * and a mineral seam reasonably takes longer to "come back" than a
+ * sapling does). One shared number for all three rather than a separate
+ * dial each: the health bar already tells them apart in how *often* they
+ * make you wait, this is only how *long*.
+ */
+const VEIN_REGROW_TICKS = 1800; // ~3 min
+
+/**
  * What stops a Lieutenant camping the place he made a kill.
  *
  * Three things were compounding. The crows sit over wherever you were last
@@ -1219,9 +1230,14 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       return;
     }
     if (t === Tile.Rock) {
-      // A rock does not run out. What it costs is being heard.
+      // A few hits before it's worked out (world.ts's VEIN_HEALTH) — not
+      // the endless single tile it used to be. What it still costs on top
+      // of that: being heard.
       pack.stone++;
       bumpNoise(state, glovedNoise(state, NOISE_PER_CHIP, player), player);
+      if (world.chipVein(gx, gy, state.tick, VEIN_REGROW_TICKS) === "exhausted") {
+        say(state, "The outcrop gives out. There's nothing left in it to chip.");
+      }
       if (!state.flags.firstStone) {
         state.flags.firstStone = true;
         say(state, "The Grey King: “Stone on stone. I can hear that from the Spire, and so can everything nearer.”");
@@ -1229,10 +1245,13 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       return;
     }
     if (t === Tile.Ore) {
-      // Same deal as a rock, one tier up: never runs out, and the loudest
-      // thing you can do in the Verge.
+      // Same deal as a rock, one tier up: fewer hits before it gives out,
+      // and the loudest thing you can do in the Verge.
       pack.ore++;
       bumpNoise(state, glovedNoise(state, NOISE_PER_ORE, player), player);
+      if (world.chipVein(gx, gy, state.tick, VEIN_REGROW_TICKS) === "exhausted") {
+        say(state, "The vein gives out. Whatever was in it is out now, and not before time.");
+      }
       if (!state.flags.firstOre) {
         state.flags.firstOre = true;
         say(state, "The Grey King: “Ore, now. You are digging for something worth taking.”");
@@ -1240,9 +1259,13 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       return;
     }
     if (t === Tile.Copper) {
-      // Same rule as ore, one seam rarer — see world.ts's mineral clusters.
+      // Same rule as ore, one seam rarer — see world.ts's mineral clusters
+      // — and the quickest of the three to give out.
       pack.copper++;
       bumpNoise(state, glovedNoise(state, NOISE_PER_COPPER, player), player);
+      if (world.chipVein(gx, gy, state.tick, VEIN_REGROW_TICKS) === "exhausted") {
+        say(state, "The seam gives out. Copper was always the thinnest find.");
+      }
       if (!state.flags.firstCopper) {
         state.flags.firstCopper = true;
         say(state, "The Grey King: “Copper. Older than the ore, and it was mine first too.”");
@@ -1250,8 +1273,9 @@ function doGather(state: SimState, player: Player, px: number, py: number): void
       return;
     }
     if (t === Tile.Ruin) {
-      // Never runs out, like Rock and Ore — but a ruin is not a resource,
-      // it is a chance. Most digging turns up nothing at all.
+      // Never runs out, unlike Rock and Ore now — a ruin is rubble
+      // already, not a vein with anything left to work out. But it is not
+      // a resource either, it is a chance. Most digging turns up nothing.
       bumpNoise(state, NOISE_PER_RUIN_DIG, player);
       if (state.rng.chance(RUIN_CROWN_CHANCE_PCT, 100)) {
         pack.crowns++;

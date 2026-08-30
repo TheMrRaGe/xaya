@@ -311,28 +311,50 @@ library, no new dependency.
 
 Grass · Tree · Stump (harvested, regrows) · Water · Bush · BareBush (picked,
 regrows) · Campfire (player-built, burns down) · Ash (a fire that went out;
-grass takes it back) · **Rock** (chip stone off it forever; it never depletes) ·
-**Snare** (set, waiting, and spent once it catches) · **Ore** (same rule as
-Rock — never depletes — but rarer, and the loudest tile in the Verge to work) ·
-**Marsh** (wet ground at a river's edge — the only tile that punishes moving
-*through* it rather than working it: slower to cross, and squelches while you
-do) · **Road** (§8's "nobody bothered to destroy them" — the mirror of a
-marsh, faster to cross than grass, and the reason a nine-times-bigger Verge is
-still walkable) · **Ruin** (a collapsed room, never depleting like Rock and
-Ore, that usually pays out nothing at all and rarely an old crown, §17A) ·
-**Clay** (open ground at the same riverbank that grows marsh — §3.1 names
-it beside timber as an everyday Verge material, so unlike Rock/Ore it is
-common and quiet, not rare and loud) · **Copper** (the rarest outcome of
-the same mineral clusters that produce Rock and Ore — §3.1 names copper,
-not iron, as the Verge's own metal; a chain for it is future work, §15's
-gap list) · **Meadow** (a wildflower patch, foraged for a satiety gain
-like a bush and never stripped bare — feeds Beekeeper, §7.2's
-named-but-unbuilt profession, whenever that is built) · **Thicket** (a
-woodland stand's dense core rather than a separate biome: more wood per
-felling than a lone Tree, louder to take, regrows into itself) ·
-**House** (a village landmark, solid, nothing to gather — placed outright
-at world-gen time, §2.5, not grown or rolled for like everything else
-here).
+grass takes it back) · **Rock** (chip stone off it — a real health bar now,
+`DepletedRock` once it gives out and a real wait before it's minable again,
+where it used to never deplete at all; see the note below) · **Snare** (set,
+waiting, and spent once it catches) · **Ore** (the same shape as Rock now,
+fewer hits and rarer to find — `DepletedOre` — and the loudest tile in the
+Verge to work) · **Marsh** (wet ground at a river's edge — the only tile
+that punishes moving *through* it rather than working it: slower to cross,
+and squelches while you do) · **Road** (§8's "nobody bothered to destroy
+them" — the mirror of a marsh, faster to cross than grass, and the reason a
+nine-times-bigger Verge is still walkable) · **Ruin** (a collapsed room,
+never depleting at all — unlike Rock and Ore now, a ruin is rubble already,
+not a vein with anything left in it — that usually pays out nothing and
+rarely an old crown, §17A) · **Clay** (open ground at the same riverbank
+that grows marsh — §3.1 names it beside timber as an everyday Verge
+material, so unlike Rock/Ore it stays common, quiet, and undepletable) ·
+**Copper** (the rarest outcome of the same mineral clusters that produce
+Rock and Ore — §3.1 names copper, not iron, as the Verge's own metal — and
+the fastest of the three to deplete, `DepletedCopper`, the rarest find
+being the one least worth camping) · **Meadow** (a wildflower patch,
+foraged for a satiety gain like a bush and never stripped bare — feeds
+Beekeeper, §7.2's named-but-unbuilt profession, whenever that is built) ·
+**Thicket** (a woodland stand's dense core rather than a separate biome:
+more wood per felling than a lone Tree, louder to take, regrows into
+itself) · **House** (a village landmark, solid, nothing to gather — placed
+outright at world-gen time, §2.5, not grown or rolled for like everything
+else here).
+
+**Rock, Ore and Copper depleting at all is a reversal, not an addition** —
+this document said flatly, more than once, that a rock outcrop "does not
+run out the way a tree does" and that this was load-bearing for the whole
+noise thesis (attention, not scarcity, was the cost). That held for a solo
+prototype and stopped holding the moment a single tile could be worked
+forever by anything that never gets bored or heard as a threat — a script
+holding one key at one outcrop paid the *entire* stone-and-ore economy's
+noise cost exactly once. Reversed on explicit direction, narrowly: each of
+the three now has a real health bar (`VEIN_HEALTH` in world.ts — 6/4/3
+hits for Rock/Ore/Copper, the rarer the find the fewer swings), a depleted
+form once it gives out, and a real regrow timer (`VEIN_REGROW_TICKS`, ~3
+minutes — longer than a Tree's own 90s) — the same generic regrowth
+`Stump`/`BareBush` already use, extended rather than duplicated. The one
+deliberate difference from a Stump: a depleted vein stays solid, since a
+mined face is still a wall of rock and a felled tree isn't a trunk any
+more. Attention wasn't wrong as the *primary* cost — noise and skill still
+work exactly as they did — it just couldn't be the *only* one.
 
 Terrain speed is one rule, read the same way by a soul, the Lieutenant and
 every beast: a marsh bogs down a fleeing deer exactly as it would bog down
@@ -411,12 +433,18 @@ both now have somewhere to go — a fired pot for clay, a second and shorter
 metal line for copper (§5.2, §6) — closing the gap the tile itself opened
 one pass earlier.
 
-Stone is worth calling out because it inverts how every other material here
-behaves. A tree runs out and regrows on a timer; a rock outcrop never runs out
-at all, so stone is never *scarce*. What it costs is being heard — chipping
-stone is the loudest single action in the Verge. That makes a tool a trade of
-attention for yield rather than of time for yield, which is the noise thesis
-`[plan §1]` applied to the workshop instead of the hunt.
+Stone was worth calling out because it used to invert how every other
+material here behaves — a tree runs out and regrows on a timer, a rock
+outcrop never ran out at all. **That inversion is gone, on explicit
+direction (§3.4's own note above): a Rock, Ore or Copper tile now has a
+real health bar and regrows on a timer too**, same shape as a tree,
+because a single tile that never ran out could be worked forever by
+anything that never gets bored or heard as a threat. What stone still
+costs, on top of that now, is being heard — chipping stone is the loudest
+single action in the Verge — so a tool is a trade of attention *and* of a
+real wait for yield, the noise thesis `[plan §1]` applied to the workshop
+joined by the same scarcity every other gathered material already answers
+to.
 
 ---
 

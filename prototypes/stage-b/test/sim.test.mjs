@@ -8,7 +8,7 @@
 // you fix something; that is cheaper than remembering.
 import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT, NOTORIOUS_STANDING, BOARD_X, BOARD_Y, ALERT_TICKS } from "../dist/sim/tick.js";
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
-import { Tile, WORLD_W, WORLD_H } from "../dist/sim/world.js";
+import { Tile, WORLD_W, WORLD_H, VEIN_HEALTH, isSolid } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
 import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus, fishChance, teachingCeiling } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
@@ -1165,7 +1165,7 @@ function check(name, cond, detail = "") {
   s.world.set(px + 1, py, Tile.Copper);
   stepTick(s, [I({ gather: true })]);
   check("digging copper fills the pack too", p.pack.copper === 1);
-  check("and the vein is still there — it never runs out", s.world.get(px + 1, py) === Tile.Copper);
+  check("and one hit doesn't exhaust the seam — it takes a few (world.ts's VEIN_HEALTH)", s.world.get(px + 1, py) === Tile.Copper);
 
   s.world.set(px + 1, py, Tile.Meadow);
   p.needs.satiety = 200;
@@ -2101,6 +2101,62 @@ function check(name, cond, detail = "") {
   const beforeRestored = dummy.health;
   stepTick(broken, [I({ strike: true }), I()]);
   check("and it starts working again the moment the weapon actually exists", beforeRestored - dummy.health === 3, `damage=${beforeRestored - dummy.health}`);
+}
+
+// --- 61. veins deplete like RuneScape rocks now — a real health bar, a depleted form, and a real wait before either comes back ---
+{
+  const s = fresh();
+  const p = s.players[0];
+  const px = Math.floor(p.x / TILE);
+  const py = Math.floor(p.y / TILE);
+  s.world.set(px + 1, py, Tile.Rock);
+
+  const rockHits = VEIN_HEALTH[Tile.Rock];
+  for (let i = 0; i < rockHits - 1; i++) stepTick(s, [I({ gather: true })]);
+  check(`an outcrop survives ${rockHits - 1} hits, one short of its health`, s.world.get(px + 1, py) === Tile.Rock, `tile=${s.world.get(px + 1, py)}`);
+  check("and every one of them still pays out", p.pack.stone === rockHits - 1, `stone=${p.pack.stone}`);
+
+  stepTick(s, [I({ gather: true })]); // the hit that finally empties it
+  // VEIN_REGROW_TICKS (tick.ts) is 1800, counted from this exact tick — read
+  // it right here rather than hand-counting every call in this block, so it
+  // stays correct even if an earlier check above changes how many ticks it
+  // took to get here.
+  const readyAtTick = s.tick + 1800;
+  check("the exhausting hit still pays out — every swing counts", p.pack.stone === rockHits, `stone=${p.pack.stone}`);
+  check("and empties the outcrop into its depleted form", s.world.get(px + 1, py) === Tile.DepletedRock, `tile=${s.world.get(px + 1, py)}`);
+  check("which is still solid — a mined face, not an opening, unlike a felled tree's stump", isSolid(s.world.get(px + 1, py)));
+
+  stepTick(s, [I({ gather: true })]);
+  check("a depleted outcrop pays out nothing further", p.pack.stone === rockHits, `stone=${p.pack.stone}`);
+
+  s.tick = readyAtTick - 2;
+  stepTick(s, [I()]);
+  check("it hasn't regrown yet", s.world.get(px + 1, py) === Tile.DepletedRock, `tile=${s.world.get(px + 1, py)}`);
+  stepTick(s, [I()]);
+  check("but it does, on schedule", s.world.get(px + 1, py) === Tile.Rock, `tile=${s.world.get(px + 1, py)}`);
+  stepTick(s, [I({ gather: true })]);
+  check("and it's minable again, back at full health", p.pack.stone === rockHits + 1, `stone=${p.pack.stone}`);
+
+  // Ore and copper deplete on their own, shorter fuses — the rarer the find, the less worth camping.
+  const ore = fresh();
+  const op = ore.players[0];
+  const opx = Math.floor(op.x / TILE);
+  const opy = Math.floor(op.y / TILE);
+  ore.world.set(opx + 1, opy, Tile.Ore);
+  const oreHits = VEIN_HEALTH[Tile.Ore];
+  for (let i = 0; i < oreHits; i++) stepTick(ore, [I({ gather: true })]);
+  check(`a vein gives out in exactly ${oreHits} hits, fewer than an outcrop's`, ore.world.get(opx + 1, opy) === Tile.DepletedOre, `tile=${ore.world.get(opx + 1, opy)}`);
+  check("and paid out one ore per hit on the way", op.pack.ore === oreHits, `ore=${op.pack.ore}`);
+
+  const copper = fresh();
+  const cp = copper.players[0];
+  const cpx = Math.floor(cp.x / TILE);
+  const cpy = Math.floor(cp.y / TILE);
+  copper.world.set(cpx + 1, cpy, Tile.Copper);
+  const copperHits = VEIN_HEALTH[Tile.Copper];
+  for (let i = 0; i < copperHits; i++) stepTick(copper, [I({ gather: true })]);
+  check(`a seam gives out fastest of the three, in ${copperHits} hits`, copper.world.get(cpx + 1, cpy) === Tile.DepletedCopper, `tile=${copper.world.get(cpx + 1, cpy)}`);
+  check("copper's own fuse is shorter than ore's", copperHits < oreHits, `copper=${copperHits} ore=${oreHits}`);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

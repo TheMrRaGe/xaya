@@ -97,6 +97,9 @@ const COLORS: Record<Tile, string> = {
   [Tile.Meadow]: "#5a7a3a",
   [Tile.Thicket]: "#16290f", // darker than Tree — a stand's core, not its fringe
   [Tile.House]: "#3a5a34", // grass — the roof drawn below is what actually reads
+  [Tile.DepletedRock]: "#57575c", // Rock's own grey, dimmed — no boulders drawn on it either
+  [Tile.DepletedOre]: "#403a30", // Ore/Copper's dark rock, darker still, and no flecks
+  [Tile.DepletedCopper]: "#403a30",
 };
 
 /** Fuel at which a fire is drawn as embers rather than a blaze. */

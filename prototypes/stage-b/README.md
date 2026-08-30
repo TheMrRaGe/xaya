@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (367 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (380 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -276,13 +276,28 @@ plan committed at the repo root's `doc/world/`.
   is worth little and makes you sick one bite in four; cooked meat is worth
   four times as much and warms you. Hides become a cloak. The fire is now
   load-bearing three ways — warmth, cooking, and being seen.
-- **Stone is free, and loud.** A rock outcrop does not run out the way a
-  tree does — you chip at it and it is still a rock — so stone is the one
-  material that is never scarce. What it costs is *attention*: hammering
-  stone is the loudest single thing you can do in the Verge, louder than
-  building a fire. That puts tools on the same thesis as everything else
-  here rather than on a respawn timer, and it means the decision is never
-  "can I afford this" but "can I afford to be heard making it."
+- **Stone was free forever; now it's free for a few swings.** A rock
+  outcrop used to never run out at all — you could stand at one and hold
+  E — and the thesis was that what it cost was *attention*, not scarcity:
+  hammering stone is the loudest single thing you can do in the Verge,
+  louder than building a fire. That held up for a solo prototype and broke
+  down the moment anything could just camp a tile forever, script or not,
+  and take the entire noise cost out of it by never needing a second one.
+  A Rock, Ore or Copper tile now has a real health bar (`VEIN_HEALTH` in
+  world.ts — 6/4/3 hits respectively, the rarer the find the fewer swings
+  it has left) and a depleted form (`DepletedRock`/`DepletedOre`/
+  `DepletedCopper`) once it gives out, regrowing on a real timer
+  (`VEIN_REGROW_TICKS`, ~3 minutes — longer than a tree's own 90s, since a
+  seam reasonably takes longer to "come back" than a sapling) exactly the
+  way a felled Tree already becomes a Stump. The one deliberate difference
+  from a Stump: a depleted vein stays solid — a mined face is still a wall
+  of rock, not an opening the way a felled tree leaves one. Every hit still
+  pays out, including the one that empties it; noise and skill still work
+  exactly as before. What changed is that a soul now has to move to a new
+  outcrop once one gives out, the same way a hunter already has to find a
+  new deer once one is down — attention was never wrong as the *primary*
+  cost, it just couldn't be the *only* one once a single tile could be
+  worked forever by something that never gets bored or heard as a threat.
 
   Off that: a **knife** (more off every carcass, and the only way to cut
   cord) and an **axe** — two more logs a tree *and a third less noise*,
@@ -426,10 +441,11 @@ plan committed at the repo root's `doc/world/`.
   moving through one is louder, standing still in one is not. A road is
   drawn as a wandering line between two map edges rather than scattered
   tile by tile — the one terrain feature that had to actually read as a
-  path to mean anything. **Ruin** is the odd one out: never depletes, like
-  Rock and Ore, but usually pays out nothing but rubble and rarely an old
-  crown (PLAN §17A) — the first time that item exists anywhere as more than
-  a name. It has exactly one use: melt it at a fire (key **0**, the same key
+  path to mean anything. **Ruin** is the odd one out: never depletes at
+  all (unlike Rock and Ore now — a ruin is rubble already, not a vein with
+  anything left to work out), and usually pays out nothing but more rubble
+  and rarely an old crown (PLAN §17A) — the first time that item exists
+  anywhere as more than a name. It has exactly one use: melt it at a fire (key **0**, the same key
   smelting already used) when there's no ore and charcoal on hand, and it
   becomes a bar — PLAN §17A's own line about "smiths who need the metal more
   than the history," made literal. No smithing is learned doing it; running
