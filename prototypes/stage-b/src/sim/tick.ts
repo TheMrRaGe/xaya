@@ -32,6 +32,8 @@ import {
   gain,
   level,
   mastery,
+  bestSkill,
+  teachingCeiling,
   woodPerTree,
   noiseScale,
   strikeBonus,
@@ -289,6 +291,14 @@ const FOOD_ITEMS: ReadonlySet<Tradeable> = new Set(["rawMeat", "cookedMeat", "fi
 const COMMONS_SATIETY_THRESHOLD = 300; // genuinely hungry, not just peckish
 const COMMONS_STANDING_GAIN = 15; // several acts to undo one kill's -40 — cooperation is the slower climb
 
+/**
+ * Teaching for free is the second of §3's six kindness acts Stage B has
+ * anywhere to put (doGive above already built the first, feeding). "A
+ * passable X" (skills.ts's own RANKS[2]) or better, since level 0 or 1 has
+ * nothing worth passing on — the blind leading the blind isn't a lesson.
+ */
+const TEACH_MIN_LEVEL = 2;
+
 const RAW_SPOIL_EVERY = 900; // ~90s per piece of raw meat lost to rot
 
 const REGROW_TICKS = 900; // ~90s
@@ -340,6 +350,12 @@ export interface Input {
    * crafting and pick a reply instead — see stepPlayer.
    */
   talk: boolean;
+  /**
+   * K — pass a little of your best skill on to whoever's nearest. Free, the
+   * same as G is: this is §3's "teaching for free" kindness act, not §18's
+   * paid apprentice economy, which needs a currency Stage B doesn't have.
+   */
+  teach: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -367,6 +383,7 @@ export const NO_INPUT: Input = {
   makeBoots: false,
   makeGloves: false,
   talk: false,
+  teach: false,
 };
 
 export interface DeathEvent {
@@ -451,6 +468,7 @@ export interface SimState {
     firstBoots: boolean;
     firstGloves: boolean;
     firstNpcKill: boolean;
+    firstTeaching: boolean;
   };
 }
 
@@ -504,6 +522,7 @@ export function newSim(seed: number, players: Player[]): SimState {
       firstBoots: false,
       firstGloves: false,
       firstNpcKill: false,
+      firstTeaching: false,
     },
   };
 }
@@ -830,6 +849,7 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
     if (input.fish) doFish(state, player, px, py);
     if (input.cycleOffer) cycleOffer(player);
     if (input.give) doGive(state, player);
+    if (input.teach) doTeach(state, player);
     if (input.makePot) doMakePot(state, player);
     if (input.makeBoots) doMakeBoots(state, player);
     if (input.makeGloves) doMakeGloves(state, player);
@@ -1445,6 +1465,21 @@ function cycleOffer(player: Player): void {
   player.offer = TRADEABLES[(i + 1) % TRADEABLES.length] ?? "wood";
 }
 
+/** Whichever other living soul is nearest, within `radius` — shared by giving and teaching. */
+function nearestOtherPlayer(state: SimState, player: Player, radius: number): Player | null {
+  let best: Player | null = null;
+  let bestSq = radius * radius;
+  for (const other of state.players) {
+    if (other.id === player.id || !other.alive) continue;
+    const d = distSq(other.x, other.y, player.x, player.y);
+    if (d <= bestSq) {
+      bestSq = d;
+      best = other;
+    }
+  }
+  return best;
+}
+
 /**
  * G — hand one of whatever you are offering to the nearest other soul.
  *
@@ -1458,16 +1493,7 @@ function doGive(state: SimState, player: Player): void {
   const item = player.offer;
   if (pack[item] < 1) return;
 
-  let recipient: Player | null = null;
-  let bestSq = TRADE_RADIUS * TRADE_RADIUS;
-  for (const other of state.players) {
-    if (other.id === player.id || !other.alive) continue;
-    const d = distSq(other.x, other.y, player.x, player.y);
-    if (d <= bestSq) {
-      bestSq = d;
-      recipient = other;
-    }
-  }
+  const recipient = nearestOtherPlayer(state, player, TRADE_RADIUS);
   if (!recipient) return;
 
   // Judged before the hand-over lands, on what the recipient actually
@@ -1491,6 +1517,44 @@ function doGive(state: SimState, player: Player): void {
       state.flags.firstCommonsStanding = true;
       say(state, "The Grey King: “...Feeding each other. I would almost call it a strategy, if it were not so small.”");
     }
+  }
+}
+
+/**
+ * K — pass a little of your best skill on to whoever's nearest. §7.3/§25's
+ * apprentice bond, crossed early and narrowly the same way PvP was
+ * (doc/world/CONTENT.md's gap list) — §18's actual paid apprentice economy
+ * needs a currency Stage B doesn't have, so what shipped is the part that
+ * doesn't: a live master handing a living student real, if bounded, skill.
+ *
+ * Deliberately narrow next to the full design: always the teacher's single
+ * best skill (skills.mastery's own pick, reused rather than adding a second
+ * selector alongside `offer`'s T key), and skills.teachingCeiling stops it
+ * one level short of the teacher's own — a lesson can build an expert but
+ * never another master out of someone else's hands. A dead master teaches
+ * nobody ever again; this is the only way one soul's practice outlives the
+ * body that earned it, and §6.1's "skill dies with the character" stays
+ * exactly as true as it always was for whoever never taught it to anyone.
+ */
+function doTeach(state: SimState, player: Player): void {
+  const student = nearestOtherPlayer(state, player, TRADE_RADIUS);
+  if (!student) return;
+
+  const skill = bestSkill(player.skills);
+  const teacherLevel = level(player.skills[skill]);
+  if (teacherLevel < TEACH_MIN_LEVEL) return; // nothing worth passing on yet
+
+  const ceiling = teachingCeiling(teacherLevel);
+  if (student.skills[skill] >= ceiling) return; // taught as far as teaching alone goes
+
+  gain(student.skills, skill, XP.teach);
+  if (student.skills[skill] > ceiling) student.skills[skill] = ceiling;
+
+  say(state, `Soul #${player.lineage} passes on a little ${skill} to Soul #${student.lineage}.`);
+  player.standing += COMMONS_STANDING_GAIN; // §3's "teaching for free" — the second of six kindness acts Stage B can now perform
+  if (!state.flags.firstTeaching) {
+    state.flags.firstTeaching = true;
+    say(state, "The Grey King: “...Passed hand to hand, now. I took the source of it once and thought that settled the matter.”");
   }
 }
 

@@ -10,7 +10,7 @@ import { newSim, stepTick, replaceSoul, addSoul, CROW_THRESHOLD, NO_INPUT } from
 import { newPlayer, NEED_MAX } from "../dist/sim/entities.js";
 import { Tile, WORLD_W, WORLD_H } from "../dist/sim/world.js";
 import { TILE } from "../dist/sim/fixed.js";
-import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus, fishChance } from "../dist/sim/skills.js";
+import { level, mastery, trapChance, charcoalYield, smeltBonus, swordBonus, fishChance, teachingCeiling } from "../dist/sim/skills.js";
 import { woundCreature, WOLF_ANGER_TICKS, STATS } from "../dist/sim/creatures.js";
 
 
@@ -1552,6 +1552,55 @@ function check(name, cond, detail = "") {
   const before = villager.health;
   stepTick(s, [I({ strike: true }), I()]);
   check("the nearer villager is struck over a farther beast or soul", villager.health < before, `health=${villager.health}`);
+}
+
+// --- 52. teaching: a live master passes on their best skill to a live student, capped one level short of their own ---
+{
+  // Below TEACH_MIN_LEVEL there is nothing worth passing on.
+  const s = fresh(2);
+  const [teacher, student] = s.players;
+  teacher.skills.woodcraft = 20; // level 1, "a poor woodcutter"
+  student.x = teacher.x;
+  student.y = teacher.y;
+  stepTick(s, [I({ teach: true }), I()]);
+  check("a teacher below the minimum level teaches nothing", student.skills.woodcraft === 0, `xp=${student.skills.woodcraft}`);
+
+  // A real master raises a green student, but a lesson alone never closes the gap all the way.
+  const s2 = fresh(2);
+  const [master, apprentice] = s2.players;
+  master.skills.woodcraft = 300; // level 5, "a skilled woodcutter"
+  apprentice.x = master.x;
+  apprentice.y = master.y;
+  const ceiling = teachingCeiling(level(master.skills.woodcraft));
+  for (let i = 0; i < 40; i++) stepTick(s2, [I({ teach: true }), I()]);
+  check(
+    "teaching raises the student's matching skill, capped one level short of the master's",
+    apprentice.skills.woodcraft === ceiling && level(apprentice.skills.woodcraft) === level(master.skills.woodcraft) - 1,
+    `student xp=${apprentice.skills.woodcraft} ceiling=${ceiling}`,
+  );
+
+  // Teaching always uses the teacher's single best skill — no separate picker.
+  const s3 = fresh(2);
+  const [multi, blank] = s3.players;
+  multi.skills.woodcraft = 100; // level 3
+  multi.skills.fishing = 300; // level 5 — the one that actually gets taught
+  blank.x = multi.x;
+  blank.y = multi.y;
+  stepTick(s3, [I({ teach: true }), I()]);
+  check(
+    "teaching passes on the teacher's single best skill",
+    blank.skills.fishing > 0 && blank.skills.woodcraft === 0,
+    `fishing=${blank.skills.fishing} woodcraft=${blank.skills.woodcraft}`,
+  );
+
+  // Teaching for free is a Commons standing act too, same ledger feeding already climbs.
+  const s4 = fresh(2);
+  const [kind, learner] = s4.players;
+  kind.skills.hunting = 300; // level 5
+  learner.x = kind.x;
+  learner.y = kind.y;
+  stepTick(s4, [I({ teach: true }), I()]);
+  check("teaching for free raises the teacher's standing", kind.standing === 15, `standing=${kind.standing}`);
 }
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);

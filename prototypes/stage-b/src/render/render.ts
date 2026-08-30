@@ -24,7 +24,7 @@ import { Creature, STATS, CreatureKind } from "../sim/creatures.js";
 import { Npc } from "../sim/npc.js";
 import { Lieutenant } from "../sim/entities.js";
 import { DIALOGUE_TREES } from "../sim/dialogue.js";
-import { SKILLS, Skill, level } from "../sim/skills.js";
+import { SKILLS, Skill, level, bestSkill, teachingCeiling } from "../sim/skills.js";
 
 export const TILE_PX = 32;
 
@@ -784,6 +784,18 @@ function usableActions(state: ViewState, p: Player): Array<{ key: string; label:
   if (p.pack.cookedMeat > 0 || p.pack.fish > 0 || p.pack.rawMeat > 0) actions.push({ key: "4", label: "Eat" });
   const nearTalkable = state.npcs.some((n) => n.alive && (n.x - p.x) ** 2 + (n.y - p.y) ** 2 <= NEARBY_UNITS * NEARBY_UNITS);
   if (actions.length < 2 && nearTalkable) actions.push({ key: "H", label: "Talk" });
+  if (actions.length < 2) {
+    // Same approximation NEARBY_UNITS already is for TALK_RADIUS — tick.ts's
+    // TEACH_MIN_LEVEL (2) isn't exported either, so it's repeated here.
+    const student = state.players.find(
+      (o): o is Player => !!o && o.id !== p.id && o.alive && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 <= NEARBY_UNITS * NEARBY_UNITS,
+    );
+    if (student) {
+      const skill = bestSkill(p.skills);
+      const teacherLevel = level(p.skills[skill]);
+      if (teacherLevel >= 2 && student.skills[skill] < teachingCeiling(teacherLevel)) actions.push({ key: "K", label: "Teach" });
+    }
+  }
   return actions.slice(0, 2);
 }
 

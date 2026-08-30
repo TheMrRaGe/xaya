@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (297 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (301 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -109,6 +109,7 @@ is often registered as `text/plain`, and Chrome refuses a
 | **T** | cycle what you're offering |
 | **G** | give one of it to the nearest other soul |
 | **H** | talk to whoever's nearest (a villager, the Teacher); talk again to leave — while a conversation is open, 1-9 pick a reply instead of crafting |
+| **K** | teach whoever's nearest a little of your best skill — free, and it never makes them your equal |
 | **Tab** | open the reference panel (crafting, pack & skills, the Barrow-list, field notes) and cycle its pages; every other key still does what it always did while it's open |
 
 ## HUD & UI redesign
@@ -594,6 +595,40 @@ plan committed at the repo root's `doc/world/`.
   only as a colder greeting in a conversation. NPCs rot and respawn the
   same way a carcass does, just slower — a bad decision costs the village
   someone for a while, not forever.
+- **A living master can now teach a living student** — PLAN §7.3/§25's
+  apprentice bond, crossed early and narrowly the same way PvP was (see
+  the cut-list note below for how that call gets made): §44's Stage B cut
+  lists "the Teacher/apprentice bond" under Stage C, but nothing about
+  building it contradicts anything Stage B has already shipped, the way
+  a shortcut-XP tutorial would have. Press **K** near another soul and
+  they gain XP in *your* single best skill (`skills.bestSkill` — the
+  same pick the Barrow-list's `mastery()` already made, reused rather
+  than adding a second selector next to `offer`'s **T** key) — but
+  `skills.teachingCeiling` stops the gain one level short of your own:
+  a master can raise a green student to "an expert," never to "a
+  master." That ceiling is the whole point, not a limitation bolted on
+  afterward — the top rank has to stay something only doing it yourself
+  can earn, or the "skill is earned by doing, and dies with you" rule
+  three bullets up would have a hole in it. Teaching is free, the same
+  way giving is: it costs the teacher nothing but the tick spent standing
+  there, and it doubles as the second of PLAN §3's six Commons-standing
+  acts Stage B can now perform (feeding was the first) — +15 standing per
+  lesson, the same ledger a kill spends, for exactly as long as the
+  student has room left under the ceiling. **The one place this doesn't
+  touch:** a dead soul's *own* next life. PLAN §25 also describes a
+  soulbound soul keeping a degraded fraction of its own skill through
+  death ("a new body relearns the hands"); that is a different mechanic
+  from this one and it did not ship — `skills.ts`'s own header still says
+  flatly that skill "dies with the character," and this feature was built
+  to be the thing that makes that claim *interesting* rather than the
+  thing that undoes it: a master's practice can now outlive their death,
+  but only in whoever they actually taught while they were alive, never
+  in their own next body. The Teacher NPC herself is untouched by any of
+  this — she still teaches words, never XP, per the reasoning above her
+  in this list. No apprentice *yield* came with it either (PLAN §18's paid
+  economy, a Teacher earning an ongoing cut of a student's early work) —
+  that needs a currency Stage B doesn't have, so what shipped is free
+  instruction, not a wage.
 
 ### He used to camp the spawn
 
@@ -652,6 +687,20 @@ the exact test §44 used to pick the other ten ("what feeds a person day to
 day"), and §17 names both explicitly under the same hunger row as Farmer and
 Hunter. Nothing on the list is contradicted; two more of §17's food
 professions exist than §44 got around to naming.
+
+**A second line was crossed the same deliberate way: the Teacher/apprentice
+bond.** §44's own Stage C list names it explicitly, alongside marks, corpse
+bounties and player trade — but unlike PvP, this crossing didn't have to
+push against anything Stage B had already decided; it only had to avoid
+contradicting it. What shipped (**K**, above) is real, bounded skill transfer
+between two live souls, capped so a lesson can never make a student the
+teacher's equal — the top rank is still something only doing it yourself can
+earn, so "skill is earned by doing, and dies with you" reads exactly as true
+after this as before it. What did **not** ship is the other half of §25's
+description (a soul keeping degraded mastery through its *own* death) and
+all of §18's paid apprentice economy (a Teacher earning an ongoing yield off
+a student's early work) — both need pieces Stage B either explicitly
+rejected (skill carrying across a death) or doesn't have yet (a currency).
 
 **One line was crossed outright, not stretched: PvP.** §44 names it, along
 with marks and bounties, as Stage C — "does cooperation beat predation with

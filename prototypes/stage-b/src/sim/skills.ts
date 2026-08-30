@@ -76,6 +76,8 @@ export const XP = {
    */
   copperSmelt: 8,
   copperForge: 20,
+  /** One lesson passed to a student — same order as a smelt or a catch. */
+  teach: 15,
 } as const;
 
 export const MAX_LEVEL = 9;
@@ -202,14 +204,33 @@ const TITLES: Record<Skill, string> = {
 
 const RANKS = ["", "a poor", "a passable", "a fair", "a good", "a skilled", "a fine", "an expert", "a master", "a master"];
 
+/** Whichever skill a soul has put the most hours into — ties fall to woodcraft. */
+export function bestSkill(skills: Skills): Skill {
+  let best: Skill = "woodcraft";
+  for (const skill of SKILLS) if (skills[skill] > skills[best]) best = skill;
+  return best;
+}
+
 /**
  * What a soul was best at, for the Barrow-list. Reputation, not advantage —
  * the next soul inherits the story and none of the skill.
  */
 export function mastery(skills: Skills): string {
-  let best: Skill = "woodcraft";
-  for (const skill of SKILLS) if (skills[skill] > skills[best]) best = skill;
+  const best = bestSkill(skills);
   const rank = level(skills[best]);
   if (rank === 0) return "green, and never got the chance";
   return `${RANKS[rank]} ${TITLES[best]}`;
+}
+
+/**
+ * The ceiling a taught skill may reach — always one level short of the
+ * teacher's own (doc/world/PLAN.md §7.3/§25: "masters transfer mastery to
+ * apprentices"). A teacher at level L can raise a student as far as level
+ * L-1 and no further, so a lesson can build an expert but never another
+ * master out of someone else's hands: the top rank stays something only
+ * doing it yourself can earn, exactly the same rule §6.10 already applies
+ * to everyone doing it the first time. See doTeach in tick.ts.
+ */
+export function teachingCeiling(teacherLevel: number): number {
+  return Math.max(0, teacherLevel * teacherLevel * 8 - 1);
 }

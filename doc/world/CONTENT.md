@@ -627,9 +627,22 @@ ascent.
   Masters transfer mastery to apprentices. **This is how society rebuilds after a
   mass-casualty event**, and it keeps veterans valuable after their character is
   gone. Also the first profession a new player ever meets `[plan §1A]` —
-  **half built**: an actual Teacher NPC and her tutorial conversation exist
-  (§2.5), but she teaches a new soul, not an apprentice, and no
-  master-to-apprentice mastery transfer of any kind exists yet.
+  **partly built, in two separate pieces**: an actual Teacher NPC and her
+  tutorial conversation exist (§2.5), teaching a new soul words rather than
+  XP, exactly as before; and, `[built]` as of this pass, **live master-to-live-
+  apprentice skill transfer** — key **K**, `doTeach` in tick.ts — a real
+  soul can now raise another real soul's best-practiced skill, capped one
+  level short of their own (`skills.teachingCeiling`) so the top rank still
+  has to be earned rather than taught. This is §25's "masters transfer
+  mastery to apprentices" half; its other half — a soul keeping a degraded
+  fraction of its *own* skill through its *own* death — was deliberately
+  not built, since `skills.ts` states outright that skill "dies with the
+  character," and building the crossed-death-retention half would have
+  contradicted that rather than merely extended it (see the gap list, §15,
+  for the full reasoning). §18's paid apprentice-yield economy — a Teacher
+  earning an ongoing cut of a student's early work — also stayed unbuilt;
+  it needs a currency Stage B doesn't have, so what shipped is free
+  instruction, not a wage.
 - **Landlord** — land survives death, making it the world's only asset class that
   does not die with you `[plan §23B]`.
 - **Grave-teller** — someone has to know the Barrow-lists cold: who died where,
@@ -660,6 +673,13 @@ yields, how much bar a smelt yields, and how hard a self-forged sword hits;
 fishing raises the odds of a bite, deliberately slower to reward than
 trapping's — a snare is paid for by hours spent *away*, a line by hours spent
 *right here*, and the reward should track which currency was actually spent.
+
+**Dying with the character has exactly one exception, and it is a person, not
+a rule:** a living soul can now teach another living soul (§7.3, key **K**),
+so practice can outlive the body that earned it — but only in whoever was
+actually taught before that body died, never in the same soul's own next
+life, and never past one level short of the teacher's own. A master who
+never taught anyone still loses everything at death, same as always.
 
 None of the eight ever *gates* an action — every one of them is attemptable
 at zero, the way §17/§22's "no classes, no starting traits" already promises.
@@ -823,18 +843,21 @@ system: no bounty payout, no plunder off a body, no Host rank actually
 offered to a notorious soul. It answers one question narrowly — does
 killing cost you something — not the larger one the full system is for.
 
-**Commons standing (§3's "kindness needs teeth") has exactly one act built,
-because it is the only one of §3's named acts Stage B has anywhere to put.**
+**Commons standing (§3's "kindness needs teeth") now has two of its six named
+acts built, out of the same "does Stage B have anywhere to put this" test.**
 Stabilising a stranger needs the Mortal Wound system (cut, §44); sheltering
-someone needs shelter; teaching for free needs a teaching verb; paying
-another's mark needs a currency; purifying land needs corruption and land to
-purify — none of it exists yet. **Feeding a hungry soul does not have that
-problem: G already existed.** Give food to a soul whose satiety is genuinely
-low and the giver's own standing rises — the same ledger a kill spends,
-climbed the other direction, at roughly a third the rate (three acts of
-kindness to undo one kill, not one for one). §3 explicitly warns this must
-not be farmable by alt-pairs; nothing here stops two cooperating players
-trading scraps back and forth for standing, and that gap is left open on
+someone needs shelter; paying another's mark needs a currency; purifying land
+needs corruption and land to purify — none of that exists yet. **Feeding a
+hungry soul didn't have that problem: G already existed.** Give food to a
+soul whose satiety is genuinely low and the giver's own standing rises — the
+same ledger a kill spends, climbed the other direction, at roughly a third
+the rate (three acts of kindness to undo one kill, not one for one).
+**Teaching for free didn't either, once a teaching verb (K, §7.3/§7.4) was
+built to answer §25's apprentice-bond gap** — the same standing gain, per
+lesson, for as long as the student has room left under the level-behind
+ceiling that gain itself is bounded by. §3 explicitly warns this must not be
+farmable by alt-pairs; nothing here stops two cooperating players trading
+scraps, or lessons, back and forth for standing, and that gap is left open on
 purpose rather than guarded by a mechanism nobody has asked for yet.
 
 ---
@@ -1273,11 +1296,21 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   read as a step toward a villager that improvises; that capability, if it
   ever exists, belongs to the Grey King's own voice work, at a much higher
   tier, not to four people in a hamlet.
-- **No apprentice or mastery-transfer mechanic.** The Teacher teaches a new
-  soul how the game's own verbs work, in words, with no mechanical effect
-  (§2.5, §7.3) — §18's actual apprentice-yield economy, and §25's mastery
-  degrading-through-death system it depends on, are both still entirely
-  unbuilt.
+- ~~**No apprentice or mastery-transfer mechanic.**~~ — half-closed,
+  deliberately, and crossed early the same way PvP was (§8.7): a live
+  soul can now teach another live soul (key **K**, §7.3/§7.4), raising
+  the student's best-matched skill up to one level short of the
+  teacher's own (`skills.teachingCeiling`). What's still open, and open
+  on purpose rather than by oversight: §18's paid apprentice-*yield*
+  economy (a Teacher earning an ongoing cut of a student's early work)
+  needs a currency Stage B doesn't have; and §25's other half — a soul
+  keeping a degraded fraction of its *own* skill through its *own*
+  death — was not built at all, because `skills.ts` states outright
+  that skill "dies with the character," and crossing that line would
+  have contradicted an existing decision rather than extended an unbuilt
+  one, unlike every other line this document records crossing early. The
+  Teacher NPC herself still teaches only words, never XP, exactly as
+  before (§2.5) — nothing about her tutorial changed.
 
 ---
 
