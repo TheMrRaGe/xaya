@@ -23,7 +23,7 @@
  * DOM — it is the seam between the two.
  */
 import { distSq, TILE } from "../sim/fixed.js";
-import { SimState } from "../sim/tick.js";
+import { SimState, LootPile } from "../sim/tick.js";
 import { World, Tile } from "../sim/world.js";
 import { Player, Lieutenant } from "../sim/entities.js";
 import { Creature } from "../sim/creatures.js";
@@ -47,6 +47,8 @@ export interface Snapshot {
   creatures: Creature[];
   /** Fogged the same as creatures — a villager is a body like any other, not a fixture of the terrain. */
   npcs: Npc[];
+  /** Fogged too — plunder is personal until you're standing near enough to see it, not a landmark like a fire. */
+  lootPiles: LootPile[];
   noise: number;
   noiseX: number;
   noiseY: number;
@@ -72,6 +74,7 @@ export function snapshot(state: SimState, viewerId: number): Snapshot {
     lieutenant: visible(state.lieutenant.x, state.lieutenant.y) ? state.lieutenant : null,
     creatures: state.creatures.filter((c) => visible(c.x, c.y)),
     npcs: state.npcs.filter((n) => visible(n.x, n.y)),
+    lootPiles: state.lootPiles.filter((p) => visible(p.x, p.y)),
     noise: state.noise,
     noiseX: state.noiseX,
     noiseY: state.noiseY,

@@ -1705,5 +1705,51 @@ function check(name, cond, detail = "") {
   check("arrows can be handed to another soul", giver.pack.arrow === 4 && receiver.pack.arrow === 1, JSON.stringify({ giver: giver.pack.arrow, receiver: receiver.pack.arrow }));
 }
 
+// --- 55. plunder: a soul-on-soul kill drops a lootable pile, crowns split instead of landing on the ground ---
+{
+  // Killing a soul spills their pack, minus crowns, at their feet.
+  const s = fresh(2);
+  const [killer, victim] = s.players;
+  killer.pack.sword = 10;
+  victim.x = killer.x;
+  victim.y = killer.y;
+  victim.health = 1;
+  victim.pack.wood = 7;
+  victim.pack.crowns = 10;
+  stepTick(s, [I({ strike: true }), I()]);
+  check("a killed soul leaves exactly one loot pile, at their own spot", s.lootPiles.length === 1, `piles=${s.lootPiles.length}`);
+  const pile = s.lootPiles[0];
+  check("the pile carries what they had, minus crowns", pile.pack.wood === 7 && pile.pack.crowns === 0, JSON.stringify(pile.pack));
+  check("the killer takes a 20% cut of the crowns, and the rest is simply gone", killer.pack.crowns === 2, `crowns=${killer.pack.crowns}`);
+
+  // A death that isn't a killing — starvation, the cold, a beast — leaves nothing to loot.
+  const starved = fresh(1);
+  starved.players[0].needs.satiety = 0;
+  starved.players[0].health = 1;
+  stepTick(starved, [I()]);
+  check("starving to death drops no loot pile", starved.lootPiles.length === 0, `piles=${starved.lootPiles.length}`);
+
+  // Looting sums materials but takes whichever tool is better, not both added together.
+  const looter = fresh(1);
+  const p = looter.players[0];
+  p.pack.wood = 2;
+  p.pack.sword = 3;
+  looter.lootPiles.push({ x: p.x, y: p.y, pack: { ...p.pack, wood: 7, sword: 15 }, diedAtTick: 0 });
+  stepTick(looter, [I({ gather: true })]);
+  check(
+    "looting sums stackable materials and takes the better of a wear-counter tool",
+    p.pack.wood === 9 && p.pack.sword === 15,
+    JSON.stringify({ wood: p.pack.wood, sword: p.pack.sword }),
+  );
+  check("and the pile is gone once looted", looter.lootPiles.length === 0, `piles=${looter.lootPiles.length}`);
+
+  // An unclaimed pile doesn't sit there forever.
+  const rot = fresh(1);
+  rot.lootPiles.push({ x: rot.players[0].x, y: rot.players[0].y, pack: { ...rot.players[0].pack }, diedAtTick: 0 });
+  rot.tick = 1800 + 5; // past LOOT_ROT_TICKS
+  stepTick(rot, [I()]);
+  check("an unclaimed pile rots away after LOOT_ROT_TICKS", rot.lootPiles.length === 0, `piles=${rot.lootPiles.length}`);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

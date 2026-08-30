@@ -15,6 +15,7 @@ import { Rng } from "./rng.js";
 import { World, WORLD_W, WORLD_H, Tile } from "./world.js";
 import {
   Player,
+  Pack,
   Lieutenant,
   Tradeable,
   TRADEABLES,
@@ -306,6 +307,37 @@ const NPC_KILL_STANDING_PENALTY = 60;
 export const NOTORIOUS_STANDING = -100;
 
 /**
+ * Plunder off a body (§28/§30's "the plunder is on the floor," §11.3's own
+ * gap list: "no plunder off the body"). Everything a killed soul carried
+ * spills where they fell — a lootable pile, not a transfer straight to the
+ * killer's pack, so a third soul can beat the killer to it exactly the way
+ * a felled deer already works. Crowns are the one exception: they never
+ * touch the ground. Most of a hoard of crowns is taken before the body is
+ * even cold — his due, the same "he pays for the dead, and takes his cut
+ * first" shape §30A already gives officers — and the rest goes to whoever
+ * actually swung, a small, real incentive for outlawry that a lootable
+ * pile alone doesn't provide (someone else can always out-loot a killer,
+ * but nobody can out-loot a cut that already landed).
+ */
+const KILLER_CROWN_CUT_PCT = 20; // the rest is the King's, and simply gone
+const LOOT_ROT_TICKS = 1800; // ~3 minutes before the valley reclaims an unclaimed pile
+const LOOT_RADIUS = TILE * 1.2; // same reach as a carcass
+/** Wear-counter tools, not stackable counts — looting takes whichever is better rather than summing two "one bow"s into a nonsense number. Everything else in Pack (materials, and `snare`'s carried count) stacks normally. */
+const LOOT_TOOL_KEYS: ReadonlyArray<keyof Pack> = [
+  "spear",
+  "cloak",
+  "knife",
+  "axe",
+  "boots",
+  "gloves",
+  "sword",
+  "copperSword",
+  "fishingLine",
+  "pot",
+  "bow",
+];
+
+/**
  * Commons standing (doc/world/PLAN.md §3): "kindness needs teeth." Of the
  * acts §3 names — stabilising a stranger, sheltering someone, feeding the
  * starving, teaching for free, paying another's mark, purifying land you do
@@ -456,6 +488,21 @@ export interface Incident {
   why: string;
 }
 
+/**
+ * A dead soul's pack, spilled where they fell — PLAN §8.5's "the plunder is
+ * on the floor," said of an officer's death, now true of a player's own.
+ * Only a soul-on-soul kill drops one (§11.3): starvation, the cold, a boar,
+ * a wolf or the Lieutenant take a life and nothing of what it carried —
+ * only another soul's blade leaves something for the ground to keep. Crowns
+ * never land here at all; see `applyCrownCut` for where those actually go.
+ */
+export interface LootPile {
+  x: number;
+  y: number;
+  pack: Pack;
+  diedAtTick: number;
+}
+
 export interface SimState {
   tick: number;
   world: World;
@@ -465,6 +512,7 @@ export interface SimState {
   npcs: Npc[];
   trades: TradeRecord[];
   incidents: Incident[];
+  lootPiles: LootPile[];
   noise: number;
   /** What the Storyteller has done to the Verge, and for how long (§3.5). */
   grief: number; // recent deaths buy the survivors quiet
@@ -521,6 +569,7 @@ export function newSim(seed: number, players: Player[]): SimState {
     npcs: spawnNpcs(),
     trades: [],
     incidents: [],
+    lootPiles: [],
     noise: 0,
     grief: 0,
     coldUntil: 0,
@@ -662,6 +711,10 @@ export function stepTick(state: SimState, inputs: ReadonlyArray<Input>): DeathEv
 
   if (!isBlighted(state)) world.tickRegrowth(state.tick);
   if (world.tickFires(state.tick) > 0) say(state, "A fire burns out. The cold comes back in.");
+  // Unclaimed plunder doesn't wait forever — same shape ash takes a burnt-out fire back.
+  if (state.lootPiles.length > 0) {
+    state.lootPiles = state.lootPiles.filter((pile) => state.tick - pile.diedAtTick < LOOT_ROT_TICKS);
+  }
   if (state.grief > 0 && state.tick % GRIEF_DECAY_EVERY === 0) state.grief--;
   if (state.tick % NOISE_DECAY_EVERY === 0) state.noise = clamp(state.noise - 1, 0, NOISE_MAX);
 
@@ -898,10 +951,21 @@ function stepPlayer(state: SimState, player: Player, input: Input): DeathEvent |
   return player.health <= 0 ? kill(state, player) : null;
 }
 
-/** E — butcher first if there is a carcass to hand, since that is what you meant. */
+/** E — loot a body first if there is one at hand, then butcher a carcass, since either is what you meant before any terrain is. */
 function doGather(state: SimState, player: Player, px: number, py: number): void {
   const { world } = state;
   const pack = player.pack;
+
+  const pileIdx = nearestLootPile(state, player);
+  if (pileIdx >= 0) {
+    const pile = state.lootPiles[pileIdx]!;
+    for (const key of TRADEABLES) pack[key] += pile.pack[key];
+    pack.snare += pile.pack.snare;
+    for (const key of LOOT_TOOL_KEYS) pack[key] = Math.max(pack[key], pile.pack[key]);
+    state.lootPiles.splice(pileIdx, 1);
+    say(state, `Soul #${player.lineage} takes what's left of the dead.`);
+    return;
+  }
 
   const carcass = nearestCreature(state, player, isCarcass);
   if (carcass) {
@@ -1129,6 +1193,7 @@ function strikeNearest(state: SimState, player: Player, radius: number, damage: 
         say(state, "The Grey King: “There. Now you understand what I have always wanted from this valley.”");
       }
       applyOutlawry(state, player, STANDING_KILL_PENALTY);
+      dropLoot(state, player, soulTarget);
     }
     return true;
   }
@@ -1149,6 +1214,30 @@ function strikeNearest(state: SimState, player: Player, radius: number, damage: 
     say(state, "The boar turns on you.");
   }
   return true;
+}
+
+/**
+ * The plunder off a soul-on-soul kill: crowns split (killer's cut now, the
+ * King's share simply gone), everything else spilled as a lootable pile at
+ * the victim's feet — see LootPile and KILLER_CROWN_CUT_PCT above.
+ */
+function dropLoot(state: SimState, killer: Player, victim: Player): void {
+  const crowns = victim.pack.crowns;
+  if (crowns > 0) {
+    const cut = Math.trunc((crowns * KILLER_CROWN_CUT_PCT) / 100);
+    killer.pack.crowns += cut;
+    victim.pack.crowns = 0;
+    say(
+      state,
+      cut > 0
+        ? `Soul #${killer.lineage} takes ${cut} crowns off the body. The rest is gone before it hits the ground — his due.`
+        : `What few crowns Soul #${victim.lineage} carried are gone before they hit the ground — his due.`,
+    );
+  }
+
+  const dropped: Pack = { ...victim.pack };
+  state.lootPiles.push({ x: victim.x, y: victim.y, pack: dropped, diedAtTick: state.tick });
+  say(state, `Soul #${victim.lineage}'s pack spills across the ground. Someone will take it, or the valley will.`);
 }
 
 /** Whatever a melee strike spends: the same priority the damage itself follows. */
@@ -1664,6 +1753,20 @@ function nearestNpc(state: SimState, player: Player, radius: number): Npc | null
       best = npc;
     }
   }
+  return best;
+}
+
+/** Index into state.lootPiles, or -1 — an index rather than the pile itself, since looting it means splicing it out. */
+function nearestLootPile(state: SimState, player: Player): number {
+  let best = -1;
+  let bestSq = LOOT_RADIUS * LOOT_RADIUS;
+  state.lootPiles.forEach((pile, i) => {
+    const d = distSq(pile.x, pile.y, player.x, player.y);
+    if (d <= bestSq) {
+      bestSq = d;
+      best = i;
+    }
+  });
   return best;
 }
 

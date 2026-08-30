@@ -480,8 +480,11 @@ maintenance is the war.
   quieter on a chop]`; hats, mail and plate at the Kiln tier and above
   `[named]`.
 - **Placed and built** — campfire `[built, burns fuel and leaves ash]`, set snare
-  `[built, springs once and is spent]`; kiln, drying rack, tannery, quern, cache,
-  shelter, well, granary, wall `[named]`.
+  `[built, springs once and is spent]`, **loot pile** `[built, PLAN §8.5's
+  "the plunder is on the floor" — spilled by a soul-on-soul kill, fogged
+  like a creature rather than global like a fire, gone after ~3 unclaimed
+  minutes]`; kiln, drying rack, tannery, quern, cache, shelter, well,
+  granary, wall `[named]`.
   Shelter is load-bearing: **logging off camped is safe, the open field is not**
   (the plan's own "Decisions locked" table, not a numbered section — corrected
   from this document's earlier `[plan §25]` citation). No `shelter` object
@@ -873,9 +876,26 @@ proximity — §29's "notorious player-killers... can be plundered into actual
 rank" read literally, one Lieutenant deep. This is a narrow slice of §25/§28's
 outlawry, crossed ahead of §44's own Stage C gate on explicit instruction —
 see this document's gap list, below — and it stops well short of that
-system: no bounty payout, no plunder off a body, no Host rank actually
-offered to a notorious soul. It answers one question narrowly — does
-killing cost you something — not the larger one the full system is for.
+system: no bounty payout, no Host rank actually offered to a notorious
+soul. It answers "does killing cost you something," not the larger question
+the full system is for.
+
+**Plunder off a body is built, narrowly** — PLAN §8.5's "the plunder is on
+the floor," said there of a dead officer, now true of a dead player. A
+soul-on-soul kill (`dropLoot` in tick.ts) spills everything the loser
+carried as a lootable pile at their feet, fogged the same as a creature or
+a villager rather than a landmark like a fire, and left to rot after about
+three unclaimed minutes if nobody takes it. **Crowns are the one exception,
+cut rather than dropped**: 20% straight into the killer's own pack, the
+rest simply gone — his due, the same "he takes a cut before the remainder
+reaches the Hoard" shape §30A already gives his officers, applied to an
+unlicensed kill instead of a licensed one. Looting merges a pile's
+stackable materials by summing (wood, arrows, cordage, the lot) and takes
+whichever of a wear-counter tool is better rather than adding two "one
+bow"s into a number that means nothing — a looter ends up with the
+sharper sword, not two swords. Still not a mark's full weight: no bounty
+payout for a mark, none of §28's other four ways to answer one, and no
+Host rank actually offered to a notorious soul.
 
 **Commons standing (§3's "kindness needs teeth") now has two of its six named
 acts built, out of the same "does Stage B have anywhere to put this" test.**
@@ -1061,12 +1081,15 @@ down by a Lieutenant · **killed by another soul** · **never made it home**.
 The soul-killed one lands like the others do: press SPACE near another
 living, not-graced soul and the same strike that would have hit a deer hits
 them instead — whichever is nearer wins, one shared verb, no separate key.
-It now carries a real, if narrow, consequence — see §8.7 — but still **not**
-a mark's full weight: no bounty payout, no plunder off the body, none of
-§28's five ways to answer a mark. §25/§28's whole outlawry and bounty
+It now carries a real, if narrow, consequence — see §8.7 — and, as of this
+pass, a real plunder (§8.7, §5.2): everything but crowns spills as a
+lootable pile, crowns themselves cut 20% to the killer and the rest gone.
+Still **not** a mark's full weight: no bounty payout, none of §28's five
+ways to answer a mark otherwise. §25/§28's whole outlawry and bounty
 system — the Grey King paying for corpses, a killer visibly taking his
 coin — is still mostly unbuilt; what exists now answers "does killing cost
-you anything," not "does the outlawry economy work."
+you anything, and what does it leave behind," not "does the outlawry
+economy work."
 
 **"Never made it home" is the offline-safety wager's own cause** (§5.2,
 the plan's "Offline: safe when camped, exposed in the field" decision) — a
@@ -1136,7 +1159,13 @@ him.**
 
 **In code today** `[built]`: one-sided giving (T to pick what you offer, G to
 hand one over) with every hand-over appended to a trade ledger from the very
-first one. No currency, no escrow — those are for strangers.
+first one. No currency, no escrow — those are for strangers. **§30/§30A's
+"where the plunder goes" now has a first, narrow answer for a player kill,
+too** (§8.7, §11.3): crowns off a killed soul split exactly the way an
+officer's take does, a cut to whoever did the killing and the remainder
+gone rather than banked anywhere a player could later spend it — Stage B
+has no Hoard for it to actually reach, so "gone" is the honest word rather
+than "banked."
 
 ---
 

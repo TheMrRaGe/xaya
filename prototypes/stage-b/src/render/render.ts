@@ -18,7 +18,7 @@
  */
 import { TILE, clamp } from "../sim/fixed.js";
 import { World, WORLD_W, WORLD_H, Tile, isSolid } from "../sim/world.js";
-import { isNight, CROW_THRESHOLD, NOTORIOUS_STANDING, DeathEvent } from "../sim/tick.js";
+import { isNight, CROW_THRESHOLD, NOTORIOUS_STANDING, DeathEvent, LootPile } from "../sim/tick.js";
 import { Player, Pack, NEED_MAX, HEALTH_MAX } from "../sim/entities.js";
 import { Creature, STATS, CreatureKind } from "../sim/creatures.js";
 import { Npc } from "../sim/npc.js";
@@ -65,6 +65,7 @@ export interface ViewState {
   lieutenant: Lieutenant | null;
   creatures: Creature[];
   npcs: Npc[];
+  lootPiles: LootPile[];
   noise: number;
   crowX: number;
   crowY: number;
@@ -352,7 +353,20 @@ function drawNpc(ctx: CanvasRenderingContext2D, npc: Npc, camera: Camera): void 
   ctx.textAlign = "left";
 }
 
+/** A dropped pack, drawn as a small sack rather than a dot — nothing else in the Verge is a thing to pick up rather than a thing to strike or talk to. */
+function drawLootPile(ctx: CanvasRenderingContext2D, pile: LootPile, camera: Camera): void {
+  const x = toPx(pile.x, camera.x) + TILE_PX / 2 - 6;
+  const y = toPx(pile.y, camera.y) + TILE_PX / 2 - 5;
+  roundRectPath(ctx, x, y, 12, 10, 3);
+  ctx.fillStyle = "#8a6a3a";
+  ctx.fill();
+  ctx.strokeStyle = "#c8a868";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
 export function drawEntities(ctx: CanvasRenderingContext2D, state: ViewState, localId: number, camera: Camera): void {
+  for (const pile of state.lootPiles) drawLootPile(ctx, pile, camera);
   for (const c of state.creatures) drawCreature(ctx, c, camera);
   for (const n of state.npcs) drawNpc(ctx, n, camera);
   drawCrows(ctx, state, camera);
@@ -780,6 +794,12 @@ const NEARBY_UNITS = TILE * 1.5;
 function usableActions(state: ViewState, p: Player): Array<{ key: string; label: string }> {
   if (p.talkingTo !== null) return [{ key: "H", label: "Leave" }, { key: "1-9", label: "Reply" }];
   const actions: Array<{ key: string; label: string }> = [];
+  // Plunder is rare and time-limited (LOOT_ROT_TICKS), so it outranks
+  // everything else worth doing this second — same reach doGather's own
+  // loot-first priority in tick.ts uses, approximated the same way
+  // NEARBY_UNITS already stands in for TALK_RADIUS below.
+  const nearLoot = state.lootPiles.some((pile) => (pile.x - p.x) ** 2 + (pile.y - p.y) ** 2 <= NEARBY_UNITS * NEARBY_UNITS);
+  if (nearLoot) actions.push({ key: "E", label: "Loot" });
   if (p.atFire) actions.push({ key: "F", label: "Feed fire" });
   else if (p.pack.wood >= 5) actions.push({ key: "F", label: "Build fire" });
   if (p.pack.cookedMeat > 0 || p.pack.fish > 0 || p.pack.rawMeat > 0) actions.push({ key: "4", label: "Eat" });

@@ -32,7 +32,7 @@ and the other machine opens `http://<your-ip>:8000/`. It binds to localhost
 by default, because opening a game server to the network should be a thing
 you typed rather than a thing that happened.
 
-`npm test` runs the checks (310 of them across 5 suites, ~2s, no browser). `npm run build`
+`npm test` runs the checks (317 of them across 5 suites, ~2s, no browser). `npm run build`
 and `npm run serve` are available separately, and `npm run watch` recompiles
 on save.
 
@@ -87,7 +87,7 @@ is often registered as `text/plain`, and Chrome refuses a
 | key | verb |
 |---|---|
 | **WASD / arrows** | move |
-| **E** | gather — chop a tree, chip a rock, pick a bush, drink from water, or butcher a carcass you're standing over |
+| **E** | gather — loot a dead soul's pack first if you're standing over one, then butcher a carcass, chop a tree, chip a rock, pick a bush, or drink from water |
 | **SPACE** | strike — hit the nearest living thing in reach, or, if nothing is that close and a bow is strung and loaded, shoot the nearest thing within a bow's reach instead |
 | **F** | feed the fire you're standing at (1 wood), or build one where there isn't one (5 wood, on grass) |
 | **1** | sharpen a spear (3 wood) — 3 damage a hit instead of 1, for 12 hits |
@@ -525,6 +525,24 @@ plan committed at the repo root's `doc/world/`.
   unlike every wear-counter tool before it), so a Fletcher can resupply a
   soul who never fletched one — the same shape a Miner's ore already has,
   and a Smith's sword never did.
+- **Killing another soul now leaves something behind.** PLAN §8.5's own
+  line about an officer's death — "the plunder is on the floor" — made
+  true of a player's for the first time. Everything the loser carried
+  spills as a lootable pile where they fell (**E** loots it first, ahead
+  of a carcass, if you're standing over one), except crowns: those are cut
+  on the spot rather than dropped, a 20% share straight into the killer's
+  own pack and the rest simply gone — his due, the same "he takes a cut
+  before the rest reaches the Hoard" shape §30A already gives his
+  officers. A pile is fogged like a creature or a villager (personal, not
+  a landmark) and rots after about three unclaimed minutes, the same way
+  ash takes a dead fire back. Looting sums whatever actually stacks (wood,
+  arrows, cordage, the lot) and takes whichever of a wear-counter tool is
+  better rather than adding two "one bow"s into a number that means
+  nothing — you don't end up with two swords, you end up with the sharper
+  one. This still isn't a mark's full weight (§28's five ways to answer
+  one, and any bounty payout for a mark, remain entirely unbuilt) — it
+  answers "what happens to the body," not "does the outlawry economy
+  work."
 - **The Verge stopped being a grid of dice rolls.** Every tile used to get
   its own independent `rng.nextInt(100)` — trees, water and stone all fell
   as an even sprinkle, which never read as a valley. Generation is now a
@@ -757,10 +775,13 @@ SPACE striking another soul at all, with its own honest death cause; a real
 cost for doing it — a kill marks the killer and drops their standing, and
 enough kills makes the Lieutenant stop hunting them altogether; and one way
 back — feeding a genuinely hungry soul builds Commons standing (see the two
-bullets above). No bounty payout, no plunder off a body, and no murder-guild
-economy came with any of the three passes — that is still exactly as
-unbuilt as it was, and is a much bigger question than whether killing costs
-you something and can be climbed back from.
+bullets above). A fourth pass, later, added plunder: a soul-on-soul kill now
+drops the loser's pack as a lootable pile (crowns split instead — a killer's
+cut now, the King's share simply gone, §30A's shape), see the bow bullet's
+neighbour below. No bounty payout and no murder-guild economy came with any
+of these passes — that is still exactly as unbuilt as it was, and is a
+bigger question than whether killing costs you something and can be climbed
+back from.
 
 Explicitly **out**, same as the plan says otherwise: land, guilds, ecology
 population math, the Shards, magic, the bounty/plunder half of the outlawry
