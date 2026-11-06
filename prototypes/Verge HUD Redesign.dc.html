@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#0a0a0a; }
+    @keyframes pulseRing { 0%,100%{ box-shadow:0 0 0 0 rgba(224,60,60,0.45);} 50%{ box-shadow:0 0 0 6px rgba(224,60,60,0);} }
+  </style>
+</helmet>
+
+<div style="background:#0a0a0a; min-height:100vh; padding:56px 40px 96px; display:flex; flex-direction:column; gap:64px; align-items:center; font-family:'Inter',sans-serif; color:#e8e0c8;">
+
+  <div style="max-width:900px; text-align:center; display:flex; flex-direction:column; gap:10px;">
+    <div style="font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#9a9284;">The Verge — Stage B</div>
+    <h1 style="margin:0; font-size:34px; font-weight:700; color:#f2ead2;">HUD &amp; Screen-Space Redesign</h1>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#b8ae9a;">The world viewport and tile art are untouched — this is a chrome pass. Today's HUD is a full-width text block stacked below the view, roughly as tall as the map itself. The redesign moves everything into compact overlays on top of the viewport, uses icons and bars instead of monospace dumps, and pushes the recipe list behind a toggle.</p>
+  </div>
+
+  <!-- ============ BEFORE / AFTER MAIN HUD ============ -->
+  <div style="display:flex; gap:40px; flex-wrap:wrap; justify-content:center; align-items:flex-start;">
+
+    <!-- BEFORE -->
+    <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <div style="font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#c02020;">Before</div>
+      <div style="width:768px; background:#0a0a0a; border:1px solid #262626; display:flex; flex-direction:column;">
+        <!-- viewport -->
+        <div style="position:relative; width:768px; height:512px; background:#3a5a34; overflow:hidden;">
+          <div style="position:absolute; left:0; top:0; width:220px; height:180px; background:#2a4a6a;"></div>
+          <div style="position:absolute; left:0; top:130px; width:110px; height:70px; background:#8a4a1a;"></div>
+          <div style="position:absolute; left:0; top:280px; width:110px; height:90px; background:#5c4a2a;"></div>
+          <div style="position:absolute; left:330px; top:60px; width:150px; height:110px; background:#6e6e73; opacity:0.85;"></div>
+          <div style="position:absolute; left:820px; top:230px; width:0; height:0;"></div>
+          <div style="position:absolute; right:40px; top:200px; width:170px; height:150px; background:#5a7a3a; border-radius:6px;"></div>
+          <div style="position:absolute; left:340px; top:220px; width:14px; height:14px; border-radius:50%; background:#c8c8c0;"></div>
+          <div style="position:absolute; left:420px; top:230px; width:12px; height:12px; border-radius:50%; background:#c8a878;"></div>
+          <div style="position:absolute; top:8px; right:8px; width:140px; height:93px; background:rgba(10,10,12,0.6); border:1px solid rgba(232,224,200,0.4);"></div>
+        </div>
+        <!-- hud -->
+        <div style="background:#111; padding:8px 10px 12px; font-family:'IBM Plex Mono',monospace;">
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <div style="width:150px; height:16px; background:#222; border:1px solid #000; position:relative;"><div style="position:absolute; inset:0; width:82%; background:#4caf50;"></div><span style="position:relative; font-size:10px; color:#fff; padding-left:4px; line-height:16px;">satiety</span></div>
+            <div style="width:150px; height:16px; background:#222; border:1px solid #000; position:relative;"><div style="position:absolute; inset:0; width:70%; background:#4caf50;"></div><span style="position:relative; font-size:10px; color:#fff; padding-left:4px; line-height:16px;">hydration</span></div>
+            <div style="width:150px; height:16px; background:#222; border:1px solid #000; position:relative;"><div style="position:absolute; inset:0; width:60%; background:#4caf50;"></div><span style="position:relative; font-size:10px; color:#fff; padding-left:4px; line-height:16px;">warmth</span></div>
+            <div style="width:150px; height:16px; background:#222; border:1px solid #000; position:relative;"><div style="position:absolute; inset:0; width:88%; background:#4caf50;"></div><span style="position:relative; font-size:10px; color:#fff; padding-left:4px; line-height:16px;">health</span></div>
+            <div style="width:108px; height:16px; background:#222; border:1px solid #000; position:relative;"><div style="position:absolute; inset:0; width:35%; background:#e0a020;"></div><span style="position:relative; font-size:10px; color:#fff; padding-left:4px; line-height:16px;">noise!</span></div>
+          </div>
+          <div style="font-size:11px; color:#ccc; line-height:1.5;">soul #14&nbsp;&nbsp;night&nbsp;&nbsp;kills 0&nbsp;&nbsp;[at fire]&nbsp;&nbsp;[unseen 10s]</div>
+          <div style="font-size:11px; color:#ccc; line-height:1.5;">wood 0&nbsp;&nbsp;stone 0&nbsp;&nbsp;cord 0&nbsp;&nbsp;meat 0 raw / 0 cooked&nbsp;&nbsp;hide 0</div>
+          <div style="font-size:11px; color:#ccc; line-height:1.5;">ore 0&nbsp;&nbsp;charcoal 0&nbsp;&nbsp;bar 0&nbsp;&nbsp;fish 0</div>
+          <div style="font-size:11px; color:#c8b088; line-height:1.5;">no tools</div>
+          <div style="font-size:11px; color:#9ab08a; line-height:1.5;">wood 0&nbsp;&nbsp;hunt 0&nbsp;&nbsp;butc 0&nbsp;&nbsp;cook 0&nbsp;&nbsp;tail 0&nbsp;&nbsp;trap 0&nbsp;&nbsp;smit 0&nbsp;&nbsp;fish 0</div>
+          <div style="font-size:10.5px; color:#8a8a8a; line-height:1.6; margin-top:4px;">
+            WASD move · E gather/chip/butcher · SPACE strike · F fire (5 wood) / feed (1)<br>
+            1 spear (3w) · 2 cook · 3 cloak (2 hide) · 4 eat · 5 knife (1s 1w) · 6 axe (2s 1w)<br>
+            7 cord (1 hide, needs knife) · 8 snare (2 cord 1w), again to set · T offer: wood · G give<br>
+            9 charcoal (3w, at fire) · 0 smelt (2 ore 1 char, or 3 copper, or 1 crown — at fire)<br>
+            B sword (2 bar 1w 1 cord, or 2 copper bar 1w 1 cord — weaker) · P pot (3 clay, at fire)<br>
+            L line (2 cord 1w) · C fish, at the water's edge — press again to keep casting<br>
+            O boots (2 hide 1 cord): softer marsh · V gloves (2 hide 1 cord): quieter stone, ore, copper
+          </div>
+          <div style="font-size:11px; color:#d8c8a0; margin-top:6px;">Soul #13 is dead — died of thirst.<br>The Grey King: "Another one stops moving. The Verge keeps what it is owed."</div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#9a9284; max-width:768px; text-align:center;">HUD block ≈240px tall — almost half the viewport's height — 8 lines of recipes shown at all times, no visual hierarchy between vitals, inventory and lore.</div>
+    </div>
+
+    <!-- AFTER -->
+    <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <div style="font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#4caf50;">After</div>
+      <div style="width:768px; height:512px; position:relative; background:#3a5a34; border:1px solid #262626; overflow:hidden;">
+        <div style="position:absolute; left:0; top:0; width:220px; height:180px; background:#2a4a6a;"></div>
+        <div style="position:absolute; left:0; top:130px; width:110px; height:70px; background:#8a4a1a;"></div>
+        <div style="position:absolute; left:0; top:280px; width:110px; height:90px; background:#5c4a2a;"></div>
+        <div style="position:absolute; left:330px; top:60px; width:150px; height:110px; background:#6e6e73; opacity:0.85;"></div>
+        <div style="position:absolute; right:40px; top:200px; width:170px; height:150px; background:#5a7a3a; border-radius:6px;"></div>
+        <div style="position:absolute; left:340px; top:220px; width:14px; height:14px; border-radius:50%; background:#c8c8c0;"></div>
+        <div style="position:absolute; left:420px; top:230px; width:12px; height:12px; border-radius:50%; background:#c8a878;"></div>
+
+        <!-- vitals cluster, top-left overlay -->
+        <div style="position:absolute; top:12px; left:12px; width:172px; background:rgba(12,12,14,0.78); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:7px; backdrop-filter:blur(3px);">
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:9px; height:9px; border-radius:50%; background:#e0a020; flex-shrink:0;"></div><div style="flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden;"><div style="width:82%; height:100%; background:#e0a020;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#cfc7b0; width:26px; text-align:right;">82</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:9px; height:9px; transform:rotate(45deg); background:#4a90c0; flex-shrink:0;"></div><div style="flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden;"><div style="width:70%; height:100%; background:#4a90c0;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#cfc7b0; width:26px; text-align:right;">70</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:9px; height:9px; border-radius:3px; background:#d9772e; flex-shrink:0;"></div><div style="flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden;"><div style="width:60%; height:100%; background:#d9772e;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#cfc7b0; width:26px; text-align:right;">60</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:9px; height:9px; transform:rotate(45deg); background:#c02020; flex-shrink:0;"></div><div style="flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden;"><div style="width:88%; height:100%; background:#c02020;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#cfc7b0; width:26px; text-align:right;">88</div></div>
+        </div>
+
+        <!-- status chip -->
+        <div style="position:absolute; top:100px; left:12px; display:flex; align-items:center; gap:6px; background:rgba(12,12,14,0.78); border:1px solid rgba(255,255,255,0.08); border-radius:999px; padding:4px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#cfc7b0;">
+          <div style="width:6px; height:6px; border-radius:50%; background:#3a4a6a;"></div>
+          soul #14 · night · unseen 10s
+        </div>
+
+        <!-- noise gauge, top center -->
+        <div style="position:absolute; top:12px; left:50%; transform:translateX(-50%); width:190px; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="font-size:9.5px; letter-spacing:1.5px; color:#e0a020; font-weight:600;">NOISE</div>
+          <div style="width:100%; height:7px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden;"><div style="width:35%; height:100%; background:linear-gradient(90deg,#4caf50,#e0a020);"></div></div>
+        </div>
+
+        <!-- minimap top-right -->
+        <div style="position:absolute; top:10px; right:10px; width:140px; height:93px; background:rgba(12,12,14,0.7); border:1px solid rgba(232,224,200,0.35); border-radius:8px;"></div>
+
+        <!-- resource tray bottom-left -->
+        <div style="position:absolute; bottom:12px; left:12px; display:flex; align-items:center; gap:6px; background:rgba(12,12,14,0.78); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:6px 8px;">
+          <div style="display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:2px; background:#9c7a4a;"></div>0</div>
+          <div style="display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:2px; background:#8a8a8a;"></div>0</div>
+          <div style="display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:2px; background:#a86868;"></div>0</div>
+          <div style="width:1px; height:16px; background:rgba(255,255,255,0.15); margin:0 2px;"></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#8a8280;">no tools</div>
+          <div style="margin-left:4px; width:16px; height:16px; border-radius:4px; border:1px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; font-size:10px; color:#cfc7b0;">▾</div>
+        </div>
+
+        <!-- action bar bottom center -->
+        <div style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px;">
+          <div style="display:flex; align-items:center; gap:6px; background:rgba(12,12,14,0.82); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:5px 10px 5px 6px;">
+            <div style="width:18px; height:18px; border-radius:4px; background:#26262a; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#e8e0c8;">F</div>
+            <div style="font-size:11.5px; color:#d8cfb8;">Feed fire</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; background:rgba(12,12,14,0.82); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:5px 10px 5px 6px;">
+            <div style="width:18px; height:18px; border-radius:4px; background:#26262a; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#e8e0c8;">4</div>
+            <div style="font-size:11.5px; color:#d8cfb8;">Eat</div>
+          </div>
+        </div>
+
+        <!-- tab hint bottom right -->
+        <div style="position:absolute; bottom:12px; right:12px; display:flex; align-items:center; gap:6px; background:rgba(12,12,14,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:999px; padding:5px 11px 5px 7px;">
+          <div style="width:16px; height:16px; border-radius:4px; background:#26262a; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#e8e0c8;">⇥</div>
+          <div style="font-size:10.5px; color:#a89e8a;">Crafting &amp; controls</div>
+        </div>
+
+        <!-- narration toast -->
+        <div style="position:absolute; bottom:56px; left:50%; transform:translateX(-50%); max-width:420px; background:rgba(20,14,10,0.85); border:1px solid rgba(216,184,120,0.35); border-radius:8px; padding:7px 14px; font-size:11.5px; color:#e0c9a0; text-align:center; font-style:italic;">
+          "Another one stops moving. The Verge keeps what it is owed."
+        </div>
+      </div>
+      <div style="font-size:12px; color:#9a9284; max-width:768px; text-align:center;">Viewport reclaims the full frame — vitals, noise, minimap, resources and controls are compact overlays that only occupy their corners; the recipe dump moves behind a Tab panel; narration is a transient toast, not a permanent line.</div>
+    </div>
+  </div>
+
+  <!-- ============ CHANGE LOG ============ -->
+  <div style="max-width:860px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+    <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#c8bfa8; max-width:260px;"><b style="color:#e8e0c8;">Vitals →</b> 4 full-width text bars become a compact icon+bar cluster, always visible, ~15% of the space.</div>
+    <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#c8bfa8; max-width:260px;"><b style="color:#e8e0c8;">Noise →</b> gets its own top-center gauge since it's the core mechanic, not buried between hydration and health.</div>
+    <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#c8bfa8; max-width:260px;"><b style="color:#e8e0c8;">Inventory →</b> a collapsed chip tray shows carried goods; a caret expands the full pack grid on demand instead of two dense text lines always on.</div>
+    <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#c8bfa8; max-width:260px;"><b style="color:#e8e0c8;">Controls →</b> the 8-line recipe list moves to a Tab-toggled panel; the always-on bar shows only 1-2 verbs actually usable right now.</div>
+    <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#c8bfa8; max-width:260px;"><b style="color:#e8e0c8;">Narration →</b> the Grey King's lines become a fading toast instead of a permanent HUD line competing with everything else.</div>
+    <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#c8bfa8; max-width:260px;"><b style="color:#e8e0c8;">Net gain →</b> viewport keeps its full 512px height; HUD chrome drops from ~240px of dedicated space to overlays inside the existing frame.</div>
+  </div>
+
+  <!-- ============ CRAFTING / CONTROLS PANEL ============ -->
+  <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+    <div style="font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">After — Crafting &amp; Controls (Tab)</div>
+    <div style="width:768px; height:512px; position:relative; background:#24241f;">
+      <div style="position:absolute; inset:0; background:rgba(6,6,6,0.72);"></div>
+      <div style="position:absolute; top:40px; left:64px; right:64px; bottom:40px; background:rgba(16,15,13,0.96); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-size:16px; font-weight:600; color:#f2ead2;">Craft &amp; survive</div>
+          <div style="display:flex; gap:14px; font-size:12px; color:#9a9284;">
+            <div style="color:#e0a020; border-bottom:2px solid #e0a020; padding-bottom:4px;">Tools</div>
+            <div>Food</div><div>Gear</div><div>Fire &amp; smithing</div><div>Fishing &amp; traps</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+          <div style="background:#1c1b18; border:1px solid #333; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:13px; color:#e8e0c8; font-weight:500;">Spear</div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; background:#2a2925; border-radius:4px; padding:2px 6px; color:#cfc7b0;">1</div></div>
+            <div style="font-size:11px; color:#9a9284;">3 wood · 12 hits · 3 dmg</div>
+          </div>
+          <div style="background:#1c1b18; border:1px solid #333; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:13px; color:#e8e0c8; font-weight:500;">Knife</div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; background:#2a2925; border-radius:4px; padding:2px 6px; color:#cfc7b0;">5</div></div>
+            <div style="font-size:11px; color:#9a9284;">1 stone · 1 wood · 20 uses</div>
+          </div>
+          <div style="background:#1c1b18; border:1px solid #333; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:13px; color:#e8e0c8; font-weight:500;">Axe</div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; background:#2a2925; border-radius:4px; padding:2px 6px; color:#cfc7b0;">6</div></div>
+            <div style="font-size:11px; color:#9a9284;">2 stone · 1 wood · 25 uses</div>
+          </div>
+          <div style="background:#1c1b18; border:1px solid #333; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; opacity:0.4;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:13px; color:#e8e0c8; font-weight:500;">Sword</div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; background:#2a2925; border-radius:4px; padding:2px 6px; color:#cfc7b0;">B</div></div>
+            <div style="font-size:11px; color:#9a9284;">2 bar · 1 wood · 1 cord — need bar</div>
+          </div>
+          <div style="background:#1c1b18; border:1px solid #333; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; opacity:0.4;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:13px; color:#e8e0c8; font-weight:500;">Boots</div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; background:#2a2925; border-radius:4px; padding:2px 6px; color:#cfc7b0;">O</div></div>
+            <div style="font-size:11px; color:#9a9284;">2 hide · 1 cord — softer marsh</div>
+          </div>
+          <div style="background:#1c1b18; border:1px solid #333; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; opacity:0.4;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:13px; color:#e8e0c8; font-weight:500;">Gloves</div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; background:#2a2925; border-radius:4px; padding:2px 6px; color:#cfc7b0;">V</div></div>
+            <div style="font-size:11px; color:#9a9284;">2 hide · 1 cord — quieter dig</div>
+          </div>
+        </div>
+        <div style="margin-top:auto; font-size:11px; color:#7a7568; text-align:center;">Grey out = missing ingredients. WASD move · SPACE strike · G give · Tab to close</div>
+      </div>
+    </div>
+    <div style="font-size:12px; color:#9a9284; max-width:768px; text-align:center;">Every recipe currently crammed into 6 permanent HUD lines becomes an on-demand, categorized, glanceable grid — greyed cards show what's missing instead of forcing a mental cost lookup.</div>
+  </div>
+
+  <!-- ============ DEATH SCREEN ============ -->
+  <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+    <div style="font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">After — Death Screen</div>
+    <div style="width:768px; height:512px; position:relative; background:#0c0c0c; display:flex; align-items:center; justify-content:center;">
+      <div style="width:480px; background:rgba(16,15,13,0.9); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:32px 36px; display:flex; flex-direction:column; gap:18px; align-items:center; text-align:center;">
+        <div style="font-size:11px; letter-spacing:2px; color:#c02020; text-transform:uppercase;">Soul #14 has fallen</div>
+        <div style="font-size:22px; font-weight:600; color:#f2ead2;">Died of thirst</div>
+        <div style="display:flex; gap:10px;">
+          <div style="background:#1c1b18; border-radius:8px; padding:8px 14px; font-family:'IBM Plex Mono',monospace;"><div style="font-size:15px; color:#e8e0c8;">0</div><div style="font-size:9.5px; color:#8a8278; letter-spacing:0.5px;">WOOD</div></div>
+          <div style="background:#1c1b18; border-radius:8px; padding:8px 14px; font-family:'IBM Plex Mono',monospace;"><div style="font-size:15px; color:#e8e0c8;">0</div><div style="font-size:9.5px; color:#8a8278; letter-spacing:0.5px;">BEASTS</div></div>
+          <div style="background:#1c1b18; border-radius:8px; padding:8px 14px; font-family:'IBM Plex Mono',monospace;"><div style="font-size:15px; color:#e8e0c8;">142s</div><div style="font-size:9.5px; color:#8a8278; letter-spacing:0.5px;">SURVIVED</div></div>
+        </div>
+        <div style="font-size:12.5px; color:#a89878; font-style:italic;">They were a fair butcher. The next soul starts at nothing.</div>
+        <div style="width:100%; height:1px; background:rgba(255,255,255,0.08);"></div>
+        <div style="width:100%; display:flex; flex-direction:column; gap:6px;">
+          <div style="font-size:10.5px; letter-spacing:1.5px; color:#8a8278; text-transform:uppercase; margin-bottom:2px;">The Barrow-list</div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:#c8bfa8; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);"><span>#13</span><span>died of thirst</span></div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:#c8bfa8; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);"><span>#12</span><span>killed by a wolf</span></div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:#c8bfa8; padding:4px 0;"><span>#11</span><span>killed by the Lieutenant</span></div>
+        </div>
+        <div style="margin-top:6px; font-size:11.5px; color:#6f6a5e;">Press any key to begin again, as the next soul.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DIALOGUE ============ -->
+  <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+    <div style="font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">After — Dialogue</div>
+    <div style="width:768px; height:512px; position:relative; background:#3a5a34; overflow:hidden;">
+      <div style="position:absolute; inset:0; background:rgba(0,0,0,0.35);"></div>
+      <div style="position:absolute; left:24px; right:24px; bottom:24px; background:rgba(14,13,11,0.94); border:1px solid rgba(216,184,120,0.3); border-radius:12px; padding:16px 20px; display:flex; gap:16px;">
+        <div style="width:44px; height:44px; border-radius:10px; background:#d8b878; flex-shrink:0;"></div>
+        <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:13px; font-weight:600; color:#d8b878;">The Teacher</div>
+          <div style="font-size:13px; color:#e8e0c8; line-height:1.5;">Snares pay while you're somewhere else. Set one in the grass, walk away, come back tomorrow — that's the whole trick of it.</div>
+          <div style="display:flex; flex-direction:column; gap:5px; margin-top:4px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#c8bfa8;"><div style="width:16px; height:16px; border-radius:4px; background:#26262a; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9.5px;">1</div>How do I set one?</div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#c8bfa8;"><div style="width:16px; height:16px; border-radius:4px; background:#26262a; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9.5px;">2</div>What else should I know?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px; color:#9a9284; max-width:768px; text-align:center;">Same monospace box becomes a visual-novel panel: a portrait swatch, speaker name in the NPC's own colour, numbered choices as keycap rows instead of a plain text list.</div>
+  </div>
+
+  <!-- ============ FURTHER NOTES ============ -->
+  <div style="max-width:860px; display:flex; flex-direction:column; gap:14px;">
+    <div style="font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a; text-align:center;">Further improvement notes</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Crafting as a menu, not raw number keys —</b> right now 0-9/B/L/P/O/V each fire a specific recipe from memory. Keep the keys as shortcuts, but let Tab open a real menu (mockup above) you can also click/select — new players shouldn't need the README open in another tab.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">A hotbar for what you're carrying —</b> spear/sword/knife/axe currently only show as text in the kit line. A small slot row (like the resource tray) showing your equipped/held tools would read faster than parsing a sentence.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">"T offer / G give" needs a visible state —</b> what you're currently offering to trade is buried in the controls text. Surface it as a small highlighted chip near the resource tray so a nearby player (and you) can see it without reading a sentence.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Skill levels are invisible progress right now —</b> "wood 0 hunt 0 butc 0..." reads as a debug line. Small tick-marks or a level pip per skill (shown only in the expanded pack panel, not the always-on HUD) would make leveling feel like progress instead of a stat dump.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Noise threshold needs a clearer "you're about to be seen" signal —</b> today it's a bar changing color. A screen-edge vignette pulse or a crow-count readout the moment you cross CROW_THRESHOLD would teach the core mechanic faster than the number alone.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Standing/marked state deserves an icon, not a bracketed clause —</b> "[marked, standing -40]" is easy to miss mid-sentence. A small badge next to the status chip (neutral/marked/notorious) reads at a glance.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Narration toasts should queue, not overwrite —</b> the Grey King's lines and death notices currently share one 2-line log. Two toasts stacking briefly (with the older one fading first) avoids losing a line to a fast second event.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Minimap could mark your fire(s) —</b> terrain-only is right for hiding creatures, but a soul's own built fires are already public knowledge (global, not fogged) — a small dot for "your fire" would help with a map nine times the original size.</div>
+      <div style="background:#141412; border:1px solid #2a2a26; border-radius:8px; padding:12px 16px; font-size:13px; color:#c8bfa8; line-height:1.5;"><b style="color:#e8e0c8;">Color-blind safety —</b> health/warmth/hydration all lean on red vs. green vs. blue at a glance. Since bars now carry an icon shape too (circle/diamond/square), that shape is already a non-color cue — worth keeping deliberately as the redesign is implemented, not dropped for polish.</div>
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

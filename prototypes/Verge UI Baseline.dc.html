@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>body{margin:0;background:#0a0a0a;}</style>
+</helmet>
+
+<div style="background:#0a0a0a; min-height:100vh; padding:56px 40px 96px; display:flex; flex-direction:column; gap:40px; align-items:center; font-family:'Inter',sans-serif; color:#e8e0c8;">
+
+  <div style="max-width:900px; text-align:center; display:flex; flex-direction:column; gap:10px;">
+    <div style="font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#9a9284;">The Verge — Design Baseline</div>
+    <h1 style="margin:0; font-size:32px; font-weight:700; color:#f2ead2;">UI elements from the ARCHON plan</h1>
+    <p style="margin:0; font-size:15px; line-height:1.6; color:#b8ae9a;">Systems named in doc/world/PLAN.md that aren't built yet, sketched in the same visual language as the HUD redesign — so whatever gets built next starts from one baseline instead of a blank page. Low-fidelity on purpose: these are wireframes to react to, not final screens.</p>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(440px,1fr)); gap:28px; max-width:1360px; width:100%;">
+
+    <!-- STANDING & THE MARK -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">1 · Standing &amp; the Mark <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— §2A / §3</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:20px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:13px; color:#c8bfa8;">How the road speaks of you</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 9px; border-radius:999px; background:rgba(192,32,32,0.18); color:#e07a7a; border:1px solid rgba(192,32,32,0.4);">marked · -40</div>
+        </div>
+        <div style="height:8px; border-radius:4px; background:#242220; position:relative; overflow:hidden;">
+          <div style="position:absolute; left:50%; top:0; bottom:0; width:20%; background:#c02020;"></div>
+          <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:rgba(255,255,255,0.3);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#8a8278; font-family:'IBM Plex Mono',monospace;"><span>notorious</span><span>neutral</span><span>commons</span></div>
+        <div style="height:1px; background:rgba(255,255,255,0.08);"></div>
+        <div style="font-size:12px; color:#9a9284;">Commons standing — built by kindness to strangers</div>
+        <div style="height:8px; border-radius:4px; background:#242220; overflow:hidden;"><div style="width:22%; height:100%; background:#4caf50;"></div></div>
+        <div style="font-size:11px; color:#7a7568;">Fed a starving soul: <span style="color:#9ab08a;">+15</span> · A kill: <span style="color:#c26a6a;">-40</span></div>
+      </div>
+    </div>
+
+    <!-- SKILLS / PROFESSIONS -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">2 · Skills &amp; Professions <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— §17 / §6.10</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:11px; color:#7a7568; margin-bottom:2px;">Dies with the soul — every hour spent is the only thing that separates two players.</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px;">
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:70px; font-size:11.5px; color:#c8bfa8;">Woodcraft</div><div style="flex:1; height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:0%; height:100%; background:#8a9a6a;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6f6a5e;">0</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:70px; font-size:11.5px; color:#c8bfa8;">Hunting</div><div style="flex:1; height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:0%; height:100%; background:#8a9a6a;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6f6a5e;">0</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:70px; font-size:11.5px; color:#c8bfa8;">Butchery</div><div style="flex:1; height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:0%; height:100%; background:#8a9a6a;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6f6a5e;">0</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:70px; font-size:11.5px; color:#c8bfa8;">Trapping</div><div style="flex:1; height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:0%; height:100%; background:#8a9a6a;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6f6a5e;">0</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:70px; font-size:11.5px; color:#c8bfa8;">Smithing</div><div style="flex:1; height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:0%; height:100%; background:#8a9a6a;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6f6a5e;">0</div></div>
+          <div style="display:flex; align-items:center; gap:8px;"><div style="width:70px; font-size:11.5px; color:#c8bfa8;">Fishing</div><div style="flex:1; height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:0%; height:100%; background:#8a9a6a;"></div></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6f6a5e;">0</div></div>
+        </div>
+        <div style="font-size:10.5px; color:#5f5b52; margin-top:4px;">Farmer, Herder, Tanner, Teacher — named in §17, unbuilt — slot into the same grid once they exist.</div>
+      </div>
+    </div>
+
+    <!-- BARROW-LIST BOARD -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">3 · The Barrow-list, as a board <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— §10</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:6px;">
+        <div style="font-size:11px; color:#7a7568; margin-bottom:4px;">"The truest tutorial in the game" — a village's own dead, readable before anything else.</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="font-size:12px; color:#e8e0c8;">Soul #13</div><div style="font-size:11.5px; color:#9a9284;">died of thirst</div><div style="font-size:10px; color:#6f6a5e; font-family:'IBM Plex Mono',monospace;">142s</div></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="font-size:12px; color:#e8e0c8;">Soul #12</div><div style="font-size:11.5px; color:#9a9284;">killed by a wolf — was a fair trapper</div><div style="font-size:10px; color:#6f6a5e; font-family:'IBM Plex Mono',monospace;">301s</div></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0;"><div style="font-size:12px; color:#e8e0c8;">Soul #11</div><div style="font-size:11.5px; color:#c26a6a;">killed by another soul</div><div style="font-size:10px; color:#6f6a5e; font-family:'IBM Plex Mono',monospace;">88s</div></div>
+        <div style="font-size:10.5px; color:#5f5b52; margin-top:6px;">Today's death screen shows the last 3 — this is that same list as a standing, readable-anytime board.</div>
+      </div>
+    </div>
+
+    <!-- TRADE / GIVING -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">4 · Trade &amp; giving <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— stage-b trade ledger</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-size:12px; color:#9a9284;">You're offering</div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #333; border-radius:999px; padding:4px 10px;"><div style="width:8px; height:8px; border-radius:2px; background:#9c7a4a;"></div><span style="font-size:12px; color:#e8e0c8;">wood</span></div>
+        </div>
+        <div style="height:1px; background:rgba(255,255,255,0.08);"></div>
+        <div style="font-size:11px; color:#7a7568;">Recent hand-overs</div>
+        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#c8bfa8;"><span>you → #14</span><span>1 cooked meat</span></div>
+        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#c8bfa8;"><span>#12 → you</span><span>1 hide</span></div>
+        <div style="font-size:10.5px; color:#5f5b52; margin-top:2px;">Every hand-over is already logged server-side — this just makes the ledger visible instead of implicit.</div>
+      </div>
+    </div>
+
+    <!-- THE UNBOWED -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">5 · An Unbowed encounter <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— §9</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div style="width:36px; height:36px; border-radius:8px; background:#8a7a5a; flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:13px; font-weight:600; color:#d8b878;">The Waiting Hound</div>
+            <div style="font-size:11.5px; color:#9a9284;">Still waiting for "back before dark."</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <div style="flex:1; text-align:center; background:#1c1b18; border:1px solid #333; border-radius:8px; padding:8px 6px; font-size:11.5px; color:#c8bfa8;">Keep<div style="font-size:10px; color:#6f6a5e; margin-top:2px;">stays, unpaid</div></div>
+          <div style="flex:1; text-align:center; background:#1c1b18; border:1px solid #4a2222; border-radius:8px; padding:8px 6px; font-size:11.5px; color:#c88a8a;">Kill<div style="font-size:10px; color:#6f6a5e; margin-top:2px;">his coin, gone forever</div></div>
+          <div style="flex:1; text-align:center; background:#1c1b18; border:1px solid #2a4a2a; border-radius:8px; padding:8px 6px; font-size:11.5px; color:#9ab08a;">Free it<div style="font-size:10px; color:#6f6a5e; margin-top:2px;">costs the walk, no reward</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WITNESS / TESTIMONY -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">6 · Testimony <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— §3 truth layer / Sigil of Witness</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:12px; color:#c8bfa8;">"There is grey in the north well."</div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:#9a9284;">
+          <div style="display:flex;">
+            <div style="width:18px; height:18px; border-radius:50%; background:#88c0e8; border:2px solid #111; margin-right:-6px;"></div>
+            <div style="width:18px; height:18px; border-radius:50%; background:#c8a0e0; border:2px solid #111; margin-right:-6px;"></div>
+            <div style="width:18px; height:18px; border-radius:50%; background:#a0e0a8; border:2px solid #111;"></div>
+          </div>
+          <span>3 unrelated souls corroborated</span>
+        </div>
+        <div style="height:6px; border-radius:3px; background:#242220; overflow:hidden;"><div style="width:60%; height:100%; background:#4caf50;"></div></div>
+        <div style="font-size:10.5px; color:#5f5b52;">Weight comes from souls with no shared history — a closed guild's word carries none.</div>
+      </div>
+    </div>
+
+    <!-- FULL INVENTORY -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">8 · Pack, expanded <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— behind the resource-tray caret</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:flex; flex-direction:column; gap:10px;">
+        <div style="font-size:11px; color:#7a7568;">Materials</div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#9c7a4a;"></div><span style="font-size:11px; color:#e8e0c8;">wood</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">6</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#8a8a8a;"></div><span style="font-size:11px; color:#e8e0c8;">stone</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">3</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#c9a227;"></div><span style="font-size:11px; color:#e8e0c8;">ore</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">2</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#4a9a7a;"></div><span style="font-size:11px; color:#e8e0c8;">copper</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">1</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#a86868;"></div><span style="font-size:11px; color:#e8e0c8;">hide</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">2</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#c8956a;"></div><span style="font-size:11px; color:#e8e0c8;">cord</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">4</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#3a3a38;"></div><span style="font-size:11px; color:#e8e0c8;">charcoal</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">1</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#b5a68c;"></div><span style="font-size:11px; color:#e8e0c8;">bar</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">0</span></div>
+        </div>
+        <div style="font-size:11px; color:#7a7568; margin-top:4px;">Food</div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#8a4a3a;"></div><span style="font-size:11px; color:#e8e0c8;">raw meat</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">1</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#c87d4a;"></div><span style="font-size:11px; color:#e8e0c8;">cooked</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">2</span></div>
+          <div style="display:flex; align-items:center; gap:6px; background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:6px 8px;"><div style="width:9px; height:9px; border-radius:2px; background:#8ba8c0;"></div><span style="font-size:11px; color:#e8e0c8;">fish</span><span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a9284;">0</span></div>
+        </div>
+        <div style="font-size:11px; color:#7a7568; margin-top:4px;">Tools &amp; gear</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+          <div style="background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:7px 9px;"><div style="font-size:11.5px; color:#e8e0c8;">spear</div><div style="height:4px; border-radius:2px; background:#2e2c28; margin-top:4px; overflow:hidden;"><div style="width:70%; height:100%; background:#c8b088;"></div></div></div>
+          <div style="background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:7px 9px;"><div style="font-size:11.5px; color:#e8e0c8;">knife</div><div style="height:4px; border-radius:2px; background:#2e2c28; margin-top:4px; overflow:hidden;"><div style="width:45%; height:100%; background:#c8b088;"></div></div></div>
+          <div style="background:#1c1b18; border:1px solid #2e2c28; border-radius:8px; padding:7px 9px; opacity:0.35;"><div style="font-size:11.5px; color:#9a9284;">axe</div><div style="height:4px; border-radius:2px; background:#2e2c28; margin-top:4px;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TERRAIN LEGEND -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">9 · Terrain legend <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— render.ts tile colours, unchanged</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px; display:grid; grid-template-columns:repeat(2,1fr); gap:7px;">
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#3a5a34;"></div><span style="font-size:11.5px; color:#c8bfa8;">Grass</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#1f3d1a;"></div><span style="font-size:11.5px; color:#c8bfa8;">Tree</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#2a4a6a;"></div><span style="font-size:11.5px; color:#c8bfa8;">Water</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#4a6a2a;"></div><span style="font-size:11.5px; color:#c8bfa8;">Bush</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#8a4a1a;"></div><span style="font-size:11.5px; color:#c8bfa8;">Campfire</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#6e6e73;"></div><span style="font-size:11.5px; color:#c8bfa8;">Rock</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#5a5248;"></div><span style="font-size:11.5px; color:#c8bfa8;">Ore</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#5a5248;"></div><span style="font-size:11.5px; color:#c8bfa8;">Copper</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#3a4a38;"></div><span style="font-size:11.5px; color:#c8bfa8;">Marsh</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#8a7a5e;"></div><span style="font-size:11.5px; color:#c8bfa8;">Road</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#5c5852;"></div><span style="font-size:11.5px; color:#c8bfa8;">Ruin</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#9c6b42;"></div><span style="font-size:11.5px; color:#c8bfa8;">Clay</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#5a7a3a;"></div><span style="font-size:11.5px; color:#c8bfa8;">Meadow</span></div>
+        <div style="display:flex; align-items:center; gap:8px;"><div style="width:14px; height:14px; border-radius:3px; background:#16290f;"></div><span style="font-size:11.5px; color:#c8bfa8;">Thicket</span></div>
+      </div>
+    </div>
+
+    <!-- BESTIARY -->
+    <div style="display:flex; flex-direction:column; gap:8px; grid-column:span 2;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">10 · Bestiary <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— stage-b/README, opened from a paused menu rather than memorised</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:14px 18px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 2fr; gap:6px 14px; font-size:11px;">
+          <div style="color:#6f6a5e; text-transform:uppercase; letter-spacing:0.5px;">Animal</div><div style="color:#6f6a5e; text-transform:uppercase; letter-spacing:0.5px;">Yields</div><div style="color:#6f6a5e; text-transform:uppercase; letter-spacing:0.5px;">Threat</div><div style="color:#6f6a5e; text-transform:uppercase; letter-spacing:0.5px;">Note</div>
+          <div style="display:flex; align-items:center; gap:6px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:50%; background:#a89880;"></div>hare</div><div style="color:#c8bfa8;">1 meat</div><div style="color:#6f6a5e;">none</div><div style="color:#9a9284;">outruns you — needs a snare</div>
+          <div style="display:flex; align-items:center; gap:6px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:50%; background:#c8a878;"></div>deer</div><div style="color:#c8bfa8;">2 meat, 1 hide</div><div style="color:#6f6a5e;">none</div><div style="color:#9a9284;">the ordinary hunt</div>
+          <div style="display:flex; align-items:center; gap:6px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:50%; background:#cfc8bc;"></div>river-goat</div><div style="color:#c8bfa8;">4 meat, 2 hide</div><div style="color:#6f6a5e;">none</div><div style="color:#9a9284;">slow, calm, worth the most</div>
+          <div style="display:flex; align-items:center; gap:6px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:50%; background:#6b4a2a;"></div>hedge-boar</div><div style="color:#c8bfa8;">3 meat, 2 hide</div><div style="color:#c26a6a;">charges</div><div style="color:#9a9284;">faster than you, ignores you until struck</div>
+          <div style="display:flex; align-items:center; gap:6px; color:#e8e0c8;"><div style="width:8px; height:8px; border-radius:50%; background:#888890;"></div>wolf</div><div style="color:#c8bfa8;">2 meat, 2 hide</div><div style="color:#c26a6a;">hunts</div><div style="color:#9a9284;">comes looking, worse after dark</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NPCS -->
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">11 · Villagers &amp; NPCs <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— npc.ts / dialogue.ts</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:10px;"><div style="width:26px; height:26px; border-radius:7px; background:#d8b878;"></div><div><div style="font-size:12.5px; color:#d8b878;">The Teacher</div><div style="font-size:10.5px; color:#8a8278;">the first profession a new soul meets — §1A</div></div></div>
+        <div style="display:flex; align-items:center; gap:10px;"><div style="width:26px; height:26px; border-radius:7px; background:#a89878;"></div><div><div style="font-size:12.5px; color:#c8bfa8;">Villager</div><div style="font-size:10.5px; color:#8a8278;">shared colour — a person, not a bestiary entry</div></div></div>
+        <div style="font-size:10.5px; color:#5f5b52; margin-top:2px;">H opens their dialogue tree (screen 6 in the HUD redesign file) — this card is the roster a "who's in town" panel would draw from.</div>
+      </div>
+    </div>
+
+    <!-- REALM / SIGIL MAP -->
+    <div style="display:flex; flex-direction:column; gap:8px; grid-column:span 2;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9ab08a;">12 · Realm &amp; Sigil progress <span style="color:#6f6a5e; font-weight:400; text-transform:none;">— §4 / §5, far-future — 2 Realms shipping first</span></div>
+      <div style="background:#111; border:1px solid #262626; border-radius:10px; padding:18px 20px; display:flex; align-items:center; gap:0; overflow-x:auto;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px;"><div style="width:34px; height:34px; border-radius:8px; background:#4caf50;"></div><div style="font-size:11px; color:#e8e0c8;">The Verge</div><div style="font-size:9.5px; color:#6f6a5e;">open</div></div>
+        <div style="width:32px; height:2px; background:#3a5a34;"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px;"><div style="width:34px; height:34px; border-radius:8px; background:#3a3f38; border:1px dashed #5a5248; display:flex; align-items:center; justify-content:center; font-size:10px; color:#8a8278;">◆</div><div style="font-size:11px; color:#9a9284;">The Moorfen</div><div style="font-size:9.5px; color:#6f6a5e;">Sigil of Harvest</div></div>
+        <div style="width:32px; height:2px; background:#2a2925;"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px;"><div style="width:34px; height:34px; border-radius:8px; background:#26241f; border:1px solid #333;"></div><div style="font-size:11px; color:#6f6a5e;">The Kiln</div><div style="font-size:9.5px; color:#4a4842;">locked</div></div>
+        <div style="width:32px; height:2px; background:#2a2925;"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px;"><div style="width:34px; height:34px; border-radius:8px; background:#26241f; border:1px solid #333;"></div><div style="font-size:11px; color:#6f6a5e;">Sunken Reach</div><div style="font-size:9.5px; color:#4a4842;">locked</div></div>
+        <div style="width:32px; height:2px; background:#2a2925;"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px;"><div style="width:34px; height:34px; border-radius:8px; background:#26241f; border:1px solid #333;"></div><div style="font-size:11px; color:#6f6a5e;">…</div><div style="font-size:9.5px; color:#4a4842;">4 more</div></div>
+        <div style="width:32px; height:2px; background:#2a2925;"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px;"><div style="width:34px; height:34px; border-radius:8px; background:#26241f; border:1px solid #4a3a2a;"></div><div style="font-size:11px; color:#8a7a5a;">The Spire</div><div style="font-size:9.5px; color:#4a4842;">the Grey King</div></div>
+      </div>
+      <div style="font-size:10.5px; color:#5f5b52;">A world-scale, collective ratchet — filled in for reference only; nothing here is a near-term build target.</div>
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>
