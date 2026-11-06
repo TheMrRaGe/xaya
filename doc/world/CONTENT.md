@@ -1529,6 +1529,14 @@ Carried from PLAN.md's own open threads, plus what this pass surfaced.
   one, unlike every other line this document records crossing early. The
   Teacher NPC herself still teaches only words, never XP, exactly as
   before (§2.5) — nothing about her tutorial changed.
+- **Controls and the interface** — one key per recipe (~35 keys in
+  `prototypes/stage-b`) cannot reach a gamepad and will not reach §17's sixty
+  professions. Needs: an intent layer under keyboard, mouse and gamepad; a
+  radial for the few constant verbs; an interactive, tabbed, searchable
+  Crafting screen (the Tab panel's Crafting page, promoted); a context radial
+  for social and working verbs; grid-snapped controller placement; a Workshop
+  building type. `[new]` Reasoned in `[plan §21A]`; built state is `[built]`
+  keyboard-only, no mouse, read-only reference panel.
 
 ---
 

@@ -24,7 +24,7 @@ That is not an increment. It breaks the architecture in one specific place — a
 | Offline | **Safe when camped, exposed in the field.** |
 | PvP | **The Grey King pays for the dead.** He wants survivors fighting each other; his coin funds the bandits who do it. |
 | Sanctuary | **Nowhere is safe by rule.** Safety is walls, neighbours and the road's good word — things people build and defend. |
-| Client | Web, systems-first, 2D/isometric. |
+| Client | Web, systems-first, 2D/isometric, controller-equal input (see §21A). |
 | Progression | Collective and world-wide. Ground is reclaimed for everyone at once, or not at all. |
 | Antagonists | **The Grey King's captains** — named, ranked, persistent. They hunt, ambush, rob and murder those who have been *marked*, and they grow richer and stronger with every kill. He also acts in person. |
 | IP posture | **Deliberately not a Nemesis-system clone.** No personal-rivalry memory subsystem. See §34. |
@@ -776,6 +776,29 @@ Four rules that matter more than the numbers:
 - **Wounds persist.** Injuries heal badly without care, which is what makes Physicians and Surgeons load-bearing rather than decorative.
 - **Ambush uses commit-reveal** (§39.G), because public replayability otherwise makes surprise impossible.
 - **Numbers to hold:** world/survival sim at 10 Hz, combat resolved on tick boundaries, a 3-tick input buffer, and the existing p95 input→effect gate of 250 ms.
+
+## 21A. Controls and the interface — controller-equal, not controller-tolerated
+
+The client has so far been decided in one line. Two facts make that a real gap rather than polish: "you can be anything" (§17) means a UI over roughly sixty professions and a many-input crafting graph (§15), and combat is commitment-based *because of* input latency (§21) — controls already carry weight in this design, undesigned. Stage B shows the ceiling early: one key per recipe works at ten recipes and fails at forty, and a gamepad cannot carry it at all.
+
+### What real games learned (checked, not assumed)
+
+- **Radial wheels are the near-universal answer for fast access on a controller**, and they work by mouse too (drag toward a wedge), so they are no tax on keyboard players. [Grounded ships four separate radials](https://www.shacknews.com/article/145401/grounded-2-keybindings-and-controls) — Construction, HotPouch, Ammo, Handcraft — rather than one overloaded menu. [Baldur's Gate 3 collapsed its tools, journal, spellbook and rests into one trigger-pull radial](https://blog.playstation.com/2023/09/05/how-baldurs-gate-3-adapts-its-expansive-rpg-gameplay-for-your-dualsense-controller/) because it "felt more intuitive" on a pad.
+- **Radials solve access, not organisation.** The same game's controller inventory is [widely called its biggest weakness](https://www.dualshockers.com/baldurs-gate-3-keyboard-or-controller/) — slower than a mouse, with no way to reorganise. A big item or recipe list needs tabs, filters and search underneath, whatever the input device.
+- **A thumbstick-driven cursor is the wrong tool for dense screens.** [Terraria's console team found it slow and imprecise](https://medium.com/@watsonwelch/terraria-on-console-10-years-later-part-2-the-controls-bb84cac14700) for exactly this reason. Cell-to-cell D-pad navigation, with a mouse still free to click directly, is the pattern that holds.
+- **Placement precision is the one honest compromise.** [V Rising's developers said it is built to be "best enjoyed with a keyboard and mouse"](https://www.gamingonlinux.com/2022/09/controller-support-for-v-rising-planned-better-steam-deck-support/), and players report decorations and columns with several snap points go "wonky" on a stick, while plain grid-snapped walls are fine.
+- **If Steam Deck or console is ever wanted** (the Chronicle's audience ambitions, §47, make it plausible), [Valve's Verified badge requires](https://partner.steamgames.com/doc/steamhardware/compat) every piece of content reachable with the default controller layout and no settings changes. Cheaper built in than retrofitted.
+
+### The decision
+
+**Controller-equal capability, not controller-identical precision.** Everything reachable on a pad; nothing requires a mouse; precision tasks may be coarser on a stick.
+
+- **Verbs split into three tiers, instead of one key each.** *Act* verbs (move, interact, strike, the fire) stay direct-mapped to a few keys and face buttons. *Craft* verbs leave the keyboard and become a menu: a radial for the handful used constantly (held tools, eat, fire) and a grid-cell Crafting screen for everything else — the Tab panel's Crafting page promoted from reference to interactive, with category tabs and search once the list passes one screen. *Social and working* verbs (give, talk, teach, the bounty board, bolt, heal) go on a context radial that offers only what the nearest thing allows — the HUD's action bar already computes "what is usable right now".
+- **One intent layer under three input devices.** Keyboard, mouse and gamepad all emit the same named intents; the sim and the wire never learn which device was used. This is the cheap way to add the mouse modality the Stage B README declined to bolt on.
+- **Building placement is grid-snapped for everyone**, one step per stick tilt and fixed-angle rotation on a bumper; mouse keeps an optional held-modifier fine-placement mode for the few objects that want it. Controller users are never blocked from placing anything, only coarser.
+- **A Workshop building type** — stand inside one and every recipe its stations support is offered at once — instead of interacting with each station separately. Ties into §15's graph and §23's settlements.
+- **Unaffected:** the tier split (§35), commitment combat and its latency budget (§21), and open information (§39.G). This is client presentation, not simulation authority.
+- **Left open on purpose:** exact button mapping and radial segment counts, rebinding, and how the digit keys that pick dialogue replies coexist with a menu. Those are the first client build's decisions, not this section's. Stage B stays keyboard-only per its cut list (§44).
 
 ## 22. Mechanisms worth stealing
 
